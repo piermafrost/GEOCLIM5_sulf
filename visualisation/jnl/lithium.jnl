@@ -1,0 +1,34 @@
+use "/Users/yves/fortran/GEOCLIMVEGET/OUTPUT/dynsoilv4_PD_Li2.nc"
+
+set region/x=-180:180/l=5000
+
+
+let lplot=nline
+let newli= if li_delta_riv eq 0 then -1e+34 else li_delta_riv
+set var/bad=-1e+34 newli
+let ratio= if LI_FSP eq 0 then -1e+34 else LI_FSP/(LI_FSP+LI_FRIV)*100
+set var/bad=-1e+34 ratio
+let LiS= if LI_FSP eq 0 then -1e+34 else log(LI_FSP+LI_FRIV)
+set var/bad=-1e+34 LiS
+let LiF= if LI_FRIV eq 0 then -1e+34 else log(LI_FRIV)
+set var/bad=-1e+34 LiF
+
+
+set v ul
+shade /lev=(8)(12,25,0.2)(30)/title="riverine d7Li" newli*1000
+!shade /lev=(8)(12,20,1)(20,25,0.1)(30) newli*1000
+go land
+
+set v ur
+shade/pal=blue_orange/title="ratio SP/DISS %" ratio
+go land
+
+set v ll
+shade/lev=(-9)(-8,-4,0.1)/title="DISS Lithium (kg/m2/yr)" LiS
+go land
+
+set v lr
+shade/lev=(-9)(-8,-4,0.1)/title="riverine Li fluxes (kg/m2/yr)" LiF
+go land
+
+sp "rm -f ferre*"

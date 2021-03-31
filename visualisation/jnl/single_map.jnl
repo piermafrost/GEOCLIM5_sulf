@@ -1,0 +1,22 @@
+DEFINE AXIS/X=0:357.1875:2.8125/units=degrees_east/modulo lon
+DEFINE AXIS/Y=-89.296875:89.296875:1.40625/units=degrees_north lat
+DEFINE GRID/x=lon/y=lat topo_grid
+
+use "/Users/yves/fortran/GEOCLIMVEGET/OUTPUT/dynsoilv4_128x128x10_365Ma_invspf_vf0.4.nc"
+
+show data
+
+set REGION/X=-180:180
+
+let var1= if reg_thickness[l=1] eq 0 then (-100) else log(reg_thickness[l=1])
+
+set w 1
+shade /x=-180:180/y=-90:90/lev=(-inf)(-4,3,0.2)(inf)/pal=blue_orange/title="Reg thickness (m)" var1
+
+
+let var1= if reg_thickness[l=20] eq 0 then (-100) else log(reg_thickness[l=200])
+
+set w 2
+shade /x=-180:180/y=-90:90/lev=(-inf)(-4,3,0.2)(inf)/pal=blue_orange/title="Reg thickness (m)" var1
+
+sp "rm -f ferre*"

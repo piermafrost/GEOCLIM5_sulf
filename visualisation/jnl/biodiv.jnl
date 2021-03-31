@@ -1,0 +1,116 @@
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+!set mode linecolors:10
+set win/new
+!PPL COLOR,7,100,50,0 ! orange
+!PPL COLOR,8,0,55,0 ! dark green
+!PPL COLOR,9,60,0,100 ! purple
+!PPL COLOR,10,100,60,70 ! pink
+
+!!!!!!PPL AXATIC = 1000
+
+
+!**************************************!
+let SAVEFIG = 0
+def sym OUTFIG = geoclim.ps
+def sym nbsp = 80  !98
+def sym nbline = 61
+!**************************************!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/biodiv_output.predator3.nc"
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+show data
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+let Nt = `var,return=lsize`
+def sym tspan = 2:`Nt`
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!TITLE='species biomass (mol/yr)'
+
+def sym winset = /aspect=0.7071/size=1.3
+
+def sym margesU = go margins .2 .3 1 .4
+def sym margesD = go margins .2 2.2 1 .4
+
+
+define viewport/xlim=0,0.5/ylim=0.50,1 a
+define viewport/xlim=0.5,1/ylim=0.50,1 b
+define viewport/xlim=0,0.5/ylim=0,0.50 c
+define viewport/xlim=0.5,1/ylim=0,0.50 d
+
+IF `SAVEFIG EQ 1` THEN sp rm -f metafile*
+IF `SAVEFIG EQ 1` THEN set mode metafile
+
+set win($winset) 1
+
+!!!!!!!!!!!!!!!!!!!!!NPolar basin!!!!!!!!!!!!!
+
+set viewport a
+
+let ymin = VAR[i=1:($nbsp)@min,j=1:9@min,l=($tspan)@min]
+let ymax = VAR[i=1:($nbsp)@max,j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+
+!list /l=($nbline)/j=1 var
+plot/title="North Polar Basin"/i=1/j=1/vlim=1e10:1e15/vlog var
+
+repeat/i=1:($nbsp):1 (plot/o/nolab/j=1/vlim=1e10:1e15/vlog var)
+!go unlabel ($LABNUM_DSET) ; ppl plot
+
+
+!!!!!!!!!!!!!!!!!!!!!Midlat basin!!!!!!!!!!!!!
+
+set viewport b
+
+let ymin = VAR[i=1:($nbsp)@min,j=1:9@min,l=($tspan)@min]
+let ymax = VAR[i=1:($nbsp)@max,j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+
+!list /l=($nbline)/j=1 var
+plot/title="Mid-low latitude Basin"/i=1/j=3/vlim=1e10:1e15/vlog var
+
+repeat/i=1:($nbsp):1 (plot/o/nolab/j=3/vlim=1e10:1e15/vlog var)
+
+
+
+!!!!!!!!!!!!!!!!!!!!!Epicont basin!!!!!!!!!!!!!
+
+
+set viewport c
+
+let ymin = VAR[i=1:($nbsp)@min,j=1:9@min,l=($tspan)@min]
+let ymax = VAR[i=1:($nbsp)@max,j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+
+!list /l=($nbline)/j=6 var
+plot/title="Epicontinental Basin"/i=1/j=6/vlim=1e10:1e15/vlog var
+
+repeat/i=1:($nbsp):1 (plot/o/nolab/j=6/vlim=1e10:1e15/vlog var)
+
+
+
+!!!!!!!!!!!!!!!!!!!!!SPolar basin!!!!!!!!!!!!!
+
+
+set viewport d
+
+let ymin = VAR[i=1:($nbsp)@min,j=1:9@min,l=($tspan)@min]
+let ymax = VAR[i=1:($nbsp)@max,j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+
+!list /l=($nbline)/j=8 var
+plot/title="South Polar Basin"/i=1/j=8/vlim=1e10:1e15/vlog var
+
+repeat/i=1:($nbsp):1 (plot/o/nolab/j=8/vlim=1e10:1e15/vlog var)
+
+
+sp "rm -f ferre*"
+

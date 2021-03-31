@@ -1,0 +1,371 @@
+#!/bin/bash
+
+
+############################################################################
+##                            Argument scanning                           ##
+############################################################################
+
+ncpath=""
+case_name=""
+comp_mode="standard"
+keep_config=0
+restore=0
+
+while [ $# -ge 1 ]
+do
+
+    case $1 in
+
+        "--ncpath")
+	    if [ $# -ge 2 ]
+	    then
+	        ncpath=$2
+		shift 2
+	    else
+	        echo ""
+                echo "Error: path required after option '--ncpath'. Option ignored."
+		shift 1
+	    fi
+	    ;;
+
+	"--debug")
+	    comp_mode="debug"
+	    shift 1
+	    ;;
+
+	"--keep-config")
+	    keep_config=1
+	    shift 1
+	    ;;
+
+	"--restore")
+	    restore=1
+	    shift 1
+	    ;;
+
+	*)
+	    if [ -z $case_name ]
+	    then
+	        case_name=$1
+	    else
+		echo ""
+		echo "Warning: Ignore extra input argument \"$1\""
+	    fi
+	    shift 1
+	    ;;
+
+    esac
+
+done
+
+
+############################################################################
+##                                Help text                               ##
+############################################################################
+
+test $restore -eq 1 -a "$case_name" == ""  &&  case_name="_%STOP%_"
+
+if [ "$case_name" == ""  -o  "$case_name" == "help"  -o  "$case_name" == "--help" ]
+then
+    echo ""
+    echo "SYNOPSIS"
+    echo ""
+    echo "     ./make_test case_name [--ncpath path] [--debug]"
+    echo ""
+    echo ""
+    echo "DESCRIPTION"
+    echo ""
+    echo "     'make_test' is a bash script that configured GEOCLIM for the given template"
+    echo "     case, compile the code, execute the template run, and compare the outputs"
+    echo "     (several COMBINE key variables) to a reference template run."
+    echo "     It uses the script 'build_GEOCLIM', itself using the Makefile is \"source/\","
+    echo "     and the Fortran codes + Makefile in postproc/template_comparison/ for the"
+    echo "     comparison check."
+    echo ""
+    echo "     For the sake of simplicity, you must have installed one of the known"
+    echo "     Fortran compiler: gfortran, ifort or pgfortran"
+    echo ""
+    echo "     You must also have installed a netCDF-Fortran library compatible with your"
+    echo "     Fortran compiler. The compilation procedure gets the library path with"
+    echo "     \`nc-config --prefix\` or use \"/usr\", if it fails."
+    echo "     You can manually specify it with the option '--ncpath path'"
+    echo ""
+    echo "     Use option '--debug' to compile GEOCLIM with debugging options"
+    echo ""
+    echo "     When the run is completed, you can compare the outputs with the reference"
+    echo "     one (with same *run* name) that is in 'OUTPUT/templates/'"
+    echo ""
+    echo "     If you want the code not to restore the original configuration files, and"
+    echo "     to let the ones used for the test, use the option \"--keep-config\". The"
+    echo "     original files will be kept in the backup directory \".case_backup/\""
+    echo "     WARNING: if you re-run \`make_test\` after, these \"test\" configuration"
+    echo "     files will be considered as the original ones, and the true original ones"
+    echo "     will be lost. To avoid that, use the option \"--restore\" to put back the"
+    echo "     eventual files stored in .case_backup/"
+    echo ""
+    echo ""
+    echo "     TEMPLATE CASE NAMES:"
+    echo ""
+    echo "     ERA5"
+    echo "             Short Geoclim run (100 years) with DynSoil dynamic module, ERA5"
+    echo "             boundary conditions (fixed 1PAL CO2, 0.5° of spatial resolution),"
+    echo "             parametric oceanic temperature (fixed)."
+    echo "             Combine initial condition: 'restart/geoclim/output.ref'"
+    echo "             DynSoil initialization: startup:eq (analytical steady-state)"
+    echo "             Input data format: netCDF (GCM outputs)"
+    echo "             CO2 interpolation: logarithmic"
+    echo "             Run name: .testrun_ERA5-DS-short"
+    echo "             ----------"
+    echo "             Reference for climate dataset:"
+    echo "             Hersbach, H. et al., (2019): ERA5 monthly averaged data on single"
+    echo "             levels from 1979 to present. Copernicus Climate Change Service (C3S)"
+    echo "             Climate Data Store (CDS). (accessed on 19 Feb 2020)"
+    echo "             https://doi.org/10.24381/cds.f17050d7"
+    echo "             distributed under Copernicus Products license:"
+    echo "             https://cds.climate.copernicus.eu/api/v2/terms/static/licence-to-use-copernicus-products.pdf"
+    echo ""
+    echo "     CESM"
+    echo "             10 kyr Geoclim run with DynSoil dynamic module, boundary conditions"
+    echo "             are CESM1.2 slab simulations, spatial resolution: 1.25° x 0.9°"
+    echo "             (lon x lat), 2 CO2 levels (1 PAL and 2 PAL), parametric oceanic"
+    echo "             temperature."
+    echo "             Combine initial condition: 'restart/geoclim/output.ref'"
+    echo "             DynSoil initialization: startup:null (no regolith)"
+    echo "             Input data format: netCDF (GCM outputs)"
+    echo "             CO2 interpolation: logarithmic"
+    echo "             Run name: .testrun_CESM1.2-DSnull"
+    echo ""
+    echo "     paleo"
+    echo "             100 kyr Geoclim run with DynSoil steady-state module, boundary"
+    echo "             conditions are Thitonian (150Ma) ocean-atmosphere coupled FOAM"
+    echo "             simulations, spatial resolution: 128x128 (~ 2.8° x 1.4°), 11 CO2"
+    echo "             levels (560ppm -- 8960ppm)."
+    echo "             Oceanic temperature from coupled GCM simulations. Rest of oceanic"
+    echo "             parameters (volumes, surfaces, mixing fluxes) kept at modern values"
+    echo "             Oxygen cycle accelerated x100"
+    echo "             CO2 degassing = 2 times pre-ind degassing."
+    echo "             Lithology mask: 6 class, uniform (modern values)"
+    echo "             Slope field: \"crude\" linear regression of paleo-elevation."
+    echo "             Combine initial condition: 'restart/geoclim/output.ref' (pre-ind)"
+    echo "             Input data format: netCDF (GCM outputs)"
+    echo "             CO2 interpolation: logarithmic"
+    echo "             Run name: .testrun_FOAM-paleo"
+    echo "             ----------"
+    echo "             Reference for GCM simulations:"
+    echo "             Pohl, A et al., 2019,"
+    echo "             https://doi.pangaea.de/10.1594/PANGAEA.904255"
+    echo "             distributed under Creative Commons license  (CC-BY-4.0)"
+    echo "             https://creativecommons.org/licenses/by/4.0/"
+    echo ""
+    echo "     ascii"
+    echo "             10 kyr Geoclim run with parametric weathering law (DynSoil module"
+    echo "             not activated), boundary conditions are pre-industrial FOAM"
+    echo "             simulations, spatial resolution: 7.5° x 4.5° (lon x lat), 6 CO2"
+    echo "             levels (200ppm -- 560ppm), parametric oceanic temperature."
+    echo "             CO2 degassing = 2 times pre-ind degassing."
+    echo "             Lithology mask: 6 class, uniform."
+    echo "             Combine initial condition: 'restart/geoclim/output.ref'"
+    echo "             Input data format: ascii"
+    echo "             CO2 interpolation: linear"
+    echo "             Run name: .testrun_FOAM-ascii"
+    exit 0
+fi
+
+
+############################################################################
+##                           Template configuration                       ##
+############################################################################
+
+# If ask, restore eventual files stored in backup directory
+if [ $restore -eq 1 ]
+then
+    if [ -d .case_backup ]
+    then
+	mv -f .case_backup/IO_CONDITIONS config/IO_CONDITIONS
+	mv -f .case_backup/constante.f90 source/constante.f90
+	mv -f .case_backup/cont_weath.f  source/cont_weath.f
+	mv -f .case_backup/shape.inc     source/shape.inc
+	mv -f .case_backup/coupler.inc   source/coupler.inc
+	rm -r -f .case_backup
+    else
+        echo ""
+	echo "NOTE: no backup files to restore."
+    fi
+fi
+
+test "$case_name" == "_%STOP%_"  && exit 0
+
+# Backup of files susceptible to be modified:
+rm -r -f .case_backup
+mkdir .case_backup
+cp config/IO_CONDITIONS source/shape.inc source/coupler.inc source/constante.f90 source/cont_weath.f .case_backup/
+
+case $case_name in
+
+    "ERA5")
+        # Copy main configuration file
+        test -e config/IO_CONDITIONS && rm -f config/IO_CONDITIONS
+	cp config/templates/IO_CONDITIONS.ERA5-short config/IO_CONDITIONS
+	config_iostat=$?
+	#
+	# Check that other configuration files exist
+	ls config/templates/GCM_input_conditions.ERA5 > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	ls config/templates/cond_p20.ERA5-short.dat > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	# Run configuration
+	resolution="1,720,360,6,10"
+	compset="COMBINE_WTH:DynSoil%dyn"
+	interpolation="linear"
+	#
+	# executable name (as will be defined by 'build_GEOCLIM')
+	exec_name='geoclim_1x720x360x6_DS-10lev.exe'
+        ;;
+
+    "CESM")
+        # Copy main configuration file
+        test -e config/IO_CONDITIONS && rm -f config/IO_CONDITIONS
+	cp config/templates/IO_CONDITIONS.CESM1.2_slab config/IO_CONDITIONS
+	config_iostat=$?
+	#
+	# Check that other configuration files exist
+	ls config/templates/GCM_input_conditions.CESM1.2_slab > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	ls config/templates/cond_p20.CESM1.2_slab.dat > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	# Run configuration
+	resolution="2,288,192,6,10"
+	compset="COMBINE_WTH:DynSoil%dyn"
+	interpolation="log"
+	#
+	# executable name (as will be defined by 'build_GEOCLIM')
+	exec_name='geoclim_2x288x192x6_DS-10lev.exe'
+        ;;
+
+    "paleo")
+        # Copy main configuration file
+        test -e config/IO_CONDITIONS && rm -f config/IO_CONDITIONS
+	cp config/templates/IO_CONDITIONS.FOAM-paleo config/IO_CONDITIONS
+	config_iostat=$?
+	#
+	# Check that other configuration files exist
+	ls config/templates/GCM_input_conditions.FOAM-paleo > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	ls config/templates/cond_p20.FOAM-paleo.dat > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	# Run configuration
+	resolution="11,128,128,6,10"
+	compset="COMBINE_WTH:DynSoil%steady"
+	interpolation="log"
+	#
+	# executable name (as will be defined by 'build_GEOCLIM')
+	exec_name='geoclim_11x128x128x6_DS-SS.exe'
+        ;;
+
+    "ascii")
+        # Copy main configuration file
+        test -e config/IO_CONDITIONS && rm -f config/IO_CONDITIONS
+	cp config/templates/IO_CONDITIONS.FOAM-ascii config/IO_CONDITIONS
+	config_iostat=$?
+	#
+	# Check that other configuration files exist
+	ls config/templates/cond_p20.FOAM-ascii.dat > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	# Run configuration
+	resolution="6,48,40,6"
+	compset="COMBINE_WTH:old"
+	interpolation="linear"
+	#
+	# executable name (as will be defined by 'build_GEOCLIM')
+	exec_name='geoclim_6x48x40x6.exe'
+        ;;
+
+    *)
+        echo ""
+	echo "Error: unknown template name \"$case_name\""
+	exit -1
+
+esac
+
+if [ $config_iostat -ne 0 ]
+then
+    echo ""
+    echo "ERROR: template configuration file(s) missing"
+    # put back original files
+    cp -f .case_backup/IO_CONDITIONS config/IO_CONDITIONS
+    cp -f .case_backup/constante.f90 source/constante.f90
+    cp -f .case_backup/cont_weath.f  source/cont_weath.f
+    rm -r -f .case_backup
+    exit 1
+fi
+
+# Erase deathnote file
+test -e deathnote.txt && rm -f deathnote.txt
+touch deathnote.txt
+
+
+############################################################################
+##                           Compile and run template                     ##
+############################################################################
+
+# Complete configuration and compile (with 'build_GEOCLIM' command
+test -z $ncpath && netcdf_option="" || netcdf_option="--ncpath $ncpath"
+
+./build_GEOCLIM --resolution $resolution --compset $compset --interp $interpolation --compilation-mode $comp_mode --reset $netcdf_option
+
+# If successful: run template
+test $? -eq 0 && executable/$exec_name 0 1 3 0 0
+
+# If run succesfull: make template comparison
+if [ $? -eq 0 ]
+then
+    echo ""
+    echo ""
+    echo "Compare outputs to reference template output"
+    echo "============================================"
+    echo ""
+    source GEOCLIM_environment
+    cd postproc/template_comparison/
+    if [ $? -eq 0 ]
+    then
+	rm -f build.*
+	echo "Compile comparison code..."
+	echo ""
+	make FC=$FC MODE=$MODE ncpath=$ncpath > build.log 2> build.error
+	if [ $? -eq 0 ] 
+	then
+	    echo ""
+	    echo "Execute comparison code..."
+	    echo ""
+	    ./compare_template.exe
+	else
+	    echo ""
+	    echo "Compilation failed. Cannot conduct comparison check."
+	    echo "See postproc/template_comparison/build.log and postproc/template_comparison/build.error"
+	    echo "for more information"
+	fi
+	make clc > /dev/null 2>&1
+	cd ../../
+    fi
+fi
+
+# Put back original files
+if [ $keep_config -eq 0 ]
+then
+    cp -f .case_backup/IO_CONDITIONS config/IO_CONDITIONS
+    cp -f .case_backup/constante.f90 source/constante.f90
+    cp -f .case_backup/cont_weath.f  source/cont_weath.f
+    cp -f .case_backup/shape.inc     source/shape.inc
+    cp -f .case_backup/coupler.inc   source/coupler.inc
+    rm -r -f .case_backup
+fi
+
+cd source
+make clean > /dev/null

@@ -1,0 +1,25 @@
+cancel data/all
+
+sp "rm -f meta*"
+
+set mode meta
+
+! ===================LOADING=====================================================
+use "/Users/yves/fortran/GEOCLIM4_ber/OUTPUT/dynsoil_output.ref.nc"
+use "/Users/yves/fortran/GEOCLIM4_ber/OUTPUT/dynsoil_output.ref_litho_prod.nc"
+
+
+show data
+
+let Freal=reg_P_diss_rate*area
+let Fmax=reg_eros_rate*area
+
+plot/vlimits=0:1 Freal[i=@sum,j=@sum,d=1]/Fmax[i=@sum,j=@sum,d=1]
+plot/o Freal[i=@sum,j=@sum,d=2]/Fmax[i=@sum,j=@sum,d=2]
+
+
+! ===================CLOSING=====================================================
+sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

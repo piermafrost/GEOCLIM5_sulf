@@ -1,0 +1,68 @@
+DEFINE AXIS/X=0.5:359.5:1/units=degrees_east/modulo lon
+DEFINE AXIS/Y=-89.5:89.5:1/units=degrees_north lat
+DEFINE GRID/x=lon/y=lat topo_grid
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.soil.nc"
+
+set REGION/X=-180:180
+
+show data
+
+set w 1
+
+set v ul
+let VAR=reg_thickness
+plot/thick=2 VAR[i=@ave,l=25]    !y=-10:10@ave]
+!plot/vlimits=0:100/thick=2 VAR[i=@ave,k=1]
+plot/o/thick=2  VAR[i=@ave,l=1]
+
+
+
+set v ll
+let VAR=x_cat_surf
+plot/thick=2 VAR[i=@ave,l=25]
+plot/o/thick=2  VAR[i=@ave,l=1]
+
+
+
+set v lr
+let VAR=cat_diss_rate
+plot/thick=2 VAR[i=@ave,l=25]
+plot/o/thick=2 VAR[i=@ave,l=1]
+!plot/o/thick=2  VAR[i=-15:15@sum,l=@sum]
+!plot/o/thick=2  VAR[i=-90:15@sum,l=@sum]
+
+
+
+set v ur
+let VAR=reg_prod_rate
+plot/thick VAR[i=@ave,l=25]
+plot/o/thick VAR[i=@ave,l=25]
+
+
+set w 2
+
+set v ul
+let VAR=cat_diss_rate
+plot/thick=2 VAR[i=@ave,l=25]
+plot/o/thick=2 VAR[i=@ave,l=1]
+
+set v ur
+let VAR=reg_mean_age
+plot/thick=2 VAR[i=@ave,l=25]
+!plot/o/thick=2 var[i=@ave,l=1]
+
+set v ll
+let VAR=reg_mean_age
+plot/thick=2 VAR[i=@ave,l=@ave]
+
+set v lr
+let VAR=x_cat_mean
+plot/vlimits=0:1/thick=2 VAR[i=@ave,l=25]
+plot/o/thick=2  VAR[i=@ave,l=1]
+
+let erosion=area*reg_eros_rate
+
+!list/x=-180,180/y=-90,90/erosion[i=@sum,l=@sum,k=700]
+
+sp "rm -f ferre*"

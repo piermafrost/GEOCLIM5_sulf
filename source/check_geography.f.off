@@ -1,0 +1,17 @@
+function_check_geography()
+    implicit none
+    include 'combine_foam.inc'
+    open(unit=967,status='replace',file='check_geography.dat',action='write')
+    do j = nlat,1,-1
+        do i = 1,nlon
+            k = nlon*(j-1) + i
+            if (areaclimber(k)>0) then
+                write(unit=967,fmt='(A1)',advance='no') '#'
+            else
+                write(unit=967,fmt='(A1)',advance='no') ' '
+            end if
+        end do
+        write(967,*)
+    end do
+    close(unit=967)
+end function

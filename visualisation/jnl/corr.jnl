@@ -1,0 +1,26 @@
+sp "rm -f ferre*"
+cancel data/all
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_vol4_veg_eros5_alt5.nc"
+
+!def sym int = l=1:500:10
+
+let p=gra_wth
+let q=runoff
+
+
+plot/vs/hlimits=0:300/vlimits=0:2 q[l=1],p[l=1]
+
+pause
+
+repeat/l=1:500:10 (plot/vs/hlimits=0:300/vlimits=0:2 q,p ; frame/file=corr-'j'.gif)
+
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+!sp "rm -f metafile*"
+sp "rm -f ferre*"

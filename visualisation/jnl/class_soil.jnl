@@ -1,0 +1,54 @@
+cancel data/all
+
+!sp "rm -f meta*"
+
+!set mode meta
+
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_vol6_veg_eros5.nc
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_vol4_veg_eros5.nc
+
+!use /Volumes/Storm/GEOCLIM3/OUTPUT/dynsoil_output.365_vol2_trap.nc
+!use /Volumes/Storm/GEOCLIM3/OUTPUT/geoclim_output.365_vol2_ss.nc
+
+show data
+
+let temp=if area ne 0 then temperature else (-1e34)
+let sloppy=if area ne 0 then slope else (-1e34)
+let grangeog=if area ne 0 then gra_wth else (-1e34)
+
+
+set w 1
+
+set v ul
+shade/x=0:360/level=(-inf)(-7,1,0.2)(inf) log(grangeog[d=1,l=2])
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+
+set v ur
+shade/x=0:360/level=(-inf)(-7,1,0.2)(inf) log(grangeog[d=2,l=2])
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+
+set v ll
+plot/vlimits=0:0.8/color=red grangeog[d=1,l=301,i=@ave]
+plot/color=black/o grangeog[d=1,l=2,i=@ave]
+
+se v lr
+plot/vlimits=0:0.8/x=0:360/color=red grangeog[d=2,l=301,i=@ave]
+plot/o/color=black grangeog[d=2,l=2,i=@ave]
+
+set w 2
+set v ul
+shade/x=0:360/pal=blue_darkred/level=(-inf)(-1,3,0.1)(inf) grangeog[d=1,l=301]/grangeog[d=1,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+
+set v ur
+shade/x=0:360/pal=blue_darkred/level=(-inf)(-1,3,0.1)(inf) grangeog[d=2,l=301]/grangeog[d=2,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+
+set v ll
+plot/vlimits=-0.2:0.5/color=red grangeog[d=1,l=301,i=@ave]-grangeog[d=1,l=4,i=@ave]
+
+se v lr
+plot/vlimits=-0.2:0.5/x=0:360/color=red grangeog[d=2,l=301,i=@ave]-grangeog[d=2,l=4,i=@ave]
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

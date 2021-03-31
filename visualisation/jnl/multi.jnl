@@ -1,0 +1,64 @@
+cancel data/all
+
+
+define viewport/xlim=0,0.5/ylim=0.5,1 a
+define viewport/xlim=0.5,1/ylim=0.5,1 b
+define viewport/xlim=0,0.5/ylim=0,0.5 c
+define viewport/xlim=0.5,1/ylim=0,0.5 d
+
+
+!###############################################################
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.bio_01.nc"
+let CO2_1=co2_atm_conc[d=1]
+let O2_1=o2_atm_conc[d=1]
+let fod_1=org_c_tot_dep_flux[d=1]
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.bio.nc"
+let CO2_2=co2_atm_conc[d=2]
+let O2_2=o2_atm_conc[d=2]
+let fod_2=org_c_tot_dep_flux[d=2]
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.bio2.nc"
+let CO2_3=co2_atm_conc[d=3]
+let O2_3=o2_atm_conc[d=3]
+let fod_3=org_c_tot_dep_flux[d=3]
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.bioprod.nc"
+let CO2_4=co2_atm_conc[d=4]
+let O2_4=o2_atm_conc[d=4]
+let fod_4=org_c_tot_dep_flux[d=4]
+
+let Nt='CO2_1,return=lsize'
+def sym tspan = 2:'Nt'
+
+let low=1e4
+let  high=15e6
+
+set viewport a 
+
+plot/thick=3/line CO2_1
+plot/thick=3/line/o CO2_2
+plot/thick=3/line/o CO2_3
+plot/thick=3/line/o CO2_4
+
+
+set viewport b
+plot/vlog/thick=3/line O2_1
+plot/thick=3/line/o O2_2
+plot/thick=3/line/o O2_3
+plot/thick=3/line/o O2_4
+
+set viewport c
+plot/thick=3/line fod_1
+plot/thick=3/line/o fod_2
+plot/thick=3/line/o fod_3
+plot/thick=3/line/o fod_4
+
+!################################################################
+
+!cancel data/all
+
+
+
+sp "rm -f ferret*"

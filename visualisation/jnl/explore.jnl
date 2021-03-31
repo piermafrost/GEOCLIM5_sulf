@@ -1,0 +1,211 @@
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+sp "rm -f meta*"
+
+set mode meta
+
+
+
+
+! ===================LOADING=====================================================
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol10_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol10_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol2_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol2_trap.nc"
+
+show data
+
+
+! ===================DEFINITION==================================================
+let fsil=if area gt 0 then reg_P_diss_rate*area else (-1e+34)
+let erosion=if area gt 0 then reg_eros_rate*area else (-1e+34)
+let production=if area gt 0 then reg_prod_rate*area else (-1e+34)
+let slope_cor=if area gt 0 then slope else (-1e+34)
+
+let fsil_mountain = if slope gt 0.05 then fsil else (-1.E+34)
+let fsil_plain = if slope le 0.05 then fsil else (-1.E+34)
+
+
+! ===================WINDOW======================================================
+set w 1
+
+set v ul
+plot/thick/vlimits=0:30 CO2_atm_level[d=2]
+plot/thick/o CO2_atm_level[d=4]
+
+set v ur
+shade/x=0:360 slope_cor[d=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v ll
+plot/thick/vlimits=10:50/title="Mountain Fsil contribution (%)" 100*fsil_mountain[d=1,x=@sum,y=@sum]/fsil[d=1,x=@sum,y=@sum]
+plot/thick/o 100*fsil_mountain[d=3,x=@sum,y=@sum]/fsil[d=3,x=@sum,y=@sum]
+
+set v lr
+plot/thick/vlimits=50:90/title="Plain Fsil contribution (%)" 100*fsil_plain[d=1,x=@sum,y=@sum]/fsil[d=1,x=@sum,y=@sum]
+plot/thick/o 100*fsil_plain[d=3,x=@sum,y=@sum]/fsil[d=3,x=@sum,y=@sum]
+
+! ===================WINDOW======================================================
+set w 2
+
+set v ul
+shade/x=0:360/lev="(-inf)(0,8,0.5)(inf)"/title="log Silicate weathering l=1" log(fsil_plain[d=1,l=1])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+list fsil[d=1,i=@sum,j=@sum,l=1]
+
+set v ur
+shade/x=0:360/lev="(-inf)(0,8,0.5)(inf)"/title="log Silicate weathering l=121" log(fsil_mountain[d=1,l=121])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v ll
+shade/x=0:360/lev="(-inf)(0,8,0.5)(inf)"/title="log Silicate weathering l=1" log(fsil_plain[d=3,l=1])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+set v lr
+shade/x=0:360/lev="(-inf)(0,8,0.5)(inf)"/title="log Silicate weathering l=121" log(fsil_mountain[d=3,l=121])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+
+
+!shade/x=0:360 log(fsil[d=1,i=@ave])
+
+! ===================WINDOW======================================================
+set w 3
+
+set v ul
+shade/x=0:360/lev="(-inf)(0.5,1.5,0.02)(inf)"/title="regolith erosion/production"/pal=blue_darkred (erosion[d=1,l=150]/production[d=1,l=1])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v ur
+shade/x=0:360/lev="(-inf)(0.5,1.5,0.02)(inf)"/title="regolith erosion/production"/pal=blue_darkred (erosion[d=1,l=121]/production[d=1,l=121])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v ll
+shade/x=0:360/lev="(-inf)(0.5,1.5,0.02)(inf)"/title="regolith erosion/production"/pal=blue_darkred (erosion[d=3,l=150]/production[d=3,l=1])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+set v lr
+shade/x=0:360/lev="(-inf)(0.5,1.5,0.02)(inf)"/title="regolith erosion/production"/pal=blue_darkred (erosion[d=3,l=121]/production[d=3,l=121])
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+
+! ===================WINDOW======================================================
+
+
+set w 4
+
+set v ul
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=1,l=102]/fsil[d=1,l=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v ur
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=1,l=120]/fsil[d=1,l=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v ll
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=1,l=121]/fsil[d=1,l=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+set v lr
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=1,l=121]/fsil[d=1,l=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+
+! ===================WINDOW======================================================
+set w 5
+
+set v ul
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=3,l=2]/fsil[d=3,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+set v ur
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=3,l=300]/fsil[d=3,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+set v ll
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=3,l=1000]/fsil[d=3,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+set v lr
+shade/x=0:360/lev="(-inf)(0.,2,0.05)(inf)"/pal=no_green_centered fsil[d=3,l=1000]/fsil[d=3,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=3]
+
+
+
+! ===================WINDOW======================================================
+set w 6
+
+set v ul
+plot/thick/vlimits=0:15/title="Sil weath mountains (mol/yr)" 1.3125*0.85*12.5*0.13*2500*fsil_mountain[d=1,x=@sum,y=@sum]/1e12
+plot/thick/o 1.3125*0.85*12.5*0.13*2500*fsil_mountain[d=3,x=@sum,y=@sum]/1e12
+
+set v ur
+plot/thick/vlimits=0:15/title="Sil weath plains (mol/yr)" 1.3125*0.85*12.5*0.13*2500*fsil_plain[d=1,x=@sum,y=@sum]/1e12
+plot/thick/o 1.3125*0.85*12.5*0.13*2500*fsil_plain[d=3,x=@sum,y=@sum]/1e12
+
+set v ll
+plot/thick/vs/vlim=1:9/hlim=3:9/title="log Fsil (green plain) vs log erosion"  log(erosion[d=1,l=121]) , log(fsil_mountain[d=1,l=121])
+plot/thick/color=green/vs/o  log(erosion[d=1,l=121]) , log(fsil_plain[d=1,l=121])
+
+set v lr
+plot/thick/vs/vlim=1:9/hlim=3:9/title="log Fsil (green plain) vs log erosion"  log(erosion[d=3,l=121]) , log(fsil_mountain[d=3,l=121])
+plot/thick/color=green/vs/o  log(erosion[d=3,l=121]) , log(fsil_plain[d=3,l=121])
+
+
+
+! ===================WINDOW======================================================
+!set w 7
+
+!set v ul
+!shade/y=-90:90/title="Fsil plain"/lev="(0,0.06,0.002)(inf)" 1.3125*0.85*12.5*0.13*2500*fsil_plain[d=1,i=@ave]/1e12!
+
+!set v ur
+!shade/y=-90:90/title="Fsil mountain"/lev="(0,0.06,0.002)(inf)" 1.3125*0.85*12.5*0.13*2500*fsil_mountain[d=1,i=@ave]/1e12
+
+!set v ll
+!shade/y=-90:90/title="Fsil plain"/lev="(0,0.06,0.002)(inf)" 1.3125*0.85*12.5*0.13*2500*fsil_plain[d=3,i=@ave]/1e12
+
+!set v lr
+!shade/y=-90:90/title="Fsil mountain"/lev="(0,0.06,0.002)(inf)" 1.3125*0.85*12.5*0.13*2500*fsil_mountain[d=3,i=@ave]/1e12
+
+list 1.3125*0.85*12.5*0.13*2500*fsil_plain[d=3,i=@sum,j=@sum,l=2]/1e12
+
+
+
+
+! ===================WINDOW======================================================
+set w 8
+
+set v ul
+shade/x=0:360/pal=rain_cmyk runoff[d=1,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+!shade/y=-90:90 reg_thickness[d=1,i=@ave]
+
+set v ur
+shade/x=0:360 temperature[d=1,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+
+set v ll
+shade/x=0:360/pal=rain_cmyk runoff[d=3,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+
+set v lr
+shade/x=0:360 temperature[d=3,l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area[d=1]
+
+!shade/y=-90:90 reg_thickness[d=3,i=@ave]
+
+list 1.3125*0.85*12.5*0.13*2500*fsil_mountain[d=3,i=@sum,j=@sum,l=2]/1e12
+
+sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

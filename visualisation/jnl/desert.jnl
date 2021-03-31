@@ -1,0 +1,37 @@
+!this routine estimates the weathering flux from zero-runoff area prior to the perturbation
+
+
+
+cancel data/all
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol2_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol4_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol8_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol12_trap.nc"
+
+
+let fsil_cont = if area ne 0 then 0.85*12.5*0.13*2500*reg_P_diss_rate*area/1e12 else (-1e34)
+let fsil_desert = if runoff[l=1] eq 0 then fsil_cont else (-1e34)
+
+set v ul
+plot/thick/title='desert weathering flux (Tmol/yr)' fsil_desert[d=1,x=@sum,y=@sum]
+plot/thick/o fsil_desert[d=2,x=@sum,y=@sum]
+plot/thick/o fsil_desert[d=3,x=@sum,y=@sum]
+plot/thick/o fsil_desert[d=4,x=@sum,y=@sum]
+
+
+
+set v ur
+plot/thick/title='desert weathering contribution (%)' 100*fsil_desert[d=1,x=@sum,y=@sum]/fsil_cont[d=1,x=@sum,y=@sum]
+plot/thick/o 100*fsil_desert[d=2,x=@sum,y=@sum]/fsil_cont[d=2,x=@sum,y=@sum]
+plot/thick/o 100*fsil_desert[d=3,x=@sum,y=@sum]/fsil_cont[d=2,x=@sum,y=@sum]
+plot/thick/o 100*fsil_desert[d=4,x=@sum,y=@sum]/fsil_cont[d=2,x=@sum,y=@sum]
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

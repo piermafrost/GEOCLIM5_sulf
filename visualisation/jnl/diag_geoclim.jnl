@@ -1,0 +1,642 @@
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+set mode linecolors:10
+set win/new
+PPL COLOR,7,100,50,0 ! orange
+PPL COLOR,8,0,55,0 ! dark green
+PPL COLOR,9,60,0,100 ! purple
+PPL COLOR,10,100,60,70 ! pink
+
+!**************************************!
+let SAVEFIG = 0
+def sym OUTFIG = geoclim.ps
+!**************************************!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.warmworld.nc"
+use "/Users/yves/fortran/GEOCLIM4_thea/OUTPUT/geoclim_output.200Ma_highCO2_ws.nc"
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+let FVOL = 6.8e12 ! mol of C / y
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+let Nt = `DIC,return=lsize`
+def sym tspan = 2:`Nt`
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+def sym winset = /aspect=0.7071/size=1.3
+
+def sym margesU = go margins .2 .3 1 .4
+def sym margesD = go margins .2 2.2 1 .4
+
+
+define viewport/xlim=0,0.5/ylim=0.58,1 a
+define viewport/xlim=0.5,1/ylim=0.58,1 b
+define viewport/xlim=0,0.5/ylim=0,0.56 c
+define viewport/xlim=0.5,1/ylim=0,0.56 d
+
+
+
+
+IF `SAVEFIG EQ 1` THEN sp rm -f metafile*
+IF `SAVEFIG EQ 1` THEN set mode metafile 
+
+
+set win($winset) 1
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = HCO3
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="HCO3- (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ; plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = CO3
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="CO3 2- (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = DIC
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="DIC (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" ($VAR)_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = H2CO3
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="H2CO3 (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = CA
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Ca2+ (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" ($VAR)_GLOB
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = O2
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="O2 (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = ALKALINITY
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Alkalinity (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ALK_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = PO4
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="PO4 2- (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = POP
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Part Org P (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" ($VAR)_GLOB
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = PIP
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Part Inorg P (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = POC
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Part Org C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = PIC
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="part Inorg C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = SR_ISO_RATIO
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="86Sr/87Sr (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" SR_IS_RAT_GLOB
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = PIC_SR_ISO_RATIO
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="PIC 86Sr/87Sr (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 PIC_SR_IS_RAT_GLOB
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = SR
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Sr2+ (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = SR_PIC
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="PIC Sr (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = HCO3_D13C
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="HCO3- d13C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = CO3_D13C
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="CO3 2- d13C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = DIC_D13C
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="DIC d13C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" ($VAR)_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = H2CO3_D13C
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="H2CO3 d13C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = LI
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Li+ (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" ($VAR)_GLOB
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = D7LI
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="d7Li (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = PIC_D13C
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="PIC d13C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = POC_D13C
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="POC d13C (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = TEMPERATURE
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="temperature (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="GLOBAL MEAN" ($VAR)_GLOB
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = SALINITY
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="salinity (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = PH
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="pH (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = OMEGA
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Omega (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/nolab/col=black/thick=3 ($VAR)_GLOB
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+let ymin000 = min(GRAN_WTH_C_FLUX,BAS_WTH_C_FLUX)
+let ymin00 = min(ymin000,ORG_C_TOT_DEP_FLUX)
+let ymin0 = min(ymin00,KER_WTH_C_FLUX)
+let ymin = ymin0[l=($tspan)@min]
+let ymax00 = max(GRAN_WTH_C_FLUX+BAS_WTH_C_FLUX,ORG_C_TOT_DEP_FLUX)
+let ymax0 = max(ymax00,KER_WTH_C_FLUX)
+let ymax = ymax0[l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="carbon fluxes (`GRAN_WTH_C_FLUX.units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+plot/o/col=black/title="org C oxyd"  KER_WTH_C_FLUX
+plot/o/col=blue/title="org C burial"  ORG_C_TOT_DEP_FLUX
+plot/o/dashed/col=purple/title="basalt weathering"  BAS_WTH_C_FLUX
+plot/o/dashed/col=red/title="granit weathering"  GRAN_WTH_C_FLUX
+plot/o/col=red/title="tot sil weathering"  GRAN_WTH_C_FLUX+BAS_WTH_C_FLUX
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = AO_CO2_FLUX
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="Atm -> Oce CO2 fluxes (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+plot/o/dashed/col=black/thick=3/title="TOTAL FLUX" 1*AO_TOT_CO2_FLUX
+
+set viewport a
+($margesU)
+let ymin0 = min(O2_ATM_LEVEL,CO2_ATM_LEVEL)
+let ymin = ymin0[j=1:9@min,l=($tspan)@min]
+let ymax0 = max(O2_ATM_LEVEL,CO2_ATM_LEVEL)
+let ymax = ymax0[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up/title="atmospheric gases (`O2_ATM_LEVEL.units`)"($vlim) 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+plot/title="O2"/o/col=red/thickness=3 O2_ATM_LEVEL
+plot/title="CO2"/o/col=black/thickness=2 CO2_ATM_LEVEL
+
+set viewport b
+($margesU)
+plot/set_up/title="atm CO2 d13C" CO2_d13C[j=10]
+go unlabel ($LABNUM_DSET) ; ppl plot
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+!----------------------------!
+def sym VAR = PIC_SINK_FLUX
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="PIC vertical flux (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = CARB_NER_DEP_FLUX
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="carb. ner. deposition flux (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport a
+($margesU)
+!----------------------------!
+def sym VAR = CARB_PROD_C_FLUX
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="carbonate production flux (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = CARB_DISS_C_FLUX
+!----------------------------!
+let ymin = ($VAR)[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="carbonate dissolution flux (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+
+
+
+!================================================!
+IF `SAVEFIG NE 1` THEN pause ; set win($winset) 1
+!================================================!
+
+
+
+set viewport c
+($margesD)
+let ymin0 = min(carb_ner_tot_dep_flux+carb_pel_tot_dep_flux,carb_wth_C_flux)
+let ymin = ymin0[l=($tspan)@min]
+let ymax0 = max(carb_ner_tot_dep_flux+carb_pel_tot_dep_flux,carb_wth_C_flux)
+let ymax = ymax0[l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="carbonate budget (`carb_ner_tot_dep_flux.units`)" 0*carb_ner_tot_dep_flux+ymin
+go unlabel ($LABNUM_DSET) ; ppl plot
+plot/o/title="cont wth"/dashed/thickness=2/col=green carb_wth_C_flux
+plot/o/title="oce dep"/thickness=2/col=green carb_ner_tot_dep_flux+carb_pel_tot_dep_flux
+
+set viewport d
+($margesD)
+!----------------------------!
+def sym VAR = ORG_C_BIO_PROD
+!----------------------------!
+let VAR2 = (IF ($VAR) GT 0) THEN ($VAR) ; let ymin = VAR2[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up/vlog($vlim)/title="biological productivity (`($VAR).units`)" 0*O2_ATM_LEVEL+1e-9
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/line=`j`/title="`tit`" ($VAR)   )
+
+set viewport a
+($margesU)
+let VAR1 = KER_WTH_C_FLUX - ORG_C_TOT_DEP_FLUX
+let VAR2 = FVOL - GRAN_WTH_C_FLUX - BAS_WTH_C_FLUX
+let VAR0 = VAR1 + VAR2
+let ymin00 = min(VAR1,VAR2)
+let ymin0 = min(ymin00,VAR0)
+let ymin = ymin0[l=($tspan)@min]
+let ymax00 = max(VAR1,VAR2)
+let ymax0 = max(ymax00,VAR0)
+let ymax = ymax0[l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up($vlim)/title="C cycle disequilibrium (src-sink) (`KER_WTH_C_FLUX.units`)"/dashed    0*KER_WTH_C_FLUX
+go unlabel ($LABNUM_DSET) ; ppl plot
+plot/o/title="total"/dashed/thickness=2/col=blue VAR0
+plot/o/title="organic"/thickness=2/col=red VAR1
+plot/o/title="inorganic"/thickness=2/col=black VAR2
+
+set viewport b
+($margesU)
+!----------------------------!
+def sym VAR = ORG_C_DEP_FLUX
+!----------------------------!
+let VAR2 = (IF ($VAR) GT 0) THEN ($VAR) ; let ymin = VAR2[j=1:9@min,l=($tspan)@min]
+let ymax = ($VAR)[j=1:9@max,l=($tspan)@max]
+IF `ymax GT ymin` THEN def sym vlim = /vlim=`ymin`:`ymax` ELSE cancel sym vlim
+plot/set_up/vlog($vlim)/title="organic carbon burial (`($VAR).units`)" 0*O2_ATM_LEVEL+`ymin`
+go unlabel ($LABNUM_DSET) ; ppl plot
+repeat/j=1:9 (   let tit = (box).box_`j`   ;   plot/o/nolab/line=`j`/title="`tit`" ($VAR)   )
+
+
+
+IF `SAVEFIG EQ 1` THEN cancel mode metafile 
+IF `SAVEFIG EQ 1` THEN sp Fprint -R -o ($outfig) metafile.plt.* metafile.plt
+IF `SAVEFIG EQ 1` THEN sp rm -f metafile*
+
+sp "rm -f ferre*"

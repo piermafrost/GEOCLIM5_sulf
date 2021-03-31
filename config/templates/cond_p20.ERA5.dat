@@ -1,0 +1,33 @@
+ 4.102033d+12 Volcanic degassing rate (mol/yr)
+  0.6d+12     MOR degassing rate (mol/yr) !0.8
+  0.0d+12     SO4 degassing by trapp onset deposited on the continents
+  0.0d+12     SO4 degassing by trapp onset deposited on the sea
+  0.0d+12     SO4 degassing by trapp onset in the deep sea
+  0.0d+13     CO2 degassing by trapp onset into the atmosphere  !1d13
+  0.0d+12     CO2 degassing by trapp onset into the deep ocean
+  0           Trapp degassing (y:1/n:0)
+  0           random biodiversity (y:1/n:0)
+  0           fauna type (global:0/endemic:1)
+  0           extinction if biomass below a threshold (y:1/n:0)
+  0           extrinsic extinction (only producers (y:1/n:0)
+  1           interactions between producers (y:1/n:0)
+  1           0:closed system, 1:open system
+  1           0:no carbonate shells, 1:carbonate shells  !0.01
+  0	      0: PIC everywhere, 1: PIC in shelfal environment only
+  1           0:closed P cycle, 1:open P cycle
+  1           0:closed organic C cycle, 1:open organic C cycle
+  1           0:no impact on oceanic biological productivity, 1: impact
+  0.25        solver timestep (yrs)  !0.02  0.05
+  0.          Starting time for iteration (yrs)
+  1.d5        Ending time for iteration (yrs)
+  4000        Print combine and biodiv outputs every ....*timestep yrs --- for long runs, 250000 is good
+  400000      Print geographically-distributed outputs every ....*timestep yrs --- for long runs, 2500000 is good
+  -1.         Age for generating an initialisation file (null or negative value means "at the end of the run")
+  1.          oxygen acceleration factor (1. is for no acceleration) -- 100. is a good value for equilibrium-reaching
+  0           0:rk4 solver
+  100         integrate continental weathering every ....*timestep (yrs) --- can be raised to 1000 to hasten equilibrium-reaching
+  4           integrate DYNSOIL variables every .... * cont_weath_jump * timestep (yrs)
+  2000000     print DYNSOIL variables every ....*timestep (yrs)
+  0           read vegetation occupation map and modified continental weathering accordingly (0: no, 1: yes)
+  100000      read next vegetation map every ....*timestep (yrs)
+  0           convert geoclim and biodiv netcdf output to ascii (y:1/n:0)

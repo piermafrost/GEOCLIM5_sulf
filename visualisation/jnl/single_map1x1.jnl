@@ -1,0 +1,27 @@
+DEFINE AXIS/X=0.5:359.5:1/units=degrees_east/modulo lon
+DEFINE AXIS/Y=-89.5:89.5:1/units=degrees_north lat
+DEFINE GRID/x=lon/y=lat topo_grid
+
+sp "rm -f out1.nc"
+
+FILE/GRID=topo_grid/VAR="temp" "/Users/yves/fortran/GEOCLIM3/calibration/present_day/temp1x1.out"
+SAVE/FILE=out1.nc temp
+
+show data
+
+let a = if (temp lt (-49)) then (-1.e+34) else temp
+
+set REGION/X=-180:180/Y=90s:90n
+
+
+
+shade /x=0:360/y=-90:90/lev=(-inf)(-40,40,2)(inf)/pal=blue_orange/title="temperature" a
+
+
+list/x=0:360/y=60s:60n a[i=@ave,j=@ave]
+list/x=0:360/y=90s:60s a[i=@ave,j=@ave]
+list/x=0:360/y=60n:90n a[i=@ave,j=@ave]
+
+
+sp "rm -f ferre*"
+sp "rm -f out1.nc"

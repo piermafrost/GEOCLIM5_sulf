@@ -1,0 +1,52 @@
+!this routine explores the weathering regime
+
+
+cancel data/all
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_vol2_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_vol4_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_vol8_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_vol12_trap.nc"
+
+
+let regime=reg_prod_rate/reg_eros_rate
+let P_diss=0.85*12.5*0.13*2500*reg_P_diss_rate*area/1e12
+
+
+set v ul
+plot/thick/title='weathering regime sum' regime[d=1,x=@sum,y=@sum]/regime[d=1,l=3,x=@sum,y=@sum]
+plot/thick/o regime[d=2,x=@sum,y=@sum]/regime[d=2,l=3,x=@sum,y=@sum]
+plot/thick/o regime[d=3,x=@sum,y=@sum]/regime[d=3,l=3,x=@sum,y=@sum]
+plot/thick/o regime[d=4,x=@sum,y=@sum]/regime[d=4,l=3,x=@sum,y=@sum]
+
+
+
+set v ur
+plot/thick/title='weathering regime averaged' regime[d=1,x=@ave,y=@ave]/regime[d=1,l=3,x=@ave,y=@ave]
+plot/thick/o regime[d=2,x=@ave,y=@ave]/regime[d=2,l=3,x=@ave,y=@ave]
+plot/thick/o regime[d=3,x=@ave,y=@ave]/regime[d=3,l=3,x=@ave,y=@ave]
+plot/thick/o regime[d=4,x=@ave,y=@ave]/regime[d=4,l=3,x=@ave,y=@ave]
+
+
+set v ll
+plot/thick/vlimits=1:10/title="averaged regolith thickness" reg_thickness[d=1,x=@ave,y=@ave]
+plot/o/thick reg_thickness[d=2,x=@ave,y=@ave]
+plot/o/thick reg_thickness[d=3,x=@ave,y=@ave]
+plot/o/thick reg_thickness[d=4,x=@ave,y=@ave]
+
+
+set v lr
+plot/thick/vlimits=0:15/title="total silicate weathering (mol CO2/yr)" P_diss[d=1,x=@sum,y=@sum]
+plot/o/thick P_diss[d=2,x=@sum,y=@sum]
+plot/o/thick P_diss[d=3,x=@sum,y=@sum]
+plot/o/thick P_diss[d=4,x=@sum,y=@sum]
+
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

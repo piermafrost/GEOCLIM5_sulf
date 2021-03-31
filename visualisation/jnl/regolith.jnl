@@ -1,0 +1,81 @@
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+sp "rm -f meta*"
+
+set mode meta
+
+
+define viewport/xlim=0:0.33/ylim=0:0.33 w1
+define viewport/xlim=0.33:0.66/ylim=0:0.33 w2
+define viewport/xlim=0.66:0.99/ylim=0:0.33 w3
+define viewport/xlim=0:0.33/ylim=0.33:0.66 w4
+define viewport/xlim=0.33:0.66/ylim=0.33:0.66 w5
+define viewport/xlim=0.66:0.99/ylim=0.33:0.66 w6
+define viewport/xlim=0:0.33/ylim=0.66:0.99 w7
+define viewport/xlim=0.33:0.66/ylim=0.66:0.99 w8
+define viewport/xlim=0.66:0.99/ylim=0.66:0.99 w9
+
+
+
+! ===================LOADING=====================================================
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol6_veg_eros5_alt5.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol6_veg_eros5_alt5.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_vol6_veg_eros5_alt5.nc"
+
+show data
+
+let prod=reg_prod_rate*area
+let eros=reg_eros_rate*area
+
+let net_reg=(prod-eros)   !m3/yr
+
+
+! ===================WINDOW======================================================
+set w 1
+
+set v w1
+plot/title="Regolith net production (m3/yr)" net_reg[d=1,i=@sum,j=@sum]
+
+set v w2
+plot/title="Regolith production and erosion (m3/yr)" prod[d=1,i=@sum,j=@sum]
+plot/o eros[d=1,i=@sum,j=@sum]
+
+set v w3
+plot/title="CO2 consumption sil weath (1e12 mol/yr)" gran_wth_C_flux[d=2]/1.d12
+
+set v w4
+plot/title="Atmospheric CO2" CO2_atm_level[d=2]
+
+set v w5
+plot/vs/ribbon/title="reg erosion/reg production" prod[d=1,i=@sum,j=@sum],eros[d=1,i=@sum,j=@sum],CO2_atm_level[d=2]
+
+set v w6
+plot/title="cation depletion @ surface" x_cat_surf[d=1,i=@ave,j=@ave]
+
+set v w7
+let reg_volume=reg_thickness[d=1]*area[d=1]   !total regolith volume m3
+plot/title="total regolith volume (m3)" reg_volume[i=@sum,j=@sum]
+!plot reg_thickness[d=1,i=@ave,j=@ave]
+
+set v w8
+let Tcont=if area ne 0 then temperature else (-1e34)
+let Toce=if area eq 0 then temperature else (-1e34)
+plot/vlimits=-10:35/title="atm + ocean T (C)" Tcont[i=@ave,j=@ave]
+plot/o Toce[i=@ave,j=@ave]
+
+set v w9
+let runtot=runoff[d=3]*area[d=3]
+plot/title="total runoff (m3/yr)" runtot[i=@sum,j=@sum]
+
+
+
+! ===================CLOSING=====================================================
+sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

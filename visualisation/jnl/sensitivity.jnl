@@ -1,0 +1,26 @@
+!this routine plots the relative proportion of mountains and plains contribution to total weathering
+
+cancel data/all
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol2_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol4_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol8_trap.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol12_trap.nc"
+
+let CO2= CO2_atm_level
+let fsil=gran_wth_c_flux/1e12
+
+plot/thick/vs/hlimits=0:30/vlimits=1.5:20 CO2[d=1],fsil[d=1]
+plot/o/thick/vs/color=red CO2[d=2],fsil[d=2]
+plot/o/thick/vs/color=green CO2[d=3],fsil[d=3]
+plot/o/thick/vs/color=blue CO2[d=4],fsil[d=4]
+
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

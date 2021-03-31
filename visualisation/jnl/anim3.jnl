@@ -1,0 +1,32 @@
+sp "rm -f ferre*"
+
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_vol4_trap.nc"
+
+set w 1
+
+def sym int = l=1:1201:2
+
+let RT = if area ne 0 then (reg_P_diss_rate)/reg_P_diss_rate[l=2] else (-1e34)
+shade/x=0:360/y=-90:90/lev="(-inf)(0,2,0.05)(inf)"/pal=blue_darkred RT[l=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+pause
+repeat/($int) ( shade/o/x=0:360/y=-90:90/lev="(-inf)(0,2,0.05)(inf)"/nolab/pal=blue_darkred RT)  !; frame/file=regthick_high.gif)
+
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"
+

@@ -1,0 +1,122 @@
+sp "rm -f ferre*"
+
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_lowT_trap_nobas.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.265_highT_trap_nobas.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_lowT_trap_nobas.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_highT_trap_nobas.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.265_lowT_trap_nobas_classic.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.265_highT_trap_nobas_classic.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_lowT_trap_nobas_class.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_highT_trap_nobas_class.nc"
+
+set region/x=-180:180
+
+set w 1
+
+let RT=if area gt 0 then temperature[t=3e6]-temperature[l=1]
+
+set v ul
+shade/x=0:360/lev="(0,2,0.1)" RT[d=1]
+
+set v ll
+shade/x=0:360/lev="(0,2,0.1)" RT[d=2]
+
+set v ur
+shade/x=0:360/lev="(0,2,0.1)" RT[d=3]
+
+set v lr
+shade/x=0:360/lev="(0,2,0.1)" RT[d=4]
+
+
+set w 2
+
+let RT=if area eq 0 then temperature[t=3e6]-temperature[l=1]
+
+set v ul
+shade/x=0:360/lev="(0,2,0.1)" RT[d=1]
+
+set v ll
+shade/x=0:360/lev="(0,2,0.1)" RT[d=2]
+
+set v ur
+shade/x=0:360/lev="(0,2,0.1)" RT[d=3]
+
+set v lr
+shade/x=0:360/lev="(0,2,0.1)" RT[d=4]
+
+
+
+set w 3
+
+let RT=if area gt 0 then temperature[t=3e6]-temperature[l=1]
+
+set v ul
+shade/x=0:360/lev="(0,2,0.1)" RT[d=5]
+
+set v ll
+shade/x=0:360/lev="(0,2,0.1)" RT[d=6]
+
+set v ur
+shade/x=0:360/lev="(0,2,0.1)" RT[d=7]
+
+set v lr
+shade/x=0:360/lev="(0,2,0.1)" RT[d=8]
+
+
+set w 4
+
+let RT=if area eq 0 then temperature[t=3e6]-temperature[l=1]
+
+set v ul
+shade/x=0:360/lev="(0,2,0.1)" RT[d=5]
+
+set v ll
+shade/x=0:360/lev="(0,2,0.1)" RT[d=6]
+
+set v ur
+shade/x=0:360/lev="(0,2,0.1)" RT[d=7]
+
+set v lr
+shade/x=0:360/lev="(0,2,0.1)" RT[d=8]
+
+
+set w 5
+
+set v ul
+let RT=if area[d=1] ne 0 then (temperature[t=3e6,d=2]-temperature[l=1,d=2])-(temperature[t=3e6,d=1]-temperature[l=1,d=1])
+list RT[i=@ave,j=@ave]
+shade/x=0:360/lev="(-inf)(-0.6,0.6,0.025)(inf)"/title="265 Ma Trap T change high-low"/pal=blue_orange RT
+
+set v ll
+let RT=if area[d=3] ne 0 then (temperature[t=3e6,d=4]-temperature[l=1,d=4])-(temperature[t=3e6,d=3]-temperature[l=1,d=3])
+list RT[i=@ave,j=@ave]
+shade/x=0:360/lev="(-inf)(-0.6,0.6,0.025)(inf)"/title="365 Ma Trap T change high-low"/pal=blue_orange RT
+
+set v ur
+let RT=if area[d=5] ne 0 then (temperature[t=3e6,d=6]-temperature[l=1,d=6])-(temperature[t=3e6,d=5]-temperature[l=1,d=5])
+list RT[i=@ave,j=@ave]
+shade/x=0:360/lev="(-inf)(-0.6,0.6,0.025)(inf)"/title="265 Ma Trap T change high-low classic"/pal=blue_orange RT
+
+set v lr
+let RT=if area[d=7] ne 0 then (temperature[t=3e6,d=8]-temperature[l=1,d=8])-(temperature[t=3e6,d=7]-temperature[l=1,d=7])
+list RT[i=@ave,j=@ave]
+shade/x=0:360/lev="(-inf)(-0.6,0.6,0.025)(inf)"/title="365 Ma Trap T change high-low classic"/pal=blue_orange RT
+
+
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

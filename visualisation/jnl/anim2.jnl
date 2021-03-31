@@ -1,0 +1,40 @@
+sp "rm -f ferre*"
+cancel data/all
+
+
+use "/Users/yves/fortran/GEOCLIM4/OUTPUT/dynsoil_output.365_vol4_veg_alt5.nc"
+!use "/Volumes/Storm/GEOCLIM3/OUTPUT/geographic_output.365_vol10_class_trap.nc"
+
+set region/x=-180:180
+
+def sym int = l=1:1000:2
+
+set w 1
+!let RT = reg_thickness-reg_thickness[l=2]
+let RT = log(reg_prod_rate/reg_eros_rate)
+!let RT = if area ne 0 then temperature else (-1e34)
+!let RT =  log(gra_wth[d=1]/gra_wth[d=2])
+!let RT = if area ne 0 then log(reg_P_diss_rate) else (-1e34)
+
+
+shade/x=0:360/y=-90:90/lev=(-inf)(-2,2,0.1)(inf)/pal=blue_darkred RT[l=1]
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+pause
+repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-inf)(-2,2,0.1)(inf)/pal=blue_darkred/nolab RT)    !frame/file=regthick_high.gif)
+
+!set w 1
+!shade/x=0:360/y=-90:90/pal=land_sea slope
+
+!set w 2
+!shade/x=0:360/y=-90:90/pal=blue_darkred/level=(-inf)(-15,15,0.5)(inf) RT[l=1]
+!shade/o/x=0:360/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/nolab/x=0:360/y=-90:90/pal=blue_darkred/level=(-inf)(-15,15,1)(inf) RT)  !; frame/file=regthick_high.gif)
+
+
+!pause
+
+
+
+sp "rm -f ferre*"
+

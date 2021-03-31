@@ -1,0 +1,68 @@
+DEFINE AXIS/X=0:357.1875:2.8125/units=degrees_east/modulo lon
+DEFINE AXIS/Y=-89.296875:89.296875:1.40625/units=degrees_north lat
+DEFINE GRID/x=lon/y=lat topo_grid
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_lowT_hx5_trap_bas.nc"
+
+set REGION/X=-180:180
+
+show data
+
+set w 1
+
+set v ul
+let VAR=reg_thickness
+plot/thick=2 VAR[i=@ave,l=2]    !y=-10:10@ave]
+!plot/vlimits=0:100/thick=2 VAR[i=@ave,k=1]
+plot/o/thick=2  VAR[i=@ave,l=300]
+
+
+
+set v ll
+let VAR=x_cat_surf
+plot/thick=2 VAR[i=@ave,l=1]
+plot/o/thick=2  VAR[i=@ave,l=300]
+
+
+
+set v lr
+let VAR=0.85*12.5 * 0.13 * 2500*reg_P_diss_rate
+plot/thick=2 VAR[i=@ave,l=1]
+plot/o/thick=2 VAR[i=@ave,l=300]
+!plot/o/thick=2  VAR[i=-15:15@sum,j=@sum]
+!plot/o/thick=2  VAR[i=-90:15@sum,j=@sum]
+
+
+
+set v ur
+let VAR=reg_prod_rate
+plot/thick=2 VAR[i=@ave,l=1]
+plot/o/thick=2 VAR[i=@ave,l=300]
+
+
+set w 2
+
+set v ul
+let VAR=(runoff/100)*area
+let runofftot=var[i=@sum,j=@sum]/area[i=@sum,j=@sum]
+list runofftot
+plot/thick=2 runofftot*100  !VAR[i=@ave,j=@ave]  !cm/yr
+
+set v ur
+let VAR=0.85*12.5 * 0.13 * 2500*reg_P_diss_rate
+plot/thick=2 VAR[i=@ave,j=@ave]/var[i=@ave,j=@ave,l=1]
+!plot/o/thick=2 var[i=@ave,j=1]
+
+set v ll
+let VAR=reg_eros_rate
+plot/thick=2 VAR[i=@ave,j=@ave]/var[i=@ave,j=@ave,l=1]
+
+set v lr
+let VAR=temperature
+plot/thick=2 VAR[i=@ave,j=@ave]
+!plot/o/thick=2  VAR[i=@ave,j=1]
+
+
+!list/x=-180,180/y=-90,90/erosion[i=@sum,j=@sum,k=700]
+
+sp "rm -f ferre*"

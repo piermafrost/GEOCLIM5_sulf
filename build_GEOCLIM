@@ -1,0 +1,792 @@
+#!/bin/bash
+
+
+############################################################################
+##                           Default Parameters                           ##
+############################################################################
+
+DEF_NLITH=6
+DEF_NDSLEVS=10
+
+declare -a KNOWN_COMPILERS=('gfortran' 'ifort' 'pgfortran')
+
+
+############################################################################
+##                            Argument scanning                           ##
+############################################################################
+
+display_help=0
+compset=""
+resolution=""
+interpolation="log"
+lock=""
+comp_mode=""
+compiler=""
+main_fflags=""
+all_fflags=""
+display_list=""
+reset=0
+# do not initialize 'ncpath' => take the environment variable if defined. If not, will be defined in the Makefile
+
+need_value=""
+got_option=0
+
+while [ $# -ge 1 ]
+do
+
+    # record if at least 1 option was passed
+    test "${1:0:1}" == "-" && got_option=1
+
+    if [ -z $need_value ]
+    then
+
+	case $1 in
+
+	    "-c"|"--compset"|"--set-of-components")
+		need_value="compset"
+		;;
+
+	    "-r"|"--res"|"--resolution")
+		need_value="res"
+		;;
+
+	    "-i"|"--interp"|"--interpolation")
+		need_value="interp"
+		;;
+
+	    "--lock")
+		need_value="lock"
+		;;
+
+	    "--mode"|"--compilation-mode")
+		need_value="mode"
+		;;
+
+	    "-fc"|"--compiler"|"--fortran-compiler")
+		need_value="compiler"
+		;;
+
+	    "--ncpath")
+		need_value="ncpath"
+		;;
+
+	    "--fflags")
+		need_value="fflags"
+		;;
+
+	    "--all-fflags")
+		need_value="all-fflags"
+		;;
+
+	    "--reset")
+		reset=1
+		;;
+
+	    "-l"|"--list")
+		need_value="list"
+		;;
+
+	    "-h"|"--help")
+		display_help=1
+		;;
+
+	    *)
+	        echo ""
+		echo "Warning: unexpected argument $1. Will be ignored"
+		;;
+	
+	esac
+	
+    else  # => previous option need a value
+
+	case $need_value in
+	    "compset")     compset=$1;;
+	    "res")         resolution=$1;;
+	    "interp")      interpolation=$1;;
+	    "lock")        lock=$1;;
+	    "mode")        comp_mode=$1;;
+	    "compiler")    compiler=$1;;
+	    "ncpath")      ncpath=$1;;
+	    "fflags")      main_fflags=$1;;
+	    "all-fflags")  all_fflags=$1;;
+	    "list")        display_list=$1;;
+	esac
+	need_value=""
+
+    fi
+
+    shift 1
+
+done
+
+if [ ! -z $need_value ]
+then
+    echo ""
+    echo "Error: option \"$need_value\" requires an argument"
+    exit 1
+fi
+
+test $got_option -eq 0 && display_help=1
+
+# "All fflags" option override "main fflags":
+test -z $all_fflags || main_fflags=""
+
+
+
+
+############################################################################
+##                              Display text                              ##
+############################################################################
+
+# Help text
+# ---------
+
+if [[ $display_help -eq 1 ]]
+then
+    echo ""
+    echo "SYNOPSIS"
+    echo ""
+    echo "     ./build_GEOCLIM --compset set_of_comps --res c,n,m[,l[,k]] [--interp log|linear] [--compiler comp] [--ncpath path]"
+    echo "     ./build_GEOCLIM --list compsets|compilers"
+    echo "     ./build_GEOCLIM --help"
+    echo ""
+    echo ""
+    echo "DESCRIPTION"
+    echo ""
+    echo "     'build_GEOCLIM' is a generic bash script to compile GEOCLIM model. It allows"
+    echo "     user to choose some options, such as GEOCLIM modules (set of components),"
+    echo "     resolution, fortran compiler... It also performs some of consistency tests."
+    echo ""
+    echo "     MANDATORY ARGUMENTS:"
+    echo ""
+    echo "     -c|--compset|--set-of-components set_of_comps"
+    echo "             Specifiy the set of components 'set_of_comps' to use."
+    echo "             Do \`./build_geoclim --list compsets\` to see the list of possible"
+    echo "             sets of components."
+    echo ""
+    echo "     -r|--res|--resolution c,n,m[,l[,k]]"
+    echo "             Specify the resolution of data used by the different modules."
+    echo "             c, n, m, l and k must be positive integers, separated by commas."
+    echo "             They also must be consistent with the input files."
+    echo "             'c': Number of CO2 levels. Mandatory"
+    echo "             'n' and 'm': x and y size of geographic fields (area, temperature,"
+    echo "                          runoff...) Mandatory"
+    echo "             'l': Number of lithology classes. Optional, default: $DEF_NLITH"
+    echo "                  In order to specify 'k' without specifying 'l', use '_'."
+    echo "             'k': Number of vertical levels in DynSoil module. Ignored if the"
+    echo "                  module is not activated (see sets of components). Optional,"
+    echo "                  default: $DEF_NDSLEVS"
+    echo ""
+    echo "     OPTIONAL ARGUMENTS:"
+    echo ""
+    echo "     -i|--interp|--interpolation interpolation_mode"
+    echo "             Specify which functional form to use for CO2 interpolation (i.e.,"
+    echo "             to interpolate climate fields between 2 CO2 levels)."
+    echo "             Must be 'linear' (abrr. 'lin') or 'logarithmic' (abrr. 'log')."
+    echo "             Default value is 'log'."
+    echo ""
+    echo "     --lock species"
+    echo "             \"Lock\" a specific geochemical cycle (i.e., force sources to"
+    echo "             balance sinks at each time step). \"species\" must be a list of"
+    echo "             cycles to lock (1 character per cycle, without space or separator)."
+    echo "             This option is only available for Oxygen and Sulfur. i.e., species"
+    echo "             can be O, S or OS (for both)."
+    echo "             Note that for Carbon, the fixed-CO2 mode does a similar effect."
+    echo ""
+    echo "     -fc|--compiler|--fortran-compiler compiler_name"
+    echo "             Compile GEOCLIM with compiler 'compiler_name'"
+    echo "             If not specified, build_GEOCLIM try and get git with \`nc-config\`."
+    echo "             If it fails, it uses the default compiler stated in the Makefile."
+    echo "             If the given compiler is not installed, it picks the first \"known\""
+    echo "             compiler that is installed."
+    echo "             Do \`./buil_geoclim --list compilers\` to see the list of"
+    echo "             configured Fortran compilers"
+    echo ""
+    echo "     --ncpath path"
+    echo "             Specify the path of the netCDF-fortran library. If not specified,"
+    echo "             it tries to get it with \`nc-config --prefix\`. It it fails, the"
+    echo "             default path in the Makefile will be used."
+    echo ""
+    echo "     --mode|--compilation-mode MODE"
+    echo "             Specify the compilation mode (ie, set of compilation options)."
+    echo "             MODE can be:"
+    echo "                 standard (default options)"
+    echo "                 optim    (optimization options, fewer debugging options)"
+    echo "                 debug    (extra debugging options)"
+    echo ""
+    echo "     --fflags \"your compilation flags\""
+    echo "             Tell the Makefile to use that list of compilation flags."
+    echo "             (override Makefile variable 'main_flags')."
+    echo "             Only keep the flags:"
+    echo "               '-I\$ncpath/include -L\$ncpath/lib -lnetcdff -lnetcdf'"
+    echo ""
+    echo "     --all-fflags \"your compilation flags\""
+    echo "             Same as '--fflags' option, but replacing ALL the flags,"
+    echo "             including the netcdf ones (override Makefile variable 'FFLAGS')"
+    echo ""
+    echo "     --reset"
+    echo "             Delete all compilation intermediate files and executables before"
+    echo "             compiling (ie, make clc). Useful when a previous compilation was"
+    echo "             done with a different compiler."
+    echo ""
+    echo "     HELP OPTIONS:"
+    echo ""
+    echo "     -l|--list list_name"
+    echo "             Display the list 'list_name'. 'list_name' can be:"
+    echo "             'compsets': list of possible sets of components"
+    echo "             'compilers': list of configured fortran compilers"
+    echo ""
+    echo "     -h|--help"
+    echo "             Display current help message (and exit)"
+    echo ""
+    echo ""
+    echo "AUTHOR"
+    echo ""
+    echo "     Pierre Maffre"
+    echo ""
+    exit 0
+fi
+
+# Lists (of set of components, ...)
+# ---------------------------------
+
+case $display_list in
+
+    "compsets")
+        # Display list of legal sets of components
+	echo ""
+	echo "List of implemented set of components (ie, combination of modules) of GEOCLIM:"
+	echo ""
+	echo "Alias     Full name"
+	echo "--------------------------------------------"
+	echo "default   COMBINE_WTH:DynSoil%dyn"
+	echo "DSS       COMBINE_WTH:DynSoil%steady"
+	echo "old       COMBINE_WTH:old"
+	echo "ECOGEO    COMBINE_ECOGEO_WTH:old"
+	echo "ECO-DSS   COMBINE_ECOGEO_WTH:DynSoil%steady"
+	echo "full      COMBINE_ECOGEO_WTH:DynSoil%dyn"
+	echo ""
+	echo "Description:"
+	echo "  - COMBINE: Ocean geochemistry module (\"core\" module, always activated)"
+	echo "  - WTH: Continental silicate weathering module. 3 possibilties:"
+	echo "        DynSoil%dyn: DynSoil model, dynamic (standard) version"
+	echo "        DynSoil%steady: DynSoil model, analytical steady-state solution"
+	echo "        old: silicate weathering computed with runoff-Arrhenius equation"
+	echo "  - ECOGEO: Ecological network model for oceanic biological pump"
+	echo "            (if not activated, biological pump prop. to phosphorus flux in ocean"
+	echo "            surface: weathering + upwelling)"
+        exit 0
+        ;;
+
+    "compilers")
+        # Display list of fortran compilers configured in the Makefile
+	echo ""
+	echo "Fortran compilers configured in Makefile:"
+	for comp in ${KNOWN_COMPILERS[@]}
+	    do echo "    $comp"
+	done
+        exit 0
+        ;;
+
+    "") # => do nothing
+        ;;
+
+    *) # => return error
+        echo ""
+        echo "ERROR: unknown list $display_list"
+	echo "Try \`./build_GEOCLIM --help\`"
+	exit 1
+	;;
+
+esac
+
+
+
+
+############################################################################
+##                             Check arguments                            ##
+############################################################################
+
+function find_command() {
+    # takes 1 argument: command to test
+    # echoes "0" if command is found, "1" if not found
+    command -v $1 > /dev/null 2>&1
+    echo $?
+}
+
+
+##======================##
+##  REQUIRED ARGUMENTS  ##
+##======================##
+
+
+## Set of components
+## =================
+
+case $compset in
+
+    "default"|"COMBINE_WTH:DynSoil%dyn")
+        USE_DS="yes"
+	DS_MODE="dynamic"
+	USE_ECO="no"
+        ;;
+
+    "DSS"|"COMBINE_WTH:DynSoil%steady")
+        USE_DS="yes"
+	DS_MODE="steady-state"
+	USE_ECO="no"
+        ;;
+
+    "old"|"COMBINE_WTH:old")
+        USE_DS="no"
+	USE_ECO="no"
+        ;;
+
+    "ECOGEO"|"COMBINE_ECOGEO_WTH:old")
+        USE_DS="no"
+	USE_ECO="yes"
+        ;;
+
+    "ECO-DSS"|"COMBINE_ECOGEO_WTH:DynSoil%steady")
+        USE_DS="yes"
+	DS_MODE="steady-state"
+	USE_ECO="yes"
+        ;;
+
+    "full"|"COMBINE_ECOGEO_WTH:DynSoil%dyn")
+        USE_DS="yes"
+	DS_MODE="dynamic"
+	USE_ECO="yes"
+        ;;
+
+    "")
+        echo ""
+        echo "ERROR: set of components required (argument '--compset ...')"
+	exit 1
+	;;
+
+    *)
+        echo ""
+        echo "ERROR: unknown set of component \"$compset\""
+	echo "Type \`./build_GEOCLIM --list compsets\` to see the possibilities"
+	exit 1
+        ;;
+
+esac
+
+
+## Model resolution
+## ================
+
+arg=$resolution
+
+nco2=${arg%%,*}
+arg=${arg#$nco2}
+arg=${arg#,}
+
+nx=${arg%%,*}
+arg=${arg#$nx}
+arg=${arg#,}
+
+ny=${arg%%,*}
+arg=${arg#$ny}
+arg=${arg#,}
+
+nlitho=${arg%%,*}
+arg=${arg#$nlitho}
+arg=${arg#,}
+
+nDSz=${arg%%,*}
+
+if [ -z $nco2 ]
+then
+    echo ""
+    echo "ERROR: Number of CO2 level required ('--res nco2,nx,ny[,nlitho[,nDSlev]]')"
+    exit 1
+fi
+
+if [ -z $nx ]
+then
+    echo ""
+    echo "ERROR: 'x' resolution required ('--res nco2,nx,ny[,nlitho[,nDSlev]]')"
+    exit 1
+fi
+
+if [ -z $ny ]
+then
+    echo ""
+    echo "ERROR: 'y' resolution required ('--res nco2,nx,ny[,nlitho[,nDSlev]]')"
+    exit 1
+fi
+
+if [ -z $nlitho ] || [ "$nlitho" == "_" ]
+then
+    echo ""
+    echo "Default number of lithology classes: $DEF_NLITH"
+    nlitho=$DEF_NLITH
+fi
+
+if [ -z $nDSz ]
+then
+    if [ "$USE_DS" == "yes" ]
+    then
+        echo ""
+        echo "Default number of DynSoil vertical levels: $DEF_NDSLEVS"
+    fi
+    nDSz=$DEF_NDSLEVS
+fi
+
+# Test validity of resolution arguments
+istat=0
+for n in $nco2 $nx $ny $nlitho $nDSz
+    do test $n -gt 0  2> /dev/null || istat=1
+done
+
+if [ $istat -ne 0 ]
+then
+    echo ""
+    echo "ERROR: invalid resolution argument \"$resolution\""
+    exit 1
+fi
+
+
+## => Executable name:
+
+exec_name=geoclim
+exec_name=${exec_name}_${nco2}x${nx}x${ny}x${nlitho}
+if [ "$USE_DS" == "yes" ]
+then
+    exec_name=${exec_name}_DS
+    if [ "$DS_MODE" == "dynamic" ]
+    then
+        exec_name=${exec_name}-${nDSz}lev
+    else
+        exec_name=${exec_name}-SS
+    fi
+fi
+test "$USE_ECO" == "yes" && exec_name=${exec_name}_ECO
+exec_name=${exec_name}.exe
+
+
+
+##======================##
+##  OPTIONAL ARGUMENTS  ##
+##======================##
+
+
+## CO2 interpolation mode
+## ======================
+
+case $interpolation in
+
+    "lin"|"linear")
+        interpolation="linear"
+	echo ""
+	echo "linear CO2 interpolation"
+	;;
+
+    "log"|"logarithmic")
+        interpolation="log"
+	echo ""
+	echo "logarithmic CO2 interpolation"
+	;;
+
+    *)
+        echo ""
+	echo "Error: illegal interpolation mode \"$interpolation\""
+	echo "See \`./build_GEOCLIM --help\` for more information"
+	exit 1
+esac
+
+
+## Lock geochemical cycles
+## =======================
+
+lock_oxygen=0
+lock_sulfur=0
+
+for i in `seq 1 ${#lock}`
+do
+    spe=${lock:i-1:1}
+
+    case $spe in
+
+        "O")
+	    lock_oxygen=1
+	    ;;
+
+        "S")
+	    lock_sulfur=1
+	    ;;
+
+	*)
+	    echo ""
+	    echo "Warning: unknown or not implemented cycle to lock: \"$spe\""
+	    echo "Ignore argument."
+	    ;;
+
+    esac
+done
+
+
+## Fortran compiler
+## ================
+
+DEF_COMP=no
+
+# If no compiler specified:
+if [ -z $compiler ]
+then
+
+    # Try compiler stated by `nc-config`:
+    compiler=`nc-config --fc 2> /dev/null`
+
+    if [ $? -eq 0 ]
+    then
+	echo ""
+	echo "Default \`nc-config\` compiler: $compiler"
+
+    else # If it did not work (command not found, or other error), get Makefile default compiler:
+	cd 'source/'
+	compiler=`make echo_FC`
+	cd ..
+	DEF_COMP=yes
+	echo ""
+	echo "Default Makefile compiler: $compiler"
+    fi
+
+else # compiler specified:
+
+    echo ""
+    echo "Compiler: $compiler"
+
+fi
+
+# Check that compiler is installed
+if [ `find_command $compiler` -ne 0 ] || [ -z $compiler ]
+then
+    echo ""
+    echo "Warning: compiler $compiler seems not to be installed"
+    echo "Replace by one of the known compiler"
+
+    DEF_COMP=no
+
+    # ... try every known compilers and get the 1st that is installed
+    found=-1
+    for compiler in ${KNOWN_COMPILERS[@]}
+    do
+        found=`find_command $compiler`
+	test $found -eq 0 && break
+    done
+
+    if [ $found -ne 0 ] # if none of the known compilers are installed (no command found)
+    then
+        echo ""
+        echo "Error: none of the known compilers seems to be installed"
+	exit 1
+    fi
+
+    echo ""
+    echo "Compiler: $compiler"
+fi
+
+# Check that compiler matches beginning string of known compilers (eg, ifort-16.0 matches ifort)
+found=0
+for kc in ${KNOWN_COMPILERS[@]}
+do
+    test -z ${compiler%%$kc*} && found=1
+done
+# if compiler not in known list and no compilation flag were given:
+if [ $found -eq 0  -a  "$main_fflags$all_fflags" == "" ]
+then
+    echo ""
+    echo "Warning: compiler $compiler is not configured in the Makefile"
+    echo "Cannot automatically set compilation options (flags)."
+    echo ""
+    echo "Run 'build_GEOCLIM' again with '--fflags' or '--all-fflags' option to specify"
+    echo "the compilation flags. See 'build_GEOCLIM --help' for details on those options."
+    echo ""
+    echo "Alternatively, you can see the list of configured Fortran compilers with:"
+    echo "  './build_GEOCLIM --list compilers'"
+    echo "You can also see in README.md instructions to compile without Makefile"
+    exit 0
+fi
+
+
+## netCDF library path
+## ===================
+
+if [ -z $ncpath ] # if no netCDF path given, try and get it from `nc-config`
+then
+
+    ncpath=`nc-config --prefix 2> /dev/null`
+    test $? -ne 0 && unset ncpath
+
+else # If netCDF path was given:
+
+    # Check if given path exists
+    if [ ! -d $ncpath ]
+    then
+        echo ""
+	echo "ERROR: given netCDF library path is not an existing repertory"
+	echo $ncpath
+	exit 1
+    fi
+    # Check if given path contains lib/ and include/ repertories
+    if [ ! -d $ncpath/lib  -o  ! -d $ncpath/include ]
+    then
+        echo ""
+	echo "ERROR: given netCDF library path does not contain 'lib/' and 'include/' repertories"
+	echo $ncpath
+	exit 1
+    fi
+fi
+
+
+# Note: no check is done for argument "comp_mode"
+
+
+
+############################################################################
+##                             Build executable                           ##
+############################################################################
+
+
+# Write fortran include files:
+# ----------------------------
+
+rm -f source/shape.inc
+echo '! File automatically generated by `build_GEOCLIM`' > source/shape.inc
+echo "integer, parameter :: nbasin = 10"                >> source/shape.inc
+echo "integer, parameter :: nclimber = $nco2"           >> source/shape.inc
+echo "integer, parameter :: nlon = $nx"                 >> source/shape.inc
+echo "integer, parameter :: nlat = $ny"                 >> source/shape.inc
+echo "integer, parameter :: nlitho = $nlitho"           >> source/shape.inc
+echo "integer, parameter :: nDSlev = $nDSz"             >> source/shape.inc
+
+rm -f source/coupler.inc
+echo '! File automatically generated by `build_GEOCLIM`'                     > source/coupler.inc
+if [ "$USE_DS" == "yes" ]
+then
+    echo "logical, parameter :: coupling_dynsoil = .true."                   >> source/coupler.inc
+    if [ "$DS_MODE" == "dynamic" ]
+    then
+	echo "logical, parameter :: use_dynsoil_steady_state = .false."      >> source/coupler.inc
+    else
+	echo "logical, parameter :: use_dynsoil_steady_state = .true."       >> source/coupler.inc
+    fi
+else
+    echo "logical, parameter :: coupling_dynsoil = .false."                  >> source/coupler.inc
+    echo "logical, parameter :: use_dynsoil_steady_state = .false."          >> source/coupler.inc
+fi
+if [ "$USE_ECO" == "yes" ]
+then
+    echo "logical, parameter :: coupling_ecogeo = .true."                    >> source/coupler.inc
+else
+    echo "logical, parameter :: coupling_ecogeo = .false."                   >> source/coupler.inc
+fi
+if [ $lock_oxygen -eq 1 ]
+then
+    echo "logical, parameter :: lock_oxygen_cycle = .true."                  >> source/coupler.inc
+else
+    echo "logical, parameter :: lock_oxygen_cycle = .false."                 >> source/coupler.inc
+fi
+if [ $lock_sulfur -eq 1 ]
+then
+    echo "logical, parameter :: lock_sulfur_cycle = .true."                  >> source/coupler.inc
+else
+    echo "logical, parameter :: lock_sulfur_cycle = .false."                 >> source/coupler.inc
+fi
+echo "character(len=*), parameter :: interpolation_mode = '$interpolation'"  >> source/coupler.inc
+
+
+# Define 'make' options
+# ---------------------
+
+MAKE_OPTIONS="execut=$exec_name"
+test "$DEF_COMP" == "no"  && MAKE_OPTIONS="$MAKE_OPTIONS FC=$compiler"
+test -z $comp_mode        || MAKE_OPTIONS="$MAKE_OPTIONS MODE=$comp_mode"
+test -z $ncpath           || MAKE_OPTIONS="$MAKE_OPTIONS ncpath=$ncpath"
+
+#'make' variables containing blanks (flags list) => cannot be passed using the string variable 'MAKE_OPTIONS'
+PRINT_MAKE_OPTIONS=$MAKE_OPTIONS
+test "$main_fflags" == "" || PRINT_MAKE_OPTIONS="$PRINT_MAKE_OPTIONS main_flags=\"$main_fflags\""
+test "$all_fflags" == ""  || PRINT_MAKE_OPTIONS="$PRINT_MAKE_OPTIONS FFLAGS=\"$all_fflags\""
+
+
+# Save variables into an environment file
+# ---------------------------------------
+
+rm -f GEOCLIM_environment
+echo "#!/bin/bash"                 >  GEOCLIM_environment
+echo ""                            >> GEOCLIM_environment
+echo "export FC=$compiler"         >> GEOCLIM_environment
+test "$main_fflags" == "" || echo "export main_flags='$main_fflags'"  >> GEOCLIM_environment
+test "$all_fflags" == ""  || echo "export FFLAGS='$all_fflags'"       >> GEOCLIM_environment
+echo "export execut=$exec_name"    >> GEOCLIM_environment
+echo "export USE_DS=$USE_DS"       >> GEOCLIM_environment
+echo "export USE_ECO=$USE_ECO"     >> GEOCLIM_environment
+test "$USE_DS" == "yes"   && echo "export DS_MODE=$DS_MODE"         >> GEOCLIM_environment
+test -z $comp_mode        || echo "export MODE=$comp_mode"          >> GEOCLIM_environment
+test -z $ncpath           || echo "export ncpath=$ncpath"           >> GEOCLIM_environment
+echo ""                            >> GEOCLIM_environment
+echo "# Compilation command:"      >> GEOCLIM_environment
+echo "# make $PRINT_MAKE_OPTIONS"  >> GEOCLIM_environment
+
+
+# Compile
+# -------
+
+rm -f build.log build.error
+cd source/
+
+test $reset -eq 1 && make clc > /dev/null
+
+echo ""
+echo ""
+echo "Compiling..."
+
+#<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
+if [ "$all_fflags" != "" ]
+then
+    make $MAKE_OPTIONS FFLAGS="$all_fflags" > ../build.log 2> ../build.error
+elif [ "$main_fflags" != "" ]
+then
+    make $MAKE_OPTIONS main_flags="$main_fflags" > ../build.log 2> ../build.error
+else
+    make $MAKE_OPTIONS > ../build.log 2> ../build.error
+fi
+#<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
+
+if [ $? -eq 0 ]
+then
+    test -d ../executable || mkdir ../executable
+    mv $exec_name ../executable/
+    echo ""
+    echo ""
+    echo "compilation SUCCESFULL."
+    echo "Created file executable/$exec_name"
+    echo ""
+    echo "To complete GEOCLIM configuration, edit files:"
+    echo "    config/IO_CONDITIONS"
+    echo "    config/cond_p20.dat"
+    echo "    config/GCM_input_conditions (optional)"
+    echo ""
+    echo "If you need to rebuild the executable (without changing resolution, set of"
+    echo "components...), simply do:"
+    echo "    cd source"
+    echo "    make $PRINT_MAKE_OPTIONS"
+    exit 0
+else
+    echo ""
+    echo ""
+    echo "compilation FAILED."
+    echo ""
+    echo "See build.log and build.error for detailed information."
+    echo ""
+    echo "Source \"include\" files have been edited (resolution, set of components...)"
+    echo "You can try and manually compile the code (files '*.f *.f90' in 'source/')."
+    echo "See in README.md instructions to compile without Makefile."
+    exit 1
+fi
+

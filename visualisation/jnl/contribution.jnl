@@ -1,0 +1,49 @@
+!this routine plots the relative proportion of mountains and plains contribution to total weathering
+
+cancel data/all
+sp "rm -f meta*"
+
+!set mode meta
+
+
+use "/Volumes/Storm/GEOCLIM3/OUTPUT/dynsoil_output.265_vol2_trap.nc"
+use "/Volumes/Storm/GEOCLIM3/OUTPUT/dynsoil_output.265_vol4_trap.nc"
+use "/Volumes/Storm/GEOCLIM3/OUTPUT/dynsoil_output.265_vol8_trap.nc"
+use "/Volumes/Storm/GEOCLIM3/OUTPUT/dynsoil_output.265_vol10_trap.nc"
+
+let fsil=if area gt 0 then reg_P_diss_rate*area else (-1e+34)
+let fsil_mountain = if slope gt 0.05 then fsil else (-1.E+34)
+let fsil_plain = if slope le 0.05 then fsil else (-1.E+34)
+
+
+
+set v ul
+plot/thick/vlimits=0:60/title="Sil weath mountains (%)" 100*(fsil_mountain[d=1,x=@sum,y=@sum]/fsil[d=1,x=@sum,y=@sum])
+plot/thick/o 100*fsil_mountain[d=2,x=@sum,y=@sum]/fsil[d=2,x=@sum,y=@sum]
+plot/thick/o 100*fsil_mountain[d=3,x=@sum,y=@sum]/fsil[d=3,x=@sum,y=@sum]
+plot/thick/o 100*fsil_mountain[d=4,x=@sum,y=@sum]/fsil[d=4,x=@sum,y=@sum]
+
+set v ur
+plot/thick/vlimits=50:100/title="Sil weath plains (%)" 100*(fsil_plain[d=1,x=@sum,y=@sum]/fsil[d=1,x=@sum,y=@sum])
+plot/thick/o 100*fsil_plain[d=2,x=@sum,y=@sum]/fsil[d=2,x=@sum,y=@sum]
+plot/thick/o 100*fsil_plain[d=3,x=@sum,y=@sum]/fsil[d=3,x=@sum,y=@sum]
+plot/thick/o 100*fsil_plain[d=4,x=@sum,y=@sum]/fsil[d=4,x=@sum,y=@sum]
+
+
+set v ll
+plot/thick/vlimits=0:6/title="Sil weath mountains (Tmol/yr)" 0.85*12.5*0.13*2500*fsil_mountain[d=1,x=@sum,y=@sum]/1e12
+plot/thick/o 0.85*12.5*0.13*2500*fsil_mountain[d=2,x=@sum,y=@sum]/1e12
+plot/thick/o 0.85*12.5*0.13*2500*fsil_mountain[d=3,x=@sum,y=@sum]/1e12
+plot/thick/o 0.85*12.5*0.13*2500*fsil_mountain[d=4,x=@sum,y=@sum]/1e12
+
+set v lr
+plot/thick/vlimits=0:12/title="Sil weath plains (Tmol/yr)" 0.85*12.5*0.13*2500*fsil_plain[d=1,x=@sum,y=@sum]/1e12
+plot/thick/o 0.85*12.5*0.13*2500*fsil_plain[d=2,x=@sum,y=@sum]/1e12
+plot/thick/o 0.85*12.5*0.13*2500*fsil_plain[d=3,x=@sum,y=@sum]/1e12
+plot/thick/o 0.85*12.5*0.13*2500*fsil_plain[d=4,x=@sum,y=@sum]/1e12
+
+
+!sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

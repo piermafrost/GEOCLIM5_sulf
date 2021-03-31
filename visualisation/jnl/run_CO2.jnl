@@ -1,0 +1,19 @@
+cancel data/all
+
+use "/Users/yves/fortran/GEOCLIM4/OUTPUT/geographic_output.ref.nc"
+use "/Users/yves/fortran/GEOCLIM4/OUTPUT/geoclim_output.ref.nc"
+
+let run_tot=if area[d=1] ne 0 then runoff[d=1]*area[d=1] else (-1e34)
+
+set v ul
+shade run_tot[l=400]
+
+set v ur
+plot run_tot[i=@sum,j=@sum]
+
+set v ll
+plot CO2_atm_level[d=2]
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"
+

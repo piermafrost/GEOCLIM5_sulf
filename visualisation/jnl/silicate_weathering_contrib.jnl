@@ -1,0 +1,24 @@
+cancel data/all
+
+use /Users/yves/fortran/GEOCLIM4_ber/OUTPUT/geographic_output.ref
+
+show data
+
+let contrib=gra_wth[l=85]*area
+
+let perc=contrib/contrib[i=@sum,j=@sum]*100
+
+set w 1
+shade/pal=blue_orange/lev=(-inf)(-5,0,0.1)(inf) log(perc)
+set w 2
+shade/x=90w:30w/y=15s:10n/pal=blue_orange/lev=(-inf)(-5,0,0.1)(inf) log(perc)
+
+
+let indonesia=perc[x=-30:-90@sum,y=15s:10n@sum]
+list indonesia
+
+let total=perc[i=@sum,j=@sum]
+list total
+
+
+sp "rm -f ferre*"

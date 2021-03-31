@@ -1,0 +1,25 @@
+use "/Users/yves/fortran/run100/geoclim_output.e108.nc"
+!use "/Users/yves/fortran/run100/geographic_output.e109.nc"
+use "/Users/yves/fortran/run100/geoclim_output.e109.nc"
+use "/Users/yves/fortran/run100/geoclim_output.e110.nc"
+use "/Users/yves/fortran/run100/geoclim_output.e111.nc"
+
+show data
+
+!let runoff_tot=area[d=2,i=@sum,j=@sum]*runoff[d=2,i=@sum,j=@sum]
+!list runoff_tot
+
+set v ul
+plot/vs/ribbon CO2_atm_level[d=1],ker_wth_C_flux[d=1],O2_atm_level[d=1]
+
+set v ll
+!plot/hlimits=8e6:20e6/vlimits=0.99:1.01 CO2_atm_level[d=1]
+plot/vs/ribbon CO2_atm_level[d=2],ker_wth_C_flux[d=2],O2_atm_level[d=2]
+
+set v ur
+plot/vs/ribbon CO2_atm_level[d=3],ker_wth_C_flux[d=3],O2_atm_level[d=3]
+
+set v lr
+plot/vs/ribbon CO2_atm_level[d=4],ker_wth_C_flux[d=4],O2_atm_level[d=4]
+
+sp "rm -f ferre*"

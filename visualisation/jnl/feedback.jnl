@@ -1,0 +1,24 @@
+cancel data/all
+
+!sp "rm -f meta*"
+
+!set mode meta
+
+
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol4_veg_alt5.nc
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol4_veg_eros5.nc
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol4_veg_eros5_alt5.nc
+
+
+show data
+
+set v ul
+plot/vs/vlimits=1:8/hlimits=0:16 (CO2_atm_level[d=1]),(gran_wth_C_flux[d=1])/1e12
+set v ur
+plot/vs/vlimits=1:8/hlimits=0:16 (CO2_atm_level[d=2]),(gran_wth_C_flux[d=2])/1e12
+set v ll
+plot/vs/vlimits=1:8/hlimits=0:16 (CO2_atm_level[d=3]),(gran_wth_C_flux[d=3])/1e12
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"
+

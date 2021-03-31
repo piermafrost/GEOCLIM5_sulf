@@ -1,0 +1,24 @@
+cancel data/all
+cancel var/all
+cancel sym/all
+cancel win/all
+cancel region
+cancel mode logo
+
+sp "rm -f meta*"
+
+set mode meta
+
+
+! ===================LOADING=====================================================
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_vol4_veg_eros5_alt5.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol4_veg_eros5_alt5.nc"
+
+
+
+
+! ===================CLOSING=====================================================
+sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

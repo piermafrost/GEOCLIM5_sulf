@@ -1,0 +1,113 @@
+sp "rm -f ferre*"
+
+use "/Users/yves/fortran/GEOCLIM4_ref/OUTPUT/dynsoil_output.ref_vol2_5.nc"
+use "/Users/yves/fortran/GEOCLIM4_ref/OUTPUT/geographic_output.ref_vol2_5.nc"
+set region/x=-180:180
+
+def sym int = l=2:2000:5
+
+!set w 1
+!let RT =(reg_P_diss_rate[d=1])/reg_prod_rate[d=1]
+!shade/x=0:360/y=-90:90/lev=(-inf)(0,1,0.05)(inf)/pal=blue_darkred RT[l=1]
+!shade/o/x=0:360/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-inf)(0,1,0.05)(inf)/nolab/pal=blue_darkred RT )  !; frame/file=regthick_high.gif)
+pause
+
+!set w 1
+!let RT = reg_P_diss_rate[d=1]/reg_P_diss_rate[d=2]
+!shade/x=0:360/y=-90:90/lev=(-inf)(0.8,1.2,0.01)(inf)/pal=blue_darkred RT[l=2]
+!shade/o/x=0:360/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/lev=(-inf)(0.8,1.2,0.01)(inf)/nolab/pal=blue_darkred RT)  !; frame/file=regthick_high.gif)
+!pause
+
+!set w 1
+!let RT = 0.85*12.5 * 0.13 * 2500*(reg_P_diss_rate[d=1]-reg_P_diss_rate[d=2])
+!let imax=RT[i=@max,j=@max,l=@max]
+!let imin=RT[i=@min,j=@min,l=@min]
+!list imax
+!list imin
+!shade/x=0:360/y=-90:90/lev=(-inf)(-0.05,0.05,0.002)(inf)/pal=blue_darkred RT[l=2]
+!shade/o/x=0:360/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/lev=(-inf)(-0.05,0.05,0.002)(inf)/nolab/pal=blue_darkred RT)  !; frame/file=regthick_high.gif)
+!pause
+
+
+!set w 1
+let RT = log(reg_P_diss_rate[d=1])  !/reg_P_diss_rate[l=2]
+shade/x=0:360/y=-90:90/lev=(-inf)(-11,-3,0.1)(inf) RT[l=2]
+shade/o/x=0:360/lev=(0)/pal=blue_light area
+pause
+repeat/($int) ( shade/o/x=0:360/lev=(-inf)(-11,-3,0.1)(inf)/nolab RT)  !; frame/file=regthick_high.gif)
+pause
+
+!set w 1
+!let RT = if area eq 0 then (-1e+34) else temperature-temperature[l=1]
+!shade/x=0:360/y=-90:90/lev=(-inf)(0,8,0.2)(inf) RT[l=2]
+!shade/o/x=0:360/lev=(inf)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/lev=(-inf)(0,8,0.2)(inf)/nolab RT)  !; frame/file=regthick_high.gif)
+!pause
+
+
+!set w 1
+!let RT = if area ne 0 then (-1e+34) else temperature-temperature[l=1]
+!shade/x=0:360/y=-90:90/lev=(-inf)(0,8,0.2)(inf)/pal=no_blue RT[l=2]
+!shade/o/x=0:360/lev=(1)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/lev=(-inf)(0,8,0.2)(inf)/pal=no_blue/nolab RT)  !; frame/file=regthick_high.gif)
+!pause
+
+!set memory/size=200
+
+!set w 2
+
+let RT = reg_thickness[d=1]*100  !reg_thickness   !li_delta_riv*1000
+shade/x=0:360/y=-90:90/lev=(-inf)(0,10,0.2)(inf)/pal=rainbow RT[l=2]
+shade/o/lev=(0)/x=0:360/y=-90:90/pal=blue_light area
+pause
+repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-inf)(0,10,0.2)(inf)/nolab/pal=rainbow RT)  !; frame/file=regthick_high.gif)
+pause
+
+let RT = if area ne 0 then runoff[d=2] else (-1e+34)  !reg_thickness   !li_delta_riv*1000
+shade/x=0:360/y=-90:90/lev=(-inf)(0,100,2)(inf)/pal=rain_cmyk RT[l=2]
+shade/o/lev=(0)/x=0:360/y=-90:90/pal=blue_light area
+pause
+repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-inf)(0,100,2)(inf)/nolab/pal=rain_cmyk RT)  !; frame/file=regthick_high.gif)
+list RT
+
+!set w 1
+!let RT = reg_thickness-reg_thickness[l=1]   !li_delta_riv*1000
+!shade/x=0:360/y=-90:90/lev=(-inf)(-3,3,0.1)(inf)/pal=blue_darkred RT[l=1]
+!!shade/x=0:360/y=-90:90/lev=(0,15,0.2)(inf)/pal=dark_terrestrial RT[l=1]
+!shade/o/x=0:369/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-inf)(-3,3,0.1)(inf)/nolab/pal=blue_darkred RT)  !; frame/file=regthick_high.gif)
+
+
+!set w 1
+!let RT = 0.85*12.5 * 0.13 * 2500* ((reg_P_diss_rate[d=1]-reg_P_diss_rate[l=1,d=1])-(reg_P_diss_rate[d=2]-reg_P_diss_rate[d=2,l=1]))
+!shade/x=0:360/y=-90:90/lev=(-inf)(-0.1,0.1,0.005)(inf)/pal=blue_darkred RT[l=1]
+!shade/o/x=0:360/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-inf)(-0.1,0.1,0.005)(inf)/nolab/pal=blue_darkred RT )  !; frame/file=regthick_high.gif)
+
+!set w 1
+!let RT = gra_wth-gra_wth[l=1]
+!shade/x=0:360/y=-90:90/lev=(-Inf)(-1,1,0.05)(Inf)/pal=blue_darkred RT[l=1]
+!shade/o/x=0:360/lev=(0)/pal=blue_light area
+!pause
+!repeat/($int) ( shade/o/x=0:360/y=-90:90/lev=(-Inf)(-0.1,0.1,0.005)(Inf)/nolab/pal=blue_darkred RT )  !; frame/file=regthick_high.gif)
+
+
+!set w 2
+!let RT=li_delta_riv[i=@ave,j=@ave]*1000*runoff[i=@ave,j=@ave]   !/runoff[i=@max,j=@max]
+!let RT2=if RT lt -10 then 9999 else RT
+!set var/bad=9999 RT2
+!shade runoff
+!list RT
+
+sp "rm -f ferre*"
+

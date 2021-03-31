@@ -1,0 +1,50 @@
+cancel data/all
+
+!sp "rm -f meta*"
+
+!set mode meta
+
+
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol4_veg_alt5.nc
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geoclim_output.365_vol4_veg_alt5.nc
+use /Users/yves/fortran/GEOCLIM3/OUTPUT/geographic_output.365_vol4_veg_alt5.nc
+
+show data
+
+let temp=if area ne 0 then temperature else (-1e34)
+let sloppy=if area ne 0 then slope else (-1e34)
+let grangeog=if area ne 0 then gra_wth else (-1e34)
+
+set w 1
+set v ul
+shade/x=0:360 log(reg_eros_rate[l=400,d=1]*2800*1e6/1000)
+
+set v ur
+plot/vs/ribbon log(reg_eros_rate[l=400,d=1]*2800*1e6/1000),log(reg_P_diss_rate[l=400,d=1]*2800*1e6/1000),log(runoff[l=400,d=1])
+
+
+set v ll
+plot/vs/ribbon log(reg_eros_rate[l=400,d=1]*2800*1e6/1000),log(reg_P_diss_rate[l=400,d=1]*2800*1e6/1000),temp[l=400,d=1]
+
+
+set v lr
+plot/vs/ribbon log(reg_eros_rate[l=400,d=1]*2800*1e6/1000),log(reg_P_diss_rate[l=400,d=1]*2800*1e6/1000),log(slope[l=400,d=1])
+
+
+!set w 2
+!plot/vs/ribbon log(reg_eros_rate[i=@ave,j=@ave,d=1]*2800*1e6/1000),log(reg_P_diss_rate[i=@ave,j=@ave,d=1]*2800*1e6/1000),CO2_atm_level[d=2]
+
+
+set w 2
+!plot/vs/ribbon log(gra_wth[l=2,d=3]),log(reg_P_diss_rate[l=2,d=1]*2800*1e6/1000),sloppy[l=2,d=1]
+plot reg_P_diss_rate[i=@sum,j=@sum,d=1]/reg_P_diss_rate[i=@sum,j=@sum,l=2,d=1]*100
+plot/o grangeog[i=@sum,j=@sum,d=3]/grangeog[i=@sum,j=@sum,l=2,d=3]*100
+!sp "Fprint -o geoclim_365_vol2.ps -R metafile.plt*"
+
+set w 4
+plot/x=100:250 reg_P_diss_rate[d=1,j=@ave,l=2]
+plot/o/x=100:250 reg_P_diss_rate[d=1,j=@ave,l=1000]
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"
+

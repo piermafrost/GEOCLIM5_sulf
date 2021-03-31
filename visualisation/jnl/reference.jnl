@@ -1,0 +1,27 @@
+cancel data/all
+sp "rm -f meta*"
+
+set mode meta
+set memory/size=200
+
+
+! ===================LOADING=====================================================
+use /Volumes/Storm/GEOCLIM3/OUTPUT_ref/dynsoil_output.ref.nc
+
+
+show data
+
+go flip_palette green_brown
+
+!shade/lev=50/pal=dynamic_cmyk (reg_thickness[l=800])
+!shade/lev=(-inf)(-7,-4,0.1)(inf)/pal=green_brown_rev log(reg_P_diss_rate[l=800])
+!shade/o/x=-180:180/lev=(0)/pal=blue_light area
+
+let temp=if area ne 0 then temperature else temperature
+plot/vs/ribbon log(reg_prod_rate[l=800]+reg_eros_rate[l=800]),log(reg_prod_rate[l=800]),temp[l=800]
+
+! ===================CLOSING=====================================================
+sp "Fprint -o geoclim.ps -R metafile.plt*"
+
+sp "rm -f metafile*"
+sp "rm -f ferre*"

@@ -1,0 +1,37 @@
+cancel data/all
+
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol6_veg_alt5.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol6_veg_eros5.nc"
+use "/Users/yves/fortran/GEOCLIM3/OUTPUT/dynsoil_output.365_vol6_veg_eros5_alt5.nc"
+
+
+let var= 0.85*12.5 * 0.13 * 2500 * reg_P_diss_rate * area
+
+set v ul
+plot/hlim=0:1/vlim=0:1/title="weathering in fc of surf cat abund"  -1 , -1
+go histo_along_var  "var[l=1,d=1]"  "x_cat_surf[l=1,d=1]"   0     1     30       "red"
+!                     ^-> Y axis variable     ^-> X ax var   xmin  xmax  xstep   color (<= default is black)
+
+
+go histo_along_var  "var[l=800,d=1]"  "x_cat_surf[l=800,d=1]"   0     1     30       "blue"
+
+
+
+
+set v ur
+plot/hlim=0:1/vlim=0:1/title="weathering in fc of surf cat abund"  -1 , -1
+go histo_along_var  "var[l=1,d=2]"  "x_cat_surf[l=1,d=2]"   0     1     30       "red"
+!                     ^-> Y axis variable     ^-> X ax var   xmin  xmax  xstep   color (<= default is black)
+
+
+go histo_along_var  "var[l=800,d=2]"  "x_cat_surf[l=800,d=2]"   0     1     30       "blue"
+
+
+
+set v lr
+plot/hlim=0:1/vlim=0:1/title="weathering in fc of surf cat abund"  -1 , -1
+go histo_along_var  "var[l=1]"  "x_cat_surf[l=1]"   0     1     30       "red"
+!                     ^-> Y axis variable     ^-> X ax var   xmin  xmax  xstep   color (<= default is black)
+
+
+go histo_along_var  "var[l=800]"  "x_cat_surf[l=800]"   0     1     30       "blue"

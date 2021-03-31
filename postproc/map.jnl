@@ -1,0 +1,66 @@
+DEFINE AXIS/X=3.75:356.25:7.5/units=degrees_east/modulo lon
+DEFINE AXIS/Y=-87.75:87.75:4.5/units=degrees_north lat
+DEFINE GRID/x=lon/y=lat topo_grid
+
+sp "rm -f *.nc"
+
+FILE/GRID=topo_grid/VAR="Tcont" "T_map_continent.out"
+SAVE/FILE=out1.nc Tcont
+
+FILE/GRID=topo_grid/VAR="Tocean" "T_map_ocean.out"
+SAVE/FILE=out2.nc Tocean
+
+FILE/GRID=topo_grid/VAR="runoff" "R_map.out"
+SAVE/FILE=out3.nc runoff
+
+use out1.nc
+
+!set REGION/X=-0:360/Y=90s:90n/l=1
+!go mp_hammer
+!go mp_orthographic -80 -40
+!go mp_grid Tcont
+!go mp_aspect
+
+!let masked_T=Tcont*mp_mask
+
+list/X=0:360/Y=90s:90n Tcont[i=@ave,j=@ave]
+
+!list/X=0:360/Y=90s:90n mask[i=@sum,j=@sum]/1.e2
+!list/X=80:120/Y=10s:10n mask[i=@sum,j=@sum]/1.e2
+!/file=area_400.dat 
+
+set v ul
+shade/X=-180:+180/Y=90s:90n/title="continental T"/lev="(-20)(-18,34,2)(40)" Tcont  !,x_page,y_page  !/nolab/noaxis
+!contour/noaxis/pen=1/nolab/pen=4/levels="(1000,1400,100)"/overlay/X=0:360/Y=90s:90n masked_T,x_page,y_page
+
+!go mp_graticule 0 360 7.5 -90 90 4.5
+!show grid
+
+
+use out2.nc
+list/X=0:360/Y=90s:90n Tocean[i=@ave,j=@ave]
+set v ur
+shade/X=-180:+180/Y=90s:90n/title="ocean T"/lev="(-20)(-18,34,2)(40)" Tocean  !,x_page,y_page  !/nolab/noaxis
+
+
+use out3.nc
+list/X=0:360/Y=90s:90n runoff[i=@ave,j=@ave]
+set v ll
+shade/X=-180:+180/Y=90s:90n/title="runoff"/pal=rain_cmyk/lev="(0,10,1)(10,100,5)(100,300,100)(500)" runoff  !,x_page,y_page  !/nolab/noaxis
+
+set v lr
+use out1.nc
+plot/title="continental T" Tcont[i=@ave]
+use out2.nc
+plot/over/title="ocean T" Tocean[i=@ave]
+
+!set v ll
+!plot mask[i=14]
+
+!set v lr
+!plot mask[i=0]
+
+sp "rm -f ferre*"
+sp "rm -f *.nc"
+
+

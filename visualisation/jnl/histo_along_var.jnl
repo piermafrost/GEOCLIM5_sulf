@@ -1,0 +1,30 @@
+! EXAMPLE:
+! plot/hlim=0:1/vlim=0:0.1/title="weathering in fc of surf cat abund"  -1 , -1
+! go histo_along_var  "reg_p_diss_rate*area"  "x_cat_surf"   0     1     5       "red"
+!                     ^-> Y axis variable     ^-> X ax var   xmin  xmax  xstep   color (<= default is black)
+
+cancel mode verify
+let VARY = $1
+let VARX = $2
+let xmin = $3
+let xmax = $4
+let nstep = $5
+def sym col = $6"black"
+
+let xwdh = (xmax-xmin)/nstep
+
+let NORM = 4e+12  !`VARY[i=@sum,j=@sum]`
+
+set region/k=1:5
+repeat/range=1:`nstep`:1/name=ST (                           \
+let x0 = xmin + (ST-1)*xwdh ; let x1 = xmin + ST*xwdh       ; \
+let VARY2 = IF VARX GE x0 AND VARX LT x1 THEN VARY          ; \
+let y1 = VARY2[i=@sum,j=@sum] / NORM                        ; \
+let xvert = zsequence( { `x0`,`x0`,`x1`,`x1`,`x0` } )       ; \
+let yvert = zsequence( { 0,   `y1`,`y1`,0,    0   } )       ; \
+poly/o/nolab/coord_ax=Y/line/col=($col) xvert , yvert       ; \
+)
+cancel region
+
+set mode verify
+
