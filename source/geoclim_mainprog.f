@@ -532,6 +532,16 @@ program geoclim
 !   &&&&&&&&&&  end iteration  &&&&&&&&&&
 
 
+    ! call 'printf' again only for creating restart files (in case asked to do at end of run)
+    icompteur = -1
+    icount_geogprint = -1
+    icount_DS_pri = -1
+    ! => do not print anything
+    ageYprint = time - 2*ts
+    ! => create restart, if not already created
+    call printf(time, icompteur, y, ybio)
+
+
     print *
     print *, 'End of run'
     call date_and_time(values=computer_time)

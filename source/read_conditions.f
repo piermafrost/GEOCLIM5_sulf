@@ -40,7 +40,7 @@
     read(3,*) convert2ascii
 
     ! generate restart at end of run if asked (0 or negative time)
-    if (ageYprint <= 0) ageYprint = tfi + 100d6
+    if (ageYprint <= 0) ageYprint = tfi + ts
 
     return
     end
