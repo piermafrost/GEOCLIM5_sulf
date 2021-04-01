@@ -93,9 +93,8 @@ module constante
     !    thickness of sulfate-reduction layer (m)
     double precision, parameter :: hsr=0.5
     !    Kinetics constants
-    !double precision, parameter :: betahml=0.2235! for org C oxidation in bioturbated layer
-    double precision, parameter :: betahml=0.09793 ! <- low P weathering
-    double precision, parameter :: gammahsr=2.5d-6 ! for sulfate-reduction
+    double precision, parameter :: betahml=0.064602 ! for org C oxidation in bioturbated layer 
+    double precision, parameter :: gammahsr=1.6292d-5 ! for sulfate-reduction
     !!    parameterized [SO4^2-] influence on sulfate-reduction => OBSOLETE used in GEOCLIM version without sulfur cycle
     !!double precision, parameter :: fSO4cste=29.
     !    Fraction of organic matter NOT lost in form of methan (that will be re-oxidized)
