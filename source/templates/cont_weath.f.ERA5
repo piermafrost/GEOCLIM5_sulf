@@ -391,9 +391,12 @@ fpw = fpw - total_cont_POC_export/cp_cont
 ! + + + + + + + + + !
 ! Lock sulfur cycle !
 ! + + + + + + + + + !
-if (lock_sulfur_cycle)  fH2SO4sulfw = sum( fSulfRed(1:nbasin-1) ) - fcarbsulfw - fsilsulfw
-! => keep sil. sulf. wth (because it eventually consumes CO2) and carb. sulf. wth,
-!    adjust only H2SO4 release to balance sulfate-reduction
+if (lock_sulfur_cycle) then
+    ! => keep sil. sulf. wth (because it eventually consumes CO2), set H2SO4 release to 0 and
+    !    use carb. sulf. wth as adjustment variable to balance sulfate-reduction
+    fH2SO4sulfw = 0
+    fcarbsulfw = sum( fSulfRed(1:nbasin-1) ) - fsilsulfw
+end if
 
 
 ! + + + + + + + + + !
