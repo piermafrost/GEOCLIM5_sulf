@@ -22,17 +22,21 @@ del(output_files[0])
 ######################
 
 
-def plot_flux(ncdat, tindex=-1, figsize=(4,4), outfname=None, netflux=True):
+def plot_flux(ncdat, tindex=-1, figsize=(4,6), outfname=None, netflux=True):
 
 
     fig = plt.figure(figsize=figsize)
     ax = []
     # ax[0]: Carbon fluxes
-    ax += [fig.add_axes([.04, .60, .92, .35])]
-    # ax[1]: Carbonate fluxes
-    ax += [fig.add_axes([.04, .32, .92, .15])]
+    ax += [fig.add_axes([.04, .74, .92, .25])]
+    # ax[1]: Oxygene fluxes
+    ax += [fig.add_axes([.04, .56, .92, .10])]
+    # ax[2]: Carbonate fluxes
+    ax += [fig.add_axes([.04, .38, .92, .10])]
+    # ax[3]: Sulfur fluxes
+    ax += [fig.add_axes([.04, .20, .92, .10])]
 
-    axtxt = fig.add_axes([.01, .01, .98, .27])
+    axtxt = fig.add_axes([.01, .01, .98, .14])
     axtxt.set_xlim([0, 1])
     axtxt.set_ylim([0, 1])
     axtxt.axis('off')
@@ -89,61 +93,116 @@ def plot_flux(ncdat, tindex=-1, figsize=(4,4), outfname=None, netflux=True):
     # Carbon fluxes
     #--------------
 
-    flxname = ['degass', 'sil wth', 'bas wth', 'ker wth', 'OC bur']
-    flx = ['tot_CO2_degassing', 'sil_wth_C_flux', 'bas_wth_C_flux', 'ker_wth_C_flux', 'org_C_tot_dep_flux']
-    col = ['crimson', 'steelblue', 'rebeccapurple', 'indianred', 'seagreen']
-    y = [0, 0, 0, 1, 1]
+    flxname = ['degass', '+sulf', 'sil wth', 'bas wth', 'ker wth', 'OC bur']
+    flx = ['tot_CO2_degassing', 'sil_sulfwth_Ca_flux', 'sil_wth_C_flux', 'bas_wth_C_flux', 'ker_wth_C_flux', 'org_C_tot_dep_flux']
+    col = ['crimson', 'goldenrod', 'steelblue', 'rebeccapurple', 'indianred', 'seagreen']
+    y = [0, 0, 0, 0, 1, 1]
 
     flxval = [1e-12*ncdat[fname][tindex] for fname in flx]
+    flxval[1] += flxval[2] # sum sulfuric + carbonic silicate weathering
 
     # sources: +; sinks: -
-    for k in [1, 2, 4]:
+    for k in [1, 2, 3, 5]:
         flxval[k] = -flxval[k]
 
     #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
     ax[0].barh(y, flxval, color=col, edgecolor='black', linewidth=0.5)
     #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
     if netflux:
-        net = [round(sum(flxval[:2]), 1), round(sum(flxval[3:]), 1)]
+        net = [round(sum(flxval[:2]), 1), round(sum(flxval[4:]), 1)]
         ax[0].vlines(net[0], y[0]+0.4, y[0]-0.4, linestyles='--', colors='black', linewidths=1) 
-        ax[0].vlines(net[1], y[3]+0.4, y[3]-0.4, linestyles='--', colors='black', linewidths=1) 
-        annotate_flux(ax[0], flxname+['', ''], flxval+net, [-1, -1, +1, -1, -1, +1, +1], y+[y[0], y[3]])
+        ax[0].vlines(net[1], y[4]+0.4, y[3]-0.4, linestyles='--', colors='black', linewidths=1) 
+        annotate_flux(ax[0], flxname+['', ''], flxval+net, [-1, +1, -1, +1, -1, -1, +1, +1], y+[y[0], y[4]])
     else:
-        annotate_flux(ax[0], flxname, flxval, [-1, -1, +1, -1, -1], y)
+        annotate_flux(ax[0], flxname, flxval, [-1, +1, -1, +1, -1, -1], y)
 
     ax[0].set_xlabel('Tmol(C)/a', fontsize=8)
 
 
-    # Carbonate weathering and precipitation
-    #---------------------------------------
+    # Oxygen fluxes - oxidative weathering and marine burial
+    #-------------------------------------------------------
 
-    flxname = ['+sw', 'carb wth', 'tot', 'carb prec (ner.)']
-    flx = ['sil_wth_C_flux', 'carb_wth_C_flux', 'carb_pel_tot_dep_flux', 'carb_ner_tot_dep_flux']
-    col = ['seashell', 'orchid', 'mediumblue', 'skyblue']
+    flxname = ['+sw', 'ker wth', 'OC bur']
+    flx = ['pyrite_wth_S_flux', 'ker_wth_C_flux', 'orgC_dep_O2_flux']
+    col = ['goldenrod', 'indianred', 'seagreen']
     y = len(col)*[0]
 
-    flxval = [1e-12*ncdat[fname][tindex] for fname in flx]
-    # sources: +; sinks: -
-    for k in [-2, -1]:
-        flxval[k] = -flxval[k]
+    flxval = [(15/8)*1e-12*ncdat[flx[0]][tindex], 1e-12*ncdat[flx[1]][tindex], -1e-12*ncdat[flx[2]][tindex,:].sum()]
+    flxval[0] += flxval[1] # sum sulfide and kerogen oxidation
 
-    flxval[-2] = flxval[-2] + flxval[-1] # sum pelagic + neritic carbonate deposition
-    flxval[0] += flxval[1] # sum carbonate and silicate weathering
     #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
     ax[1].barh(y, flxval, color=col, edgecolor='black', linewidth=0.5)
     #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
     if netflux:
         net = round(flxval[0]+flxval[2], 1)
         ax[1].vlines(net, y[0]+0.4, y[0]-0.4, linestyles='--', colors='black', linewidths=1) 
-        annotate_flux(ax[1], flxname+[''], flxval+[net], [-1, -1, -1, -1], y+[y[0]])#,
-        #            xpad=[0.005, 0.005, 0.02, 0.02, 0.02, 0.02],
-        #            fontsize=[6, 6, 7, 7, 7, 7])
+        annotate_flux(ax[1], flxname+[''], flxval+[net], [-1, -1, -1, +1], y+[y[0]])
     else:
-        annotate_flux(ax[1], flxname, flxval, [-1, -1, -1, -1], y)#,
-        #            xpad=[0.005, 0.005, 0.02, 0.02, 0.02],
-        #            fontsize=[6, 6, 7, 7, 7])
+        annotate_flux(ax[1], flxname, flxval, [-1, -1, -1], y)
 
-    ax[1].set_xlabel('Tmol(Ca)/a', fontsize=8)
+    ax[1].set_xlabel('Tmol(O$_2$)/a', fontsize=8)
+
+
+    # Carbonate weathering and precipitation
+    #---------------------------------------
+
+    flxname = ['+sulf', '+sil', 'carb wth', 'tot', 'carb prec (ner.)']
+    flx = ['sil_sulfwth_Ca_flux', 'carb_sulfwth_Ca_flux', 'sil_wth_C_flux', 'carb_wth_C_flux', 'carb_pel_tot_dep_flux', 'carb_ner_tot_dep_flux']
+    col = ['goldenrod', 'seashell', 'orchid', 'mediumblue', 'skyblue']
+    y = len(col)*[0]
+
+    flxval = [1e-12*ncdat[fname][tindex] for fname in flx]
+    flxval[-2] = flxval[-2] + flxval[-1] # sum pelagic + neritic carbonate deposition
+    flxval[2] += flxval[3] # sum carbonate and silicate weathering
+    flxval[0] += flxval[1] + flxval[2] # sum sulfuric and carbonic weathering
+    del(flxval[1]) # do not show separately carbonate and silicate sulfuric weathering
+
+    # sources: +; sinks: -
+    for k in [-2, -1]:
+        flxval[k] = -flxval[k]
+
+    #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
+    ax[2].barh(y, flxval, color=col, edgecolor='black', linewidth=0.5)
+    #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
+    if netflux:
+        net = round(flxval[0]+flxval[3], 1)
+        ax[2].vlines(net, y[0]+0.4, y[0]-0.4, linestyles='--', colors='black', linewidths=1) 
+        annotate_flux(ax[2], flxname+[''], flxval+[net], [+1, -1, -1, -1, -1, +1], y+[y[0]],
+                    xpad=[0.005, 0.015, 0.02, 0.02, 0.02, 0.02],
+                    fontsize=[6, 6, 7, 7, 7, 7])
+    else:
+        annotate_flux(ax[2], flxname, flxval, [+1, -1, -1, -1, -1], y,
+                    xpad=[0.005, 0.015, 0.02, 0.02, 0.02],
+                    fontsize=[6, 6, 7, 7, 7])
+
+    ax[2].set_xlabel('Tmol(Ca)/a', fontsize=8)
+
+
+    # Sulfide weathering and sulfate-reduction
+    #-----------------------------------------
+
+    flxname = ['sulfide wth', 'sulfate-red']
+    flx = ['pyrite_wth_S_flux', 'sulf_red_flux']
+    col = ['goldenrod', 'sienna']
+    y = len(col)*[0]
+
+    flxval = [1e-12*ncdat[flx[0]][tindex], -1e-12*ncdat[flx[1]][tindex,:].sum()]
+
+    #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
+    ax[3].barh(y, flxval, color=col, edgecolor='black', linewidth=0.5)
+    #<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>-<>#
+    if netflux:
+        net = round(sum(flxval), 1)
+        ax[3].vlines(net, y[0]+0.4, y[0]-0.4, linestyles='--', colors='black', linewidths=1) 
+        annotate_flux(ax[3], flxname+[''], flxval+[net], [-1, -1, +1], y+[y[0]])
+    else:
+        annotate_flux(ax[3], flxname, flxval, [-1, -1], y)
+
+    ax[3].set_xlabel('Tmol(S)/a', fontsize=8)
+
+
+    # Carbonate weathering and precipitation
+    #---------------------------------------
 
 
     # Customization
@@ -159,25 +218,27 @@ def plot_flux(ncdat, tindex=-1, figsize=(4,4), outfname=None, netflux=True):
             axi.spines[wch].set_visible(False)
 
 
-    # water discharge, sediment discharge, sedimentation flux
-    #--------------------------------------------------------
+    # water discharge, sediment discharge, sedimentation flux and bioprod
+    #--------------------------------------------------------------------
 
     axtxt.annotate('Disch: {:.3f} Sv'.format((1e-6/(365.2422*24*60*60))*ncdat['discharge'][tindex]),
-                   (.05, .75), ha='left', va='top')
+                   (.05, .85), ha='left', va='top')
     axtxt.annotate('TSS: {:.3f} Gt/yr'.format(1e-12*ncdat['TSS'][tindex]),
-                   (.05, .50), ha='left', va='top')
+                   (.05, .60), ha='left', va='top')
     axtxt.annotate('sedim: {:.3f} Gt/yr'.format(1e-12*ncdat['sedim_flux'][tindex,:].sum()),
-                   (.05, .25), ha='left', va='top')
-
-
-    # CO2 and O2
-    #-----------
-
+                   (.05, .35), ha='left', va='top')
     axtxt.annotate('bioprod: {:.1f} Tmol/yr'.format(1e-12*ncdat['org_C_bio_prod'][tindex,:].sum()),
+                   (.05, .10), ha='left', va='top')
+
+
+    # CO2, O2 and SO4
+    #----------------
+
+    axtxt.annotate('pCO$_2$: {:.3f} PAL'.format(ncdat['CO2_atm_level'][tindex]),
                    (.55, .75), ha='left', va='top')
-    axtxt.annotate('pCO2: {:.3f} PAL'.format(ncdat['CO2_atm_level'][tindex]),
+    axtxt.annotate('pO$_2$: {:.3f} PAL'.format(ncdat['O2_atm_level'][tindex]),
                    (.55, .50), ha='left', va='top')
-    axtxt.annotate('pO2: {:.3f} PAL'.format(ncdat['O2_atm_level'][tindex]),
+    axtxt.annotate('SO$_4$$^2$$^-$: {:.3f} mol/m$^3$'.format(ncdat['SO4_glob'][tindex]),
                    (.55, .25), ha='left', va='top')
 
 
@@ -217,7 +278,7 @@ def plot_ocechem(ncdat, tindex=-1, figsize=(7,4), outfname=None):
     # Oceanic profiles (polar, Mid-lat and epicontinental) #
     ########################################################
 
-    for specie in ['alkalinity', 'DIC', ['H2CO3', 'HCO3', 'CO3'], 'pH', 'temperature', 'Ca', 'POC', 'O2', 'PO4', 'POP', 'lysoc_depth_carb', 'lysoc_depth_arag', 'DIC_d13C', 'Sr', 'Sr_iso_ratio']:
+    for specie in ['alkalinity', 'DIC', ['H2CO3', 'HCO3', 'CO3'], 'pH', 'temperature', 'Ca', 'POC', 'O2', 'PO4', 'POP', 'SO4', 'lysoc_depth_carb', 'lysoc_depth_arag', 'DIC_d13C', 'Sr', 'Sr_iso_ratio']:
 
         if type(specie) is not list:
             listspe = [specie]
@@ -280,6 +341,8 @@ def plot_ocechem(ncdat, tindex=-1, figsize=(7,4), outfname=None):
 
         if specie == 'alkalinity':
             globname = 'alk_glob'
+        elif specie == 'Sr_iso_ratio':
+            globname = 'Sr_iso_rat_glob'
         elif listspe[0] in ['lysoc_depth_carb', 'lysoc_depth_arag', 'H2CO3']:
             globname = None
         else:
@@ -300,6 +363,7 @@ def plot_ocechem(ncdat, tindex=-1, figsize=(7,4), outfname=None):
         #----------
 
         pdf.savefig()
+        plt.close('all')
 
 
 
@@ -313,7 +377,7 @@ def plot_ocechem(ncdat, tindex=-1, figsize=(7,4), outfname=None):
     legnd = ['shelf', 'ep deep', 'open ML', 'open NP', 'open SP']
     xpos  = [1, 3, 5, 6.5, 8]
 
-    for var in ['sedim_rate', 'sedim_flux', 'org_C_dep_flux', 'burial_efficiency', 'P_dep']:
+    for var in ['sedim_rate', 'sedim_flux', 'org_C_dep_flux', 'burial_efficiency', 'P_dep', 'sulf_red_flux']:
 
         fig = plt.figure(figsize=figsize)
         ax = fig.add_axes([.09, .3, .88, .65])
@@ -330,6 +394,10 @@ def plot_ocechem(ncdat, tindex=-1, figsize=(7,4), outfname=None):
             unit = 'Gmol/a'
             name = 'Phosphorus burial fluxes'
             legend = ['orgC-bound', 'phosphorite', 'Hydro Fe-bound']
+        elif var == 'sulf_red_flux':
+            value = 1e-12 * f[var][tindex,index]
+            unit = 'Tmol/a'
+            name = f[var].long_name
         elif var == 'sedim_rate':
             value = 1e3 * f[var][tindex,index]
             unit = 'mm/a'
@@ -367,6 +435,7 @@ def plot_ocechem(ncdat, tindex=-1, figsize=(7,4), outfname=None):
         #----------
 
         pdf.savefig()
+        plt.close('all')
 
 
     # Close pdf file
