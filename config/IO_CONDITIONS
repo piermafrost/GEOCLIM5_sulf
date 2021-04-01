@@ -182,7 +182,7 @@ RESTART_FILE:       'dynsoil_restart'       # define the name of the dynsoil res
 #   * 'restart' => read restart from existing file
 #   * 'startup:null' => create null initial condition (reg. thick. = 0 everywhere)
 #   * 'startup:eq' => create initial conditions at equilibrium with given climatology and init pCO2 (using analytical formulas)
-'restart'
+'startup:eq'
 
 # Initialization file path (only used in 'restart' initialization mode):
 # ----------------------------------------------------------------------
@@ -281,8 +281,8 @@ GLOBAL_OCEAN_PIC_D13C:  -                             PIC_d13C_glob       -     
 GLOBAL_OCEAN_POC_D13C:  -                             POC_d13C_glob       -                   _FillValue     9.96921e+36    'Mean ocean delta C 13 of Particulate Organic Carbon'
 GLOBAL_OCEAN_86-87_Sr:  -                             Sr_iso_rat_glob     -                   _FillValue     9.96921e+36    'Mean ocean Sr 87 / Sr 86 isotopic ratio'
 GLOBAL_OCEAN_PIC:       -                             PIC_Sr_iso_rat_glob -                   _FillValue     9.96921e+36    'Mean ocean Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
-GLOBAL_OCEAN_D7Li:      #                             d7Li_glob           -                   _FillValue     9.96921e+36    'Mean ocean delta lithium 7 (dissolved Li)'
-GLOBAL_OCEAN_Li:        #                             Li_glob             'mol/m3'            _FillValue     9.96921e+36    'Mean ocean lithium concentration'
+GLOB_VAR_19--NOT-ATTRI: #                             obsolete            -                   _FillValue     9.96921e+36    ''
+GLOBAL_OCEAN_SO4:       -                             SO4_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean sulfate concentration'
 GLOBAL_OCEAN_PH:        -                             pH_glob             -                   _FillValue     9.96921e+36    'Mean ocean potential of hydrogen'
 GLOBAL_OCEAN_OMEGA:     -                             omega_glob          -                   _FillValue     9.96921e+36    'Mean ocean calcite solubility product'
 GLOBAL_OCEAN_TEMP:      -                             temperature_glob    degrees_celsius     _FillValue     9.96921e+36    'Mean ocean temperature'
