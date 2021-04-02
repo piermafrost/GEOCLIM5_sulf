@@ -182,7 +182,7 @@ RESTART_FILE:       'dynsoil_restart'       # define the name of the dynsoil res
 #   * 'restart' => read restart from existing file
 #   * 'startup:null' => create null initial condition (reg. thick. = 0 everywhere)
 #   * 'startup:eq' => create initial conditions at equilibrium with given climatology and init pCO2 (using analytical formulas)
-'restart'
+'startup:eq'
 
 # Initialization file path (only used in 'restart' initialization mode):
 # ----------------------------------------------------------------------
@@ -251,8 +251,8 @@ VAR_15--POC_DELTA_13C:  -                             POC_d13C            -     
 VAR_16--CO2_DELTA_13C:  -                             CO2_d13C            -                   _FillValue     9.96921e+36    'delta C 13 of CO2'
 VAR_17--86-87_Sr_RATIO: -                             Sr_iso_ratio        -                   _FillValue     9.96921e+36    'Sr 87 / Sr 86 isotopic ratio'
 VAR_18--PIC_Sr_RATIO:   -                             PIC_Sr_iso_ratio    -                   _FillValue     9.96921e+36    'Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
-VAR_19--DELTA_7Li-6Li:  #                             d7Li                -                   _FillValue     9.96921e+36    'delta lithium 7 (dissolved Li)'
-VAR_20--Li_DISS:        #                             Li                  'mol/m3'            _FillValue     9.96921e+36    'Lithium concentration'
+VAR_19--NOT-ATTRIBUTED: #                             obsolete            -                   _FillValue     9.96921e+36    'not attributed GEOCLIM variable'
+VAR_20--SO4^2-_DISS:    -                             SO4                 'mol/m3'            _FillValue     9.96921e+36    'Sulfate ion concentration'
 H2CO3:                  -                             H2CO3               'mol/m3'            _FillValue     9.96921e+36    'H2CO3 ion concentration'
 HCO3-:                  -                             HCO3                'mol/m3'            _FillValue     9.96921e+36    'HCO3 - ion concentration'
 CO3_2-:                 -                             CO3                 'mol/m3'            _FillValue     9.96921e+36    'CO3 2- ion concentration'
@@ -281,8 +281,8 @@ GLOBAL_OCEAN_PIC_D13C:  -                             PIC_d13C_glob       -     
 GLOBAL_OCEAN_POC_D13C:  -                             POC_d13C_glob       -                   _FillValue     9.96921e+36    'Mean ocean delta C 13 of Particulate Organic Carbon'
 GLOBAL_OCEAN_86-87_Sr:  -                             Sr_iso_rat_glob     -                   _FillValue     9.96921e+36    'Mean ocean Sr 87 / Sr 86 isotopic ratio'
 GLOBAL_OCEAN_PIC:       -                             PIC_Sr_iso_rat_glob -                   _FillValue     9.96921e+36    'Mean ocean Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
-GLOBAL_OCEAN_D7Li:      #                             d7Li_glob           -                   _FillValue     9.96921e+36    'Mean ocean delta lithium 7 (dissolved Li)'
-GLOBAL_OCEAN_Li:        #                             Li_glob             'mol/m3'            _FillValue     9.96921e+36    'Mean ocean lithium concentration'
+GLOB_VAR_19--NOT-ATTRI: #                             obsolete            -                   _FillValue     9.96921e+36    ''
+GLOBAL_OCEAN_SO4:       -                             SO4_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean sulfate concentration'
 GLOBAL_OCEAN_PH:        -                             pH_glob             -                   _FillValue     9.96921e+36    'Mean ocean potential of hydrogen'
 GLOBAL_OCEAN_OMEGA:     -                             omega_glob          -                   _FillValue     9.96921e+36    'Mean ocean calcite solubility product'
 GLOBAL_OCEAN_TEMP:      -                             temperature_glob    degrees_celsius     _FillValue     9.96921e+36    'Mean ocean temperature'
@@ -330,6 +330,11 @@ CORG_BURIAL_EFFICIENCY: -                             burial_efficiency   '-'   
 P_DEP_ORG_C-BOUND:      -                             P_dep_flux_orgC     'mol/y'             _FillValue     9.96921e+36    'Organic carbon-bound phosphorus deposition flux'
 P_DEP_PHOSPHORITE:      -                             P_dep_flux_phosph   'mol/y'             _FillValue     9.96921e+36    'Phosphorus deposition flux in form of phosphorite'
 P_DEP_HYDROTHERMAL:     -                             P_dep_flux_hydro    'mol/y'             _FillValue     9.96921e+36    'Hydrothermal Fe-bound phosphorus deposition flux'
+PYRITE_WTH_S_FLUX:      -                             pyrite_wth_S_flux   'mol/y'             _FillValue     9.96921E+36    'Sulfur flux from continental pyrite oxidation'
+SIL_SULF_WTH_Ca_FLUX:   -                             sil_sulfwth_Ca_flux 'mol/y'             _FillValue     9.96921E+36    'Silicate weathering flux by sulfuric acid (moles of Ca-Mg)'
+CARB_SULF_WTH_Ca_FLUX:  -                             carb_sulfwth_Ca_flux 'mol/y'            _FillValue     9.96921E+36    'Carbonate weathering flux by sulfuric acid (moles of Ca-Mg)'
+SULFATE_RED_S_FLUX:     -                             sulf_red_flux       'mol/y'             _FillValue     9.96921E+36    'Sulfate-reduction flux in marine sediment (moles of S)'
+ORG_C_BURIAL_O2_FLUX:   -                             orgC_dep_O2_flux    'mol/y'             _FillValue     9.96921E+36    'O2 flux due to organic carbon burial'
 
 ################################################## GEOGRAPHIC:
 #
