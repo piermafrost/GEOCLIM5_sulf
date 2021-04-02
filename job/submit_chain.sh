@@ -221,9 +221,9 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     rm -r -f $RUN_NAME
     mkdir $RUN_NAME
-    mkdir $RUN_NAME/backup
     mkdir $RUN_NAME/config
     mkdir $RUN_NAME/run
+    test -d .backup || mkdir .backup # backup directory common to all runs
 
 
 
@@ -307,8 +307,8 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Backup of GEOCLIM configuration files
     # -------------------------------------
 
-    cp ../$GEOCLIM_IO_FILE $RUN_NAME/backup/IO_CONDITIONS
-    cp $CONFIG_FILE $RUN_NAME/backup/cond_p20.dat
+    test -e .backup/IO_CONDITIONS || cp ../$GEOCLIM_IO_FILE .backup/IO_CONDITIONS
+    test -e .backup/cond_p20.dat  || cp $CONFIG_FILE        .backup/cond_p20.dat
 
 
 
@@ -376,8 +376,8 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     if [ $? -ne 0 ] # if submission failed, put back original GEOCLIM config files
     then
         cd ../../
-	mv -f $RUN_NAME/backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
-	mv -f $RUN_NAME/backup/cond_p20.dat  $CONFIG_FILE
+	test -e .backup/IO_CONDITIONS || mv -f .backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
+	test -e .backup/cond_p20.dat  || mv -f .backup/cond_p20.dat  $CONFIG_FILE
     fi
 
 
@@ -548,16 +548,16 @@ else # configuration already done => continue run
 
 	if [ $? -ne 0 ] # if submission failed, put back original GEOCLIM config files
 	then
-	    mv -f ../backup/IO_CONDITIONS $GEOCLIM_IO_FILE
-	    mv -f ../backup/cond_p20.dat  $CONFIG_FILE
+	    test -e ../../.backup/IO_CONDITIONS || mv -f ../../.backup/IO_CONDITIONS $GEOCLIM_IO_FILE
+	    test -e ../../.backup/cond_p20.dat  || mv -f ../../.backup/cond_p20.dat  $CONFIG_FILE
 	fi
 
 
 
     else # End of runs, put back original GEOCLIM config files
 
-	mv -f ../backup/IO_CONDITIONS $GEOCLIM_IO_FILE
-	mv -f ../backup/cond_p20.dat  $CONFIG_FILE
+	test -e ../../.backup/IO_CONDITIONS || mv -f ../../.backup/IO_CONDITIONS $GEOCLIM_IO_FILE
+	test -e ../../.backup/cond_p20.dat  || mv -f ../../.backup/cond_p20.dat  $CONFIG_FILE
 
     fi
 
