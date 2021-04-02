@@ -352,6 +352,7 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     cp $0        $RUN_NAME/run/
     cp $JOB_FILE $RUN_NAME/run/
+    chmod u+x $RUN_NAME/*
 
 
 
@@ -366,7 +367,6 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Link to "real" executable (job file must run the link "geoclim.exe")
     test "${EXECUTABLE:0:1}" == "/" || EXECUTABLE=../../../$EXECUTABLE
     ln -s -f $EXECUTABLE geoclim.exe
-    chmod u+x geoclim.exe
 
     #=======================#
     $SUBMIT_COMMAND $JOB_FILE
