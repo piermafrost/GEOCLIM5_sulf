@@ -352,7 +352,7 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     cp $0        $RUN_NAME/run/
     cp $JOB_FILE $RUN_NAME/run/
-    chmod u+x $RUN_NAME/*
+    chmod u+x $RUN_NAME/run/*
 
 
 
