@@ -62,7 +62,7 @@ subroutine read_oceanic_temperature(IOunit, co2_axis, Toceclimber)
               print *
               print *, 'Error while reading oceanic temperature'
               print *, 'CO2 mismatch for level #', k
-              write(*, fmt='(A,F10.2,A,F10.2)'), 'Got: ', real(co2), ', expect: ', 280*co2_axis(k)
+              write(*, fmt='(A,F10.2,A,F10.2)') 'Got: ', real(co2), ', expect: ', 280*co2_axis(k)
               stop
           end if
       end do
