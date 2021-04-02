@@ -232,8 +232,6 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     ls ../$CONFIG_FILE > /dev/null || exit 1
 
-    mkdir $RUN_NAME/config
-
     echo $GEOCLIM_IO_FILE > $RUN_NAME/config/geoclim_io_file
     echo $CONFIG_FILE > $RUN_NAME/config/config_file
 
@@ -309,7 +307,6 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Backup of GEOCLIM configuration files
     # -------------------------------------
 
-    mkdir $RUN_NAME/backup
     cp ../$GEOCLIM_IO_FILE $RUN_NAME/backup/IO_CONDITIONS
     cp $CONFIG_FILE $RUN_NAME/backup/cond_p20.dat
 
