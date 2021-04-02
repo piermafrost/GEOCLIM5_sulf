@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -A UCBK0027
 #PBS -N G-car
-#PBS -o geoclim-noPf-car.log
+#PBS -o geoclim-car.log
 #PBS -j oe
 #PBS -q regular
 #PBS -l walltime=12:00:00
@@ -13,7 +13,7 @@ mkdir -p $TMPDIR
 
 ### Run OpenMP program
 cd ../executable/
-./geoclim.exe
+./geoclim-car.exe 0 1 3 0 0
 
 # Recursive resubmission
 cd ../job/

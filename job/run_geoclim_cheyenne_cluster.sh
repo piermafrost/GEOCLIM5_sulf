@@ -13,7 +13,7 @@ mkdir -p $TMPDIR
 
 ### Run OpenMP program
 cd ../executable/
-./geoclim.exe
+./geoclim.exe 0 1 3 0 0
 
 # Recursive resubmission
 cd ../job/
