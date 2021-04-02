@@ -12,7 +12,7 @@ export TMPDIR=/glade/scratch/$USER/temp
 mkdir -p $TMPDIR
 
 ### Run OpenMP program
-cd ../executables/
+cd ../executable/
 ./geoclim.exe
 
 # Recursive resubmission
