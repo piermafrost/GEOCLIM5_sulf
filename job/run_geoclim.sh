@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -A UCBK0027
-#PBS -N G-car
+#PBS -N GEOCLIM
 #PBS -o geoclim.log
 #PBS -j oe
 #PBS -q regular
