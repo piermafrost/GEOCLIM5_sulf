@@ -143,7 +143,7 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
         line=`read_lines ../$GEOCLIM_IO_FILE $nline`
 	nuncomment=$((nuncomment + `is_commented "$line"`))
     done
-    RUN_NAME=`get_second_arg $line`
+    test -z $RUN_NAME && RUN_NAME=`get_second_arg $line`
     RUN_NAME_LINENUM=$nline
 
     # line #2 > output directory
