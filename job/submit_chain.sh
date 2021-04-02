@@ -33,7 +33,7 @@
 GEOCLIM_IO_FILE='config/IO_CONDITIONS'
 
 # GEOCLIM's run name (if undefined, keep the one in main GEOCLIM IO file)
-RUN_NAME='.PyrW+50-Carb'
+RUN_NAME='.jobtest'
 
 # Job file (configured for the cluster) and submission commmand
 JOB_FILE='run_geoclim.sh'
@@ -41,30 +41,30 @@ SUBMIT_COMMAND=qsub
 
 # "real" executable file (if undefined, default is ../executable/geoclim.exe)
 # (RELATIVE TO GEOCLIM ROOT DIRECTORY!)
-EXECUTABLE='executable/geoclim-car.exe'
+EXECUTABLE='executable/geoclim.exe'
 
 # Solver and printing parameters
 # must be *same length* "list" of values (lenght = number of successive runs)
 # Undefined of empty variable => keep the values already in the configuration file
 
-STOP_TIMES="1d+5 1d+6 50d+6"   # times to stop and relaunch GEOCLIM
-COMBINE_DT="0.25 0.25 0.25"    # solver time-step for combine 
-CONTWTH_NSKIP="100 2000 40000" # asynchronous coupling of continental weathering module (x time_step)
-DYNSOIL_NSKIP="4 2 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
-COMBINE_PRINT_NSKIP="4000   40000   400000"    # printing COMBINE outputs every ... x time_step
-GEOGRAP_PRINT_NSKIP="40000  400000  4000000"   # printing geographic outputs every ... x time_step
-DYNSOIL_PRINT_NSKIP="200000 2000000 40000000"  # printing Dynsoil outputs every ... x time_step
+#STOP_TIMES="1d+5 1d+6 50d+6"   # times to stop and relaunch GEOCLIM
+#COMBINE_DT="0.25 0.25 0.25"    # solver time-step for combine 
+#CONTWTH_NSKIP="100 2000 40000" # asynchronous coupling of continental weathering module (x time_step)
+#DYNSOIL_NSKIP="4 2 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
+#COMBINE_PRINT_NSKIP="4000   40000   400000"    # printing COMBINE outputs every ... x time_step
+#GEOGRAP_PRINT_NSKIP="40000  400000  4000000"   # printing geographic outputs every ... x time_step
+#DYNSOIL_PRINT_NSKIP="200000 2000000 40000000"  # printing Dynsoil outputs every ... x time_step
 
 ### EXAMPLES:
 #
 ## basic test
-# STOP_TIMES="1 10 100"   # times to stop and relaunch GEOCLIM
-# COMBINE_DT=""                  # solver time-step for combine 
-# CONTWTH_NSKIP="1 1 1" # asynchronous coupling of continental weathering module (x time_step)
-# DYNSOIL_NSKIP="1 1 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
-# COMBINE_PRINT_NSKIP="1 1 1"        # printing COMBINE outputs every ... x time_step
-# GEOGRAP_PRINT_NSKIP="2 10 100"     # printing geographic outputs every ... x time_step
-# DYNSOIL_PRINT_NSKIP="4 20 100"  # printing Dynsoil outputs every ... x time_step
+STOP_TIMES="1 10 100"   # times to stop and relaunch GEOCLIM
+COMBINE_DT=""                  # solver time-step for combine 
+CONTWTH_NSKIP="1 1 1" # asynchronous coupling of continental weathering module (x time_step)
+DYNSOIL_NSKIP="1 1 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
+COMBINE_PRINT_NSKIP="1 1 1"        # printing COMBINE outputs every ... x time_step
+GEOGRAP_PRINT_NSKIP="2 10 100"     # printing geographic outputs every ... x time_step
+DYNSOIL_PRINT_NSKIP="4 20 100"  # printing Dynsoil outputs every ... x time_step
 #
 ## "realistic example"
 # STOP_TIMES="1d+5 1d+6 50d+6"   # times to stop and relaunch GEOCLIM
@@ -412,14 +412,6 @@ else # configuration already done => continue run
     RUN_NUMBER=`cat ../config/run_number`
 
 
-    # Determine path relative to current directory
-    test "${GEOCLIM_IO_FILE:0:1}"    == "/"  ||  GEOCLIM_IO_FILE=../../../$GEOCLIM_IO_FILE
-    test "${CONFIG_FILE:0:1}"        == "/"  ||  CONFIG_FILE=../../../$CONFIG_FILE
-    test "${OUTPUTDIR:0:1}"          == "/"  ||  OUTPUTDIR=../../../$OUTPUTDIR
-    test "${COMBINE_RESTARTDIR:0:1}" == "/"  ||  COMBINE_RESTARTDIR=../../../$COMBINE_RESTARTDIR
-    test "${DYNSOIL_RESTARTDIR:0:1}" == "/"  ||  DYNSOIL_RESTARTDIR=../../../$DYNSOIL_RESTARTDIR
-
-
     # Get time steps info
     test -e ../config/stop_times && tstart=`head -n 1 ../config/stop_times`
 
@@ -476,13 +468,21 @@ else # configuration already done => continue run
     fi
 
 
+    # Determine path relative to current directory
+    test "${GEOCLIM_IO_FILE:0:1}"    == "/"  ||  GEOCLIM_IO_FILE=../../../$GEOCLIM_IO_FILE
+    test "${CONFIG_FILE:0:1}"        == "/"  ||  CONFIG_FILE=../../../$CONFIG_FILE
+    test "${OUTPUTDIR:0:1}"          == "/"  ||  OUTPUTDIR=../../../$OUTPUTDIR
+    test "${COMBINE_RESTARTDIR:0:1}" == "/"  &&  LOC_COMBINE_RESTARTDIR=$COMBINE_RESTARTDIR  ||  LOC_COMBINE_RESTARTDIR=../../../$COMBINE_RESTARTDIR
+    test "${DYNSOIL_RESTARTDIR:0:1}" == "/"  &&  LOC_DYNSOIL_RESTARTDIR=$DYNSOIL_RESTARTDIR  ||  LOC_DYNSOIL_RESTARTDIR=../../../$DYNSOIL_RESTARTDIR
+
+
 
     # Move restart files
     # ------------------
 
-    mv ${OUTPUTDIR}${COMBINE_RESTART}${RUN_NAME}_${RUN_NUMBER}    ${COMBINE_RESTARTDIR}
+    mv ${OUTPUTDIR}${COMBINE_RESTART}${RUN_NAME}_${RUN_NUMBER}    ${LOC_COMBINE_RESTARTDIR}
     test $? -ne 0 && the_end=1
-    mv ${OUTPUTDIR}${DYNSOIL_RESTART}${RUN_NAME}_${RUN_NUMBER}.nc ${DYNSOIL_RESTARTDIR}
+    mv ${OUTPUTDIR}${DYNSOIL_RESTART}${RUN_NAME}_${RUN_NUMBER}.nc ${LOC_DYNSOIL_RESTARTDIR}
     test $? -ne 0 && the_end=1
 
 
