@@ -4,7 +4,7 @@
 #PBS -o geoclim.log
 #PBS -j oe
 #PBS -q regular
-#PBS -l walltime=12:00:00
+#PBS -l walltime=1:00:00
 #PBS -l select=1:ncpus=1:ompthreads=1
 
 ### ??
