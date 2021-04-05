@@ -43,6 +43,10 @@ SUBMIT_COMMAND=qsub
 # (RELATIVE TO GEOCLIM ROOT DIRECTORY!)
 EXECUTABLE='executable/geoclim.exe'
 
+# Optional: log file of the cluster job
+LOG_FILE="geoclim-h2s.log"
+
+
 # Solver and printing parameters
 # must be *same length* "list" of values (lenght = number of successive runs)
 # Undefined of empty variable => keep the values already in the configuration file
@@ -367,6 +371,9 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Link to "real" executable (job file must run the link "geoclim.exe")
     test "${EXECUTABLE:0:1}" == "/" || EXECUTABLE=../../../$EXECUTABLE
     ln -s -f $EXECUTABLE geoclim.exe
+
+    # Modify the log file of the job file (if asked)
+    test -z $LOG_FILE || perl -pi -e "s/geoclim.log/$LOG_FILE/g" $JOB_FILE
 
     #=======================#
     $SUBMIT_COMMAND $JOB_FILE
