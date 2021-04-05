@@ -11,5 +11,7 @@
     if (O2.gt.0.414) then
         out=0.
     endif
+!    ! no Oxygen P-feedback
+!    out=0.495
     return
     end
