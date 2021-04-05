@@ -15,6 +15,16 @@
 # The actual "job" file that launch geoclime run is a separate file,
 # stated by the variable JOB_FILE
 # This file must be configured for the user's cluster.
+#
+# This script use the log file .config-queue (in main GEOCLIM directory)
+# to resolve conflict of access to GEOCLIM configuration files.
+# You can type `./submit_chain.sh ERASE_CONFIG_QUEUE` to deleted it
+# in case an error occur and the status is "busy" while no run is waiting
+# to start.
+#
+# If you want to restore the original configuration files (normally done at
+# the end of ALL sucessive runs launched by this script), type
+# `./submit_chain.sh RESTORE_CONFIG`.
 
 
 #<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
@@ -33,7 +43,7 @@
 GEOCLIM_IO_FILE='config/IO_CONDITIONS'
 
 # GEOCLIM's run name (if undefined, keep the one in main GEOCLIM IO file)
-RUN_NAME='.jobtest'
+RUN_NAME='.jobtest2'
 
 # Job file (configured for the cluster) and submission commmand
 JOB_FILE='run_geoclim.sh'
@@ -125,8 +135,22 @@ function read_lines() {
 
 
 
+case $1 in 
+
+    "ERASE_CONFIG_QUEUE")
+	rm -f ../.config-queue
+	test $? -eq 0 && echo "Warning: queue file for configuration access deleted."
+	exit 0
+	;;
+
+esac
+
+
+
+
 if [[ $1 != "CONTINUE_RUN" ]] # => Internal configuration
 then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
     # Read GEOCLIM main IO file
@@ -217,6 +241,37 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     line=${line//\"}
     DYNSOIL_RESTARTDIR="${line%\/*}/"
     DYNSOIL_INIT_LINENUM=$nline
+
+
+
+    # Signal to restore configuration file
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    if [ "$1" == "RESTORE_CONFIG" ]
+    then
+	mv -f .backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
+	mv -f .backup/cond_p20.dat  $CONFIG_FILE
+	exit 0
+    fi
+
+
+
+    # Check that a GEOCLIM run is not currently trying to access the configuration files
+    # ----------------------------------------------------------------------------------
+
+    if [ -f ../.config-queue ]
+    then
+        status_string=`tail -n 1 ../.config-queue`
+	while [ "$status_string" == "busy" ]
+	do
+	    echo "configuration files busy. Run set-up postponed for 1 minute"
+	    sleep 1m
+            status_string=`tail -n 1 ../.config-queue`
+	done
+    fi
+
+    # Signal that the configuration files are now busy for a run set-up
+    echo "busy" >> ../.config-queue
 
 
 
@@ -496,6 +551,23 @@ else # configuration already done => continue run
 
     if [ $the_end -eq 0 ]
     then
+
+
+
+	# Check that a GEOCLIM run is not currently trying to access the configuration files
+	if [ -f ../../../.config-queue ]
+	then
+	    status_string=`tail -n 1 ../../../.config-queue`
+	    while [ "$status_string" == "busy" ]
+	    do
+		echo "configuration files busy. Run set-up postponed for 1 minute"
+		sleep 1m
+		status_string=`tail -n 1 ../../../.config-queue`
+	    done
+	fi
+
+	# Signal that the configuration files are now busy for a run set-up
+	echo "busy" >> ../../../.config-queue
 
 
 
