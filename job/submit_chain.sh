@@ -44,7 +44,7 @@ SUBMIT_COMMAND=qsub
 EXECUTABLE='executable/geoclim.exe'
 
 # Optional: log file of the cluster job
-LOG_FILE="geoclim-h2s.log"
+LOG_FILE=""
 
 
 # Solver and printing parameters
