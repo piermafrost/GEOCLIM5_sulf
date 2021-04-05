@@ -26,6 +26,7 @@ program geoclim
     use utils,                         only: read_comment, set_error_handling_option
     implicit none
     include 'combine_foam.inc'
+    integer:: ierr
 
 
 
@@ -344,6 +345,21 @@ program geoclim
 
 !   close IO condition file:
     close(0)
+
+!   signal that the current run is done with the 2 configuration files,
+!   they can be safely modified.
+    open(unit=0, file=geoclim_path//'.config-queue', status='old', action='readwrite', iostat=ierr)
+    if (ierr/=0)  open(unit=0, file=geoclim_path//'.config-queue', status='replace', action='readwrite')
+    ierr=0
+    do while (ierr==0) ! read until end of file
+        read(unit=0, fmt=*, iostat=ierr)
+    end do
+    if (ierr>0) read(unit=0, fmt=*) ! if error other than end-of-file raised, re-execute reading action to display it
+    backspace(unit=0)
+    write(unit=0, fmt='(A)') 'free (run: '//trim(run_name)//')'
+    close(unit=0)
+
+
 
 
 !   +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
