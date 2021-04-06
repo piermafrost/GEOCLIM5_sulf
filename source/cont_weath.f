@@ -284,6 +284,8 @@ else
             POC_export_rate(j)=POC_export_rate(j)/12.         !mol/m2/yr
             !! add O2 feedback
             !POC_export_rate(j) = POC_export_rate(j) / sqrt(var(11,nbasin)/38.002d18)
+            !! add stronger O2 feedback
+            !POC_export_rate(j) = POC_export_rate(j) / (var(11,nbasin)/38.002d18)
             total_cont_POC_export=total_cont_POC_export+POC_export_rate(j)*areaclimber(j)*1.e+12  !mol/yr
 
 
