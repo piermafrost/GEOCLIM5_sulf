@@ -282,6 +282,10 @@ else
             reg_eros_galy_unit=reg_eros_lithmean(j)*TSS_density*1.e6*1.e-3  !moving from m/yr to t/km2/yr
             POC_export_rate(j)=0.081*(reg_eros_galy_unit)**0.56  !in t/km2/yr
             POC_export_rate(j)=POC_export_rate(j)/12.         !mol/m2/yr
+            !! add O2 feedback
+            !POC_export_rate(j) = POC_export_rate(j) / sqrt(var(11,nbasin)/38.002d18)
+            !! add stronger O2 feedback
+            !POC_export_rate(j) = POC_export_rate(j) / (var(11,nbasin)/38.002d18)
             total_cont_POC_export=total_cont_POC_export+POC_export_rate(j)*areaclimber(j)*1.e+12  !mol/yr
 
 
