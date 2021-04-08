@@ -250,7 +250,7 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     if [ "$1" == "RESTORE_CONFIG" ]
     then
 	mv -f .backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
-	mv -f .backup/cond_p20.dat  $CONFIG_FILE
+	mv -f .backup/cond_p20.dat  ../$CONFIG_FILE
 	exit 0
     fi
 
