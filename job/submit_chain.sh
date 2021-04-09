@@ -56,6 +56,19 @@ EXECUTABLE='executable/geoclim.exe'
 # Optional: log file of the cluster job
 LOG_FILE=""
 
+# COMBINE initial condition (optional. If not specified, will keep the one in GEOCLIM main config file)
+# note: provide file path *relative to GEOCLIM root directory*, or absolute path
+COMBINE_INIT='restart/geoclim/output.ref'
+
+# Dynsoil initial condition
+# 4 possibilities:
+#    * 'startup:eq' (start from automatically-computed equilibrium condition)
+#    * 'startup:null' (start from null regolith)
+#    * name_of_init_file (start from given restart file)
+#    * '' (empty variable: keep restart mode and file from GEOCLIM main config file)
+# note: if file name, provide file path *relative to GEOCLIM root directory*, or absolute path
+DYNSOIL_INIT='startup:eq'
+
 
 # Solver and printing parameters
 # must be *same length* "list" of values (lenght = number of successive runs)
@@ -134,8 +147,18 @@ function read_lines() {
 
 
 
+# Select case according to argument passed to the script
+# ======================================================
 
 case $1 in 
+
+
+
+
+    #======================================================================#
+
+
+
 
     "ERASE_CONFIG_QUEUE")
 	rm -f ../.config-queue
@@ -143,14 +166,18 @@ case $1 in
 	exit 0
 	;;
 
-esac
+
+
+
+    #======================================================================#
 
 
 
 
-if [[ $1 != "CONTINUE_RUN" ]] # => Internal configuration
-then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+    ""|"RESTORE_CONFIG") # no argument passed => Internal configuration
+                         # 'RESTORE_CONFIG' => read GEOCLIM main config file
+                         #                     and restore all config files
+                         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
     # Read GEOCLIM main IO file
@@ -377,7 +404,29 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     rm -f toto
     read_lines ../$GEOCLIM_IO_FILE 1 $((RUN_NAME_LINENUM - 1)) > toto
     echo "RUN_NAME: '${RUN_NAME}_1'" >> toto
-    tail -n $((GEOCLIM_IO_FILE_NLINES - RUN_NAME_LINENUM)) ../$GEOCLIM_IO_FILE >> toto
+    if [ -z "$COMBINE_INIT" ]
+    then
+        read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((COMBINE_INIT_LINENUM - 1))             >> toto
+        echo "COMBINE_INIT_FILE: '$COMBINE_INIT'"
+        read_lines ../$GEOCLIM_IO_FILE $((COMBINE_INIT_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1)) >> toto
+    else
+        read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1))     >> toto
+    fi
+    case "$DYNSOIL_INIT" in
+        "") # empty variable => keep cofig file as it is
+            tail -n $((GEOCLIM_IO_FILE_NLINES - DYNSOIL_RESTART_MODE_LINENUM + 1)) ../$GEOCLIM_IO_FILE         >> toto
+            ;;
+        "startup:eq"|"startup:null") # startup modes, do not need to edit restart file name
+            echo "'$DYNSOIL_INIT'"                                                                             >> toto
+            tail -n $((GEOCLIM_IO_FILE_NLINES - DYNSOIL_RESTART_MODE_LINENUM)) ../$GEOCLIM_IO_FILE             >> toto
+            ;;
+        *) # None of above => consider variable as init file name
+            echo "'restart'"                                                                                   >> toto
+            read_lines ../$GEOCLIM_IO_FILE $((DYNSOIL_RESTART_MODE_LINENUM + 1)) $((DYNSOIL_INIT_LINENUM - 1)) >> toto
+            echo "'$DYNSOIL_INIT'"                                                                             >> toto
+            tail -n $((GEOCLIM_IO_FILE_NLINES - DYNSOIL_INIT_LINENUM)) ../$GEOCLIM_IO_FILE                     >> toto
+            ;;
+    esac
     #============================#
     mv -f toto ../$GEOCLIM_IO_FILE
     #============================#
@@ -441,12 +490,18 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
 	test -e .backup/IO_CONDITIONS && mv -f .backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
 	test -e .backup/cond_p20.dat  && mv -f .backup/cond_p20.dat  $CONFIG_FILE
     fi
+    ;;
 
 
 
 
-else # configuration already done => continue run
-     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #======================================================================#
+
+
+
+
+    "CONTINUE_RUN") # configuration already done => continue run
+                    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     # WARNING: This part is supposed to be executed in the copy the present file
     # that is in ./$RUN_NAME/run/
@@ -639,8 +694,24 @@ else # configuration already done => continue run
 	test -e ../../.backup/cond_p20.dat  && mv -f ../../.backup/cond_p20.dat  $CONFIG_FILE
 
     fi
+    ;;
 
 
 
 
-fi
+    #======================================================================#
+
+
+
+
+    *) # Unrecognized argument
+       #%%%%%%%%%%%%%%%%%%%%%%
+        echo ""
+        echo "ERROR: illegal argument \"$1\""
+        exit 1
+        ;;
+
+
+
+esac
+
