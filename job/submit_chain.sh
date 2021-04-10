@@ -406,11 +406,11 @@ case $1 in
     echo "RUN_NAME: '${RUN_NAME}_1'" >> toto
     if [ -z "$COMBINE_INIT" ]
     then
-        read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((COMBINE_INIT_LINENUM - 1))             >> toto
-        echo "COMBINE_INIT_FILE: '$COMBINE_INIT'"
-        read_lines ../$GEOCLIM_IO_FILE $((COMBINE_INIT_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1)) >> toto
-    else
         read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1))     >> toto
+    else
+        read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((COMBINE_INIT_LINENUM - 1))             >> toto
+        echo "COMBINE_INIT_FILE: '$COMBINE_INIT'"                                                          >> toto
+        read_lines ../$GEOCLIM_IO_FILE $((COMBINE_INIT_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1)) >> toto
     fi
     case "$DYNSOIL_INIT" in
         "") # empty variable => keep cofig file as it is
