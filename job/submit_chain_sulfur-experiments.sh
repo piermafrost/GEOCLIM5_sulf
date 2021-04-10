@@ -56,120 +56,161 @@ SUBMIT_COMMAND=qsub
 
 LOG_FILE="geoclim.log"
 
+# Dynsoil initial conditions
+# 4 possibilities:
+#    * 'startup:eq' (start from automatically-computed equilibrium condition)
+#    * 'startup:null' (start from null regolith)
+#    * name_of_init_file (start from given restart file)
+#    * '' (empty variable: keep restart mode and file from GEOCLIM main config file)
+DYNSOIL_INIT='startup:eq'
+
 
 # Run-dependent variable:
 # -----------------------
 
 # Abrupt perturbation (3 successive runs)
-#STOP_TIMES="1d+5 1d+6 50d+6"   # times to stop and relaunch GEOCLIM
-#COMBINE_DT="0.25 0.25 0.25"    # solver time-step for combine 
-#CONTWTH_NSKIP="100 2000 40000" # asynchronous coupling of continental weathering module (x time_step)
-#DYNSOIL_NSKIP="4 2 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
-#COMBINE_PRINT_NSKIP="4000   40000   400000"    # printing COMBINE outputs every ... x time_step
-#GEOGRAP_PRINT_NSKIP="40000  400000  4000000"   # printing geographic outputs every ... x time_step
-#DYNSOIL_PRINT_NSKIP="200000 2000000 40000000"  # printing Dynsoil outputs every ... x time_step
+STOP_TIMES="1d+5 1d+6 50d+6"   # times to stop and relaunch GEOCLIM
+COMBINE_DT="0.25 0.25 0.25"    # solver time-step for combine 
+CONTWTH_NSKIP="100 2000 40000" # asynchronous coupling of continental weathering module (x time_step)
+DYNSOIL_NSKIP="4 2 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
+COMBINE_PRINT_NSKIP="4000   40000   400000"    # printing COMBINE outputs every ... x time_step
+GEOGRAP_PRINT_NSKIP="40000  400000  4000000"   # printing geographic outputs every ... x time_step
+DYNSOIL_PRINT_NSKIP="200000 2000000 40000000"  # printing Dynsoil outputs every ... x time_step
 
 # Progressive perturbation (1 single run)
-STOP_TIMES="50d+6"    # times to stop and relaunch GEOCLIM
-COMBINE_DT="0.25"     # solver time-step for combine 
-CONTWTH_NSKIP="40000" # asynchronous coupling of continental weathering module (x time_step)
-DYNSOIL_NSKIP="1"     # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
-COMBINE_PRINT_NSKIP="400000"    # printing COMBINE outputs every ... x time_step
-GEOGRAP_PRINT_NSKIP="4000000"   # printing geographic outputs every ... x time_step
-DYNSOIL_PRINT_NSKIP="40000000"  # printing Dynsoil outputs every ... x time_step
+#STOP_TIMES="50d+6"    # times to stop and relaunch GEOCLIM
+#COMBINE_DT="0.25"     # solver time-step for combine 
+#CONTWTH_NSKIP="40000" # asynchronous coupling of continental weathering module (x time_step)
+#DYNSOIL_NSKIP="1"     # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
+#COMBINE_PRINT_NSKIP="400000"    # printing COMBINE outputs every ... x time_step
+#GEOGRAP_PRINT_NSKIP="4000000"   # printing geographic outputs every ... x time_step
+#DYNSOIL_PRINT_NSKIP="40000000"  # printing Dynsoil outputs every ... x time_step
 
 
-# Carb sulf wth - O2 fdbk: P-Hyd++, land++
+###  Carb sulf wth - O2 fdbk: P-Hyd++, land++
+#COMBINE_INIT='restart/geoclim/output.calib_Phyd-land-fdbk-plus'
+#
 #RUN_NAME='.PyrW+50-Carb_Phyd-land-fdbk-plus'
 #EXECUTABLE='executable/geoclim-car_Phydlandfdbkplus.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_Phyd-land-fdbk-plus'
 #EXECUTABLE='executable/geoclim-car-prog_Phydlandfdbkplus.exe'
 
-# Sil sulf wth - O2 fdbk: P-Hyd++, land++
+#    Sil sulf wth - O2 fdbk: P-Hyd++, land++
 #RUN_NAME='.PyrW+50-Sil_Phyd-land-fdbk-plus'
 #EXECUTABLE='executable/geoclim-sil_Phydlandfdbkplus.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_Phyd-land-fdbk-plus'
 #EXECUTABLE='executable/geoclim-sil-prog_Phydlandfdbkplus.exe'
 
-# Carb sulf wth - O2 fdbk: P-Hyd++, land+
+###  Carb sulf wth - O2 fdbk: P-Hyd++, land+
+#COMBINE_INIT='restart/geoclim/output.calib_Phyd-land-fdbk'
+#
 #RUN_NAME='.PyrW+50-Carb_Phyd-land-fdbk'
 #EXECUTABLE='executable/geoclim-car_Phydlandfdbk.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_Phyd-land-fdbk'
 #EXECUTABLE='executable/geoclim-car-prog_Phydlandfdbk.exe'
 
-# Sil sulf wth - O2 fdbk: P-Hyd++, land+
+#    Sil sulf wth - O2 fdbk: P-Hyd++, land+
 #RUN_NAME='.PyrW+50-Sil_Phyd-land-fdbk'
 #EXECUTABLE='executable/geoclim-sil_Phydlandfdbk.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_Phyd-land-fdbk'
 #EXECUTABLE='executable/geoclim-sil-prog_Phydlandfdbk.exe'
 
-# Carb sulf wth - O2 fdbk: P-Hyd++
+###  Carb sulf wth - O2 fdbk: P-Hyd++
+#COMBINE_INIT='restart/geoclim/output.calib_Phyd-fdbk-plus'
+#
 #RUN_NAME='.PyrW+50-Carb_Phyd-fdbk-plus'
 #EXECUTABLE='executable/geoclim-car_Phydfdbkplus.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_Phyd-fdbk-plus'
 #EXECUTABLE='executable/geoclim-car-prog_Phydfdbkplus.exe'
 
-# Sil sulf wth - O2 fdbk: P-Hyd++
+#    Sil sulf wth - O2 fdbk: P-Hyd++
 #RUN_NAME='.PyrW+50-Sil_Phyd-fdbk-plus'
 #EXECUTABLE='executable/geoclim-sil_Phydfdbkplus.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_Phyd-fdbk-plus'
 #EXECUTABLE='executable/geoclim-sil-prog_Phydfdbkplus.exe'
 
-# Carb sulf wth - O2 fdbk: P-Hyd+
+###  Carb sulf wth - O2 fdbk: P-Hyd+
+#COMBINE_INIT='restart/geoclim/output.calib_Phyd-fdbk'
+#
 #RUN_NAME='.PyrW+50-Carb_Phyd-fdbk'
 #EXECUTABLE='executable/geoclim-car_Phydfdbk.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_Phyd-fdbk'
 #EXECUTABLE='executable/geoclim-car-prog_Phydfdbk.exe'
 
-# Sil sulf wth - O2 fdbk: P-Hyd+
+#    Sil sulf wth - O2 fdbk: P-Hyd+
 #RUN_NAME='.PyrW+50-Sil_Phyd-fdbk'
 #EXECUTABLE='executable/geoclim-sil_Phydfdbk.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_Phyd-fdbk'
 #EXECUTABLE='executable/geoclim-sil-prog_Phydfdbk.exe'
 
-# Carb sulf wth - O2 fdbk: no P
+###  Carb sulf wth - O2 fdbk: no P
+#COMBINE_INIT='restart/geoclim/output.calib-noPfdbk'
+#
 #RUN_NAME='.PyrW+50-Carb_noPfdbk'
 #EXECUTABLE='executable/geoclim-car_noPfdbk.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_noPfdbk'
 #EXECUTABLE='executable/geoclim-car-prog_noPfdbk.exe'
 
-# Sil sulf wth - O2 fdbk: no P
+#    Sil sulf wth - O2 fdbk: no P
 #RUN_NAME='.PyrW+50-Sil_noPfdbk'
 #EXECUTABLE='executable/geoclim-sil_noPfdbk.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_noPfdbk'
 #EXECUTABLE='executable/geoclim-sil-prog_noPfdbk.exe'
 
-# Carb sulf wth - O2 fdbk: no P, sed ML-
+###  Carb sulf wth - O2 fdbk: no P, sed ML-
+#COMBINE_INIT='restart/geoclim/output.calib-noPfdbk-red'
+#
 #RUN_NAME='.PyrW+50-Carb_noPfdbk-red'
 #EXECUTABLE='executable/geoclim-car_noPfdbkred.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_noPfdbk-red'
 #EXECUTABLE='executable/geoclim-car-prog_noPfdbkred.exe'
 
-# Sil sulf wth - O2 fdbk: no P, sed ML-
+#    Sil sulf wth - O2 fdbk: no P, sed ML-
 #RUN_NAME='.PyrW+50-Sil_noPfdbk-red'
 #EXECUTABLE='executable/geoclim-sil_noPfdbkred.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_noPfdbk-red'
 #EXECUTABLE='executable/geoclim-sil-prog_noPfdbkred.exe'
 
-# Carb sulf wth - no O2 fdbk
+###  Carb sulf wth - no O2 fdbk
+#COMBINE_INIT='restart/geoclim/output.GFDL_PI_eq'
+#
 #RUN_NAME='.PyrW+50-Carb_noO2fdbk'
 #EXECUTABLE='executable/geoclim-car_noO2fdbk.exe'
 #RUN_NAME='.PyrW+50-Carb-prog_noO2fdbk'
 #EXECUTABLE='executable/geoclim-car-prog_noO2fdbk.exe'
 
-# Sil sulf wth - no O2 fdbk
+#    Sil sulf wth - no O2 fdbk
 #RUN_NAME='.PyrW+50-Sil_noO2fdbk'
 #EXECUTABLE='executable/geoclim-sil_noO2fdbk.exe'
 #RUN_NAME='.PyrW+50-Sil-prog_noO2fdbk'
 #EXECUTABLE='executable/geoclim-sil-prog_noO2fdbk.exe'
 
-# Carb sulf wth - standard O2 feedback
+###  Carb sulf wth - standard O2 feedback
+COMBINE_INIT='restart/geoclim/output.GFDL_PI_eq'
+#
+#RUN_NAME='.PyrW+50-Carb'
+#EXECUTABLE='executable/geoclim-car.exe'
 #RUN_NAME='.PyrW+50-Carb-prog'
 #EXECUTABLE='executable/geoclim-car-prog.exe'
 
-# Sil sulf wth - standard O2 feedback
-RUN_NAME='.PyrW+50-Sil-prog'
-EXECUTABLE='executable/geoclim-sil-prog.exe'
+#    Sil sulf wth - standard O2 feedback
+#COMBINE_INIT='restart/geoclim/output.GFDL_PI_eq'
+#RUN_NAME='.PyrW+50-Sil'
+#EXECUTABLE='executable/geoclim-sil.exe'
+#RUN_NAME='.PyrW+50-Sil-prog'
+#EXECUTABLE='executable/geoclim-sil-prog.exe'
+
+###  Carb sulf wth - Pyrite & Kerogen perturbation, without add. P (standard O2 feedback)
+#RUN_NAME='.PyrKerW+10-noP-Carb'
+#EXECUTABLE='executable/geoclim-car-ker+10-noP.exe'
+#RUN_NAME='.PyrKerW+10-noP-Carb-prog'
+#EXECUTABLE='executable/geoclim-car-ker+10-noP-prog.exe'
+
+###  Carb sulf wth - Pyrite & Kerogen perturbation, with add. P (standard O2 feedback)
+RUN_NAME='.PyrKerW+10-P-Carb'
+EXECUTABLE='executable/geoclim-car-ker+10-P.exe'
+#RUN_NAME='.PyrKerW+10-P-Carb-prog'
+#EXECUTABLE='executable/geoclim-car-ker+10-P-prog.exe'
 
 
 # <><><><><><><><><><><><><><><><><><><><><><><><><><>
@@ -242,8 +283,18 @@ function read_lines() {
 
 
 
+# Select case according to argument passed to the script
+# ======================================================
 
 case $1 in 
+
+
+
+
+    #======================================================================#
+
+
+
 
     "ERASE_CONFIG_QUEUE")
 	rm -f ../.config-queue
@@ -251,14 +302,18 @@ case $1 in
 	exit 0
 	;;
 
-esac
+
+
+
+    #======================================================================#
 
 
 
 
-if [[ $1 != "CONTINUE_RUN" ]] # => Internal configuration
-then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+    ""|"RESTORE_CONFIG") # no argument passed => Internal configuration
+                         # 'RESTORE_CONFIG' => read GEOCLIM main config file
+                         #                     and restore all config files
+                         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
     # Read GEOCLIM main IO file
@@ -485,7 +540,29 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
     rm -f toto
     read_lines ../$GEOCLIM_IO_FILE 1 $((RUN_NAME_LINENUM - 1)) > toto
     echo "RUN_NAME: '${RUN_NAME}_1'" >> toto
-    tail -n $((GEOCLIM_IO_FILE_NLINES - RUN_NAME_LINENUM)) ../$GEOCLIM_IO_FILE >> toto
+    if [ -z "$COMBINE_INIT" ]
+    then
+        read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1))     >> toto
+    else
+        read_lines ../$GEOCLIM_IO_FILE $((RUN_NAME_LINENUM + 1)) $((COMBINE_INIT_LINENUM - 1))             >> toto
+        echo "COMBINE_INIT_FILE: '$COMBINE_INIT'"                                                          >> toto
+        read_lines ../$GEOCLIM_IO_FILE $((COMBINE_INIT_LINENUM + 1)) $((DYNSOIL_RESTART_MODE_LINENUM - 1)) >> toto
+    fi
+    case "$DYNSOIL_INIT" in
+        "") # empty variable => keep cofig file as it is
+            tail -n $((GEOCLIM_IO_FILE_NLINES - DYNSOIL_RESTART_MODE_LINENUM + 1)) ../$GEOCLIM_IO_FILE         >> toto
+            ;;
+        "startup:eq"|"startup:null") # startup modes, do not need to edit restart file name
+            echo "'$DYNSOIL_INIT'"                                                                             >> toto
+            tail -n $((GEOCLIM_IO_FILE_NLINES - DYNSOIL_RESTART_MODE_LINENUM)) ../$GEOCLIM_IO_FILE             >> toto
+            ;;
+        *) # None of above => consider variable as init file name
+            echo "'restart'"                                                                                   >> toto
+            read_lines ../$GEOCLIM_IO_FILE $((DYNSOIL_RESTART_MODE_LINENUM + 1)) $((DYNSOIL_INIT_LINENUM - 1)) >> toto
+            echo "'$DYNSOIL_INIT'"                                                                             >> toto
+            tail -n $((GEOCLIM_IO_FILE_NLINES - DYNSOIL_INIT_LINENUM)) ../$GEOCLIM_IO_FILE                     >> toto
+            ;;
+    esac
     #============================#
     mv -f toto ../$GEOCLIM_IO_FILE
     #============================#
@@ -549,12 +626,18 @@ then                          #%%%%%%%%%%%%%%%%%%%%%%%%%%
 	test -e .backup/IO_CONDITIONS && mv -f .backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
 	test -e .backup/cond_p20.dat  && mv -f .backup/cond_p20.dat  $CONFIG_FILE
     fi
+    ;;
 
 
 
 
-else # configuration already done => continue run
-     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #======================================================================#
+
+
+
+
+    "CONTINUE_RUN") # configuration already done => continue run
+                    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     # WARNING: This part is supposed to be executed in the copy the present file
     # that is in ./$RUN_NAME/run/
@@ -747,8 +830,24 @@ else # configuration already done => continue run
 	test -e ../../.backup/cond_p20.dat  && mv -f ../../.backup/cond_p20.dat  $CONFIG_FILE
 
     fi
+    ;;
 
 
 
 
-fi
+    #======================================================================#
+
+
+
+
+    *) # Unrecognized argument
+       #%%%%%%%%%%%%%%%%%%%%%%
+        echo ""
+        echo "ERROR: illegal argument \"$1\""
+        exit 1
+        ;;
+
+
+
+esac
+
