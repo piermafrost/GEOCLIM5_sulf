@@ -269,6 +269,12 @@ else
                                                             ! *dexp(facker)  !0.672d+10
             fker(j) = 0.5 * sum(litho_frac(:,j)*OC_rock*reg_eros(:,j))
             !         ^^^ : oxidation efficiency
+            ! *************************************
+            ! Kerogen weathering perturbation: +50%
+            !fker(j) = 1.5 * fker(j)
+            ! +10.32% (eq. in C source as + 50% of sulfuric weathering)
+            !fker(j) = 1.1032 * fker(j)
+            ! *************************************
             if (.not. lock_oxygen_cycle)  fkerw = fkerw + fker(j)*1e12*areaclimber(j)*clo
 
 
@@ -306,11 +312,13 @@ else
             !*********************************************************************!
             ! SULFURIC WEATHERING PERTURBATION - PART 1/3
             ! -------------------------------------------
-            ! PERTURBATION: +50% of pyrite weathering flux:
+            ! PERTURBATION: +50% of pyrite weathering flux (with kerw => +10.32%):
             ! abrupt perturbation
             !faddsulfw = faddsulfw + 0.5*fpyrw*1e12*areaclimber(j)
+            !faddsulfw = faddsulfw + 0.1032*fpyrw*1e12*areaclimber(j)
             ! progressive pertubation over 40 Ma
             !faddsulfw = faddsulfw + 0.5*min(1d0, t/40d6)*fpyrw*1e12*areaclimber(j)
+            !faddsulfw = faddsulfw + 0.1032*min(1d0, t/40d6)*fpyrw*1e12*areaclimber(j)
             !*********************************************************************!
 
         end do
@@ -380,6 +388,11 @@ do j0=1,ncontpxl
     fp(j) = sum((P_rock(1:nlitho-1)/CaMg_rock(1:nlitho-1)) * wth_litho_wgh(1:nlitho-1,j)) & ! silicate part
             +  P2C_carb * wth_litho_wgh(nlitho,j) & ! carbonate part
             +  P2C_ker * fker(j) ! kerogen part
+            ! *************************************
+            ! Do not consider "extra" kerogen weathering (ie, perturbation) for P weathering
+            !+  P2C_ker * fker(j) / 1.5    ! kerogen part
+            !+  P2C_ker * fker(j) / 1.1032 ! kerogen part
+            ! *************************************
     fpw = fpw + fp(j)*1d12*areaclimber(j)*clo*phosss
 
 end do
