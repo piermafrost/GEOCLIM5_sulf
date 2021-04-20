@@ -23,6 +23,9 @@ subroutine read_oceanic_temperature(IOunit, co2_axis, Toceclimber)
         ! Pre-industrial
         SST = 20 + 4.88504*dlog(co2_axis)
         deepT = -6.58807 + 6.89026*dlog(co2_axis)
+        ! Fixed oceanic temperature
+        !SST = 20
+        !deepT = -6.58807
 
         ! 265Ma
         !SST = 15.6279 + 4.88504*dlog(co2_axis)
