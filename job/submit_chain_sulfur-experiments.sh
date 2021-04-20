@@ -77,6 +77,9 @@ COMBINE_PRINT_NSKIP="4000   40000   400000"    # printing COMBINE outputs every 
 GEOGRAP_PRINT_NSKIP="40000  400000  4000000"   # printing geographic outputs every ... x time_step
 DYNSOIL_PRINT_NSKIP="200000 2000000 40000000"  # printing Dynsoil outputs every ... x time_step
 
+# FOR CARB TRADE-OFF (cannot have asynchronous DynSoil coupling because carbonate wth is computed outside DynSoil)
+#DYNSOIL_NSKIP="1 1 1"          # asynchronous coupling of DynSoil module (x contwth_nskip x time_step)
+
 # Progressive perturbation (1 single run)
 #STOP_TIMES="50d+6"    # times to stop and relaunch GEOCLIM
 #COMBINE_DT="0.25"     # solver time-step for combine 
@@ -185,11 +188,12 @@ DYNSOIL_PRINT_NSKIP="200000 2000000 40000000"  # printing Dynsoil outputs every 
 #RUN_NAME='.PyrW+50-Sil-prog_noO2fdbk'
 #EXECUTABLE='executable/geoclim-sil-prog_noO2fdbk.exe'
 
-###  Carb sulf wth - standard O2 feedback
+###  RESTART with standard O2 feedback
 COMBINE_INIT='restart/geoclim/output.GFDL_PI_eq'
-#
-#RUN_NAME='.PyrW+50-Carb'
-#EXECUTABLE='executable/geoclim-car.exe'
+
+###  Carb sulf wth - standard O2 feedback
+RUN_NAME='.PyrW+50-Carb'
+EXECUTABLE='executable/geoclim-car.exe'
 #RUN_NAME='.PyrW+50-Carb-prog'
 #EXECUTABLE='executable/geoclim-car-prog.exe'
 
@@ -207,10 +211,31 @@ COMBINE_INIT='restart/geoclim/output.GFDL_PI_eq'
 #EXECUTABLE='executable/geoclim-car-ker+10-noP-prog.exe'
 
 ###  Carb sulf wth - Pyrite & Kerogen perturbation, with add. P (standard O2 feedback)
-RUN_NAME='.PyrKerW+10-P-Carb'
-EXECUTABLE='executable/geoclim-car-ker+10-P.exe'
+#RUN_NAME='.PyrKerW+10-P-Carb'
+#EXECUTABLE='executable/geoclim-car-ker+10-P.exe'
 #RUN_NAME='.PyrKerW+10-P-Carb-prog'
 #EXECUTABLE='executable/geoclim-car-ker+10-P-prog.exe'
+
+###  Carb sulf wth - trade-off
+#RUN_NAME='.PyrW+50-Carb-trdf'
+#EXECUTABLE='executable/geoclim-car-trdf.exe'
+
+#    Sil sulf wth - trade-off
+#RUN_NAME='.PyrW+50-Sil-trdf'
+#EXECUTABLE='executable/geoclim-sil-trdf.exe'
+
+#    H2SO4 leaching
+#RUN_NAME='.PyrW+50-H2SO4'
+#EXECUTABLE='executable/geoclim-h2s.exe'
+
+###  Carb sulf wth - fixed oceanic temperature
+#RUN_NAME='.PyrW+50-Carb_cst-oceT'
+#EXECUTABLE='executable/geoclim-car-oceTcste.exe'
+
+###  Carb sulf wth - fixed CO2
+#!! NOTE: YOU NEED TO UPDATE config/GCM_io_condition TO SPECIFY 1 CO2 LEVEL
+#RUN_NAME='.PyrW+50-Carb_cst-CO2'
+#EXECUTABLE='executable/geoclim-car-CO2cste.exe'
 
 
 # <><><><><><><><><><><><><><><><><><><><><><><><><><>
