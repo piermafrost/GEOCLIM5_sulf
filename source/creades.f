@@ -206,7 +206,6 @@
                *var(6,j)*vol(j) &
                + gotoshelf*fsink_inorg(j)*(vol(j))*var(6,j) &
                *(1.-closed) &
-               +fsilw*rSrsil+fbasw*rSrsil+fcarbw*rSrCar &
                +(fsilw+fbasw+fsilsulfw)*rSrsil+(fcarbw+fcarbsulfw)*rSrCar &! add carbonate and silicate weathering by sulphuric acid
                -freef(j)*rSrdep(j)
     end do
