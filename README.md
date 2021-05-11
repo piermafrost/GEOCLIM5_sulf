@@ -38,6 +38,10 @@ the same results.
 Type `./make_test` for more information.
 
 
+## `configure.sh` command
+A script to quickly set up pre-defined GEOCLIM configurations, like ERA5 (ref) or GFDL.
+
+
 ## `build_GEOCLIM` command
 `build_GEOCLIM` is a bash script, meant to edit the needed source files for pre-compilation configuration (data shape,
 activated modules, ...) and compile the code. The post-compilation configuration is left to do (which file to use as
