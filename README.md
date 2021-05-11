@@ -5,10 +5,11 @@
   with some automatic unit conversions.
 * Possibility to automatically create DynSoil initial conditions (null regolith, or at equilibrium with initial pCO2).
 * Can specify uniform lithology, without input netCDF file
-* Add checks for axis matching, missing points, invalid runoff and slope, invalid lithology,
-  and interactively ask the users if error detected (by default)
+* Add checks for axis matching, missing points, invalid runoff and slope, invalid lithology, and physical units.
+  Interactively ask the users if error detected (by default).
 * Reorganize the main IO file ('config/IO_CONDITION'), can now add commented (#) and blank lines
 * Minor code improvements (e.g., Runge-Kutta 4 scheme, biological 13C fractionation formula...)
+* Add simplified sulfur cycle (oceanic SO4^2-, sulfide weathering and sulfate-reduction).
 
 
 ## Required software
