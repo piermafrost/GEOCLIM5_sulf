@@ -214,17 +214,22 @@ computed with a parametric function of pCO2. "file_name", the boxes temperature 
 temperature of each box at each CO2 level. Each row of that file represents a CO2 level, each column states the temperature
 of the n-th box, except the first column that states the CO2 level (in ppmv).
 * Continental climate: total grid area, land area, temperature (at each CO2 levels) and runoff (at each CO2 levels).
-  See examples in INPUT/ERA5/ (ascii files. Area in 1e6 km2, temperature in °C, runoff in cm/y).
+  See examples in INPUT/ERA5/ (ascii files. Area in 1e6 km2, temperature in °C, runoff in cm/y, if INPUT_MODE is 'ascii').
   Alternatively, those 4 inputs can be read from GCM outputs (land annual climatology), in netCDF format.
-  In that case, the GCM output files info must be provided in config/GCM_input_conditions. The model expect 1 netCDF
-  file per CO2 level. It recognizes several units and completes automatic conversions. If the units are not recognized, the default
-  units will be assumed, but the user will be asked interactively to validate it. New units and conversion factors can easily be added
-  in source/physical_units.f90
+  Set INPUT_MODE as 'GCM' in config/IO_CONDITIONS. The GCM output files info must be provided in config/GCM_input_conditions.
+  The model expect 1 netCDF file per CO2 level. It recognizes several units and completes automatic conversions. If the units are not
+  recognized, the default units will be assumed, but the user will be asked interactively to validate it. New units and conversion
+  factors can easily be added in source/physical_units.f90 (see section *defining new physical units* in *Further information*).
 * Lithology mask: a netCDF file containing the area fraction covered by each lithology class in every land pixels.
   Alternatively, the user can specify directly in config/IO_CONDITIONS a geographically uniform lithology fraction for each class.
 * topography slope: a netCDF file, only read if coupled with DynSoil.
 * A special file is also required ("All" file) containing mean climate variables (like global temperature) at each CO2 level.
   See for instance 'INPUT/ERA5/All_ERA5.dat'
+* Global Mean Surface Temperature (GMST): this input is optional, and is available in 'GCM' input mode only. You can specify
+  in config/GMC_input_conditions the netCDF files and variable for 2m temperature *everywhere* (not only on lands). It can be
+  stored in different netCDF files than land temperature and runoff (as runoff is very often in *land* GCM output, whose variables
+  are defined only on lands, and not on ocean). However, this temperature field **must** be defined on the same grid than the land
+  outputs. If nothing is specified, the GMST will not be computed and output by the model.
 
 
 #### Initialization files
@@ -303,9 +308,9 @@ You can put as many run names as you want in the deathnote, one by line. Don't f
 
 ### Special runs
 
-#### Equilibrium run
-An "equilibrium run" is a run whose transient evolution is of no interest because one only wants to get the geochemical
-steady-state (for instance, to start perturbation from that steady-state).
+#### Equilibrium (accelerated) run
+An "equilibrium run", or accelerated run, is a run whose transient evolution is of no interest because one only wants to get
+the geochemical steady-state (for instance, to start perturbation from that steady-state).
 In that case, a couple of things can be modified to shorten the time needed to reach the steady-state, without modifying it.
 
 ###### Before compilation: 
@@ -325,19 +330,32 @@ Note that there will be a slight difference between the analytical steady-state 
 "dynamic" version of DynSoil) simply because of the vertical discretization.
 
 ###### After compilation
-* Oxygen cycle acceleration: O2 is the species with the longest residence time (~10 Myr). An acceleration coefficient
-can be tuned in 'config/cond_p20.dat'. Setting it to 100 is enough to bring it down to Carbon residence time. An excessively
-value will cause the model to crash.
+* Oxygen cycle acceleration: O2 has a residence time of ~8 Myr, so it requires around 20 Myr to reach equilibrium.
+An acceleration coefficient can be tuned in 'config/cond_p20.dat'. Setting it to 100 is enough to bring the equilibration
+time down to Carbon residence time. An excessively value will cause the model to crash.
+* Sulfur cycle acceleration: Similarly to oxygen, an acceleration coefficient can be tuned in 'config/cond_p20.dat' to reduce
+the time needed for sulfur cycle to reach equilibrium (the residence time of sulfur is ~30 Myr). 100 is a good value.
 * Asynchronous coupling with continental weathering: The standard time-step for continental weathering is 25 years, and
 the model spends a significant amount of time on the continental computation, especially at high resolution (1° or less)
 and when coupled to DynSoil.
 Increasing that time step to 250 years, or 1000 years will hasten the run, only degrading the quality of the transient
 evolution. If it is too high, however, it can increase the model time needed to reach the steady-state.
 
-#### Calibration run
+#### Fixed CO2 run
+...
+
+#### Run with locked geochemical cycles
+...
+
+
+
+## Further information
+
+#### Calibration procedure
 To be fully consistent, the model should be recalibrated for each new set of boundary conditions.
 The current calibration is done with ERA5 reanalysis fields for temperature and runoff, SRTM slope, and
-Hartmann et al. 2013 lithology mask, all at a resolution of 0.5°.
+Hartmann et al. 2013 lithology mask, all at a resolution of 0.5°. A second calibration is available for the GFDL boundary
+conditions.
 The climate fields of a General Circulation Model will inevitably differ from ERA5 fields, and differ from one GCM to
 another, yielding many unique geochemical steady-states. The spatial resolution may also affect the steady-state.
 
@@ -345,6 +363,9 @@ Here are suggested steps to properly recalibrate the model:
 * Run a Pre-Industrial simulation (1850 boundary conditions, 1xCO2) with the GCM you intend to use, preferably with
 the same set of components and resolution. Retrieve the equilibrium annual climatology.
 * Configure GEOCLIM at the given geographic resolution and with 1 CO2 level. It will set the model in fixed CO2 mode.
+If you are using the 'GCM' input mode, you will need to remove (or comment) the lines stating the netCDF inputs that are
+not at 1xCO2 in config/GCM_input_conditions. If you are using the 'ascii' input mode, you will need to remove the not-1xCO2
+inputs *in the ascii files* (or create new ascii files with only 1xCO2 inputs).
 * For the lithology mask, it is preferable to keep it the same way than you intend to use it for the paleo runs
 (uniform or spatially-resolved, with same number of classes), while being consistent with present-day lithology.
 * Do a first short run with the pre-industrial forcings to retrieve the silicate weathering flux. If you used DynSoil
@@ -354,28 +375,37 @@ If you use another set of components, only 1 model time step is needed.
 As today's degassing flux is not well constrained, it is better to tuned it and keep the weathering parameters unchanged.
 Note that the degassing flux (specified in "config/cond_p20.dat") is split in 2: Volcanic (continental) and MOR (oceanic).
 Doing so, the equilibrium CO2 with Pre-Industrial boundary conditions will be 1 PAL.
-* *Phosphorus weathering?*
-* With that degassing flux, re-do as many runs as needed to get 1 PAL of atmospheric O2 (use oxygen acceleration coefficient!)
-There is no other way than to manually run the model, adjust the parameters if O2 is too low or too high, re-compile, re-run,
-and so on, because the organic carbon burial flux also depends on O2 concentration.
-I recommend tuning the value of the parameter 'OC_in_rocks' that corresponds to "siliclate sediments", because it is the
-most poorly constrained parameter. This parameter (in "source/combine_foam.inc") specifies the mass fraction of petrogenic
-carbon in each rock type. A higher value will result in higher kerogen weathering, and thus less oxygen (and vice versa).
-A standard value for siliclate sediment is ~1%, though is highly depends on the type of sediment.
-Note that the total kerogen weathering carbon flux (= total organic carbon burial) should be ~5 Gmol/yr.
-* Though it is of less importance, you can adjust the carbonate weathering constant in "source/cont_weath.f" to have a total
-carbonate weathering flux of 13 Gmol/yr. A simple cross-multiplication is sufficient to get the right flux, no need to do
-back and forth runs.
-However, make sure to do it **before** oxygen tuning, as it may affect the efficiency of organic carbon burial.
+* Although it is not strictly necessary, you may want to adjust the parameters of Phosphorus and carbonate weathering to get the
+desired flux. Phosphorus weathering will impact the oxygen levels. Carbonate weathering has no impact on equilibrium CO2, and
+virtually no impcat on O2 (though it may affect the biological pump). However, it directly impacts the oceanic DIC, Calcium and
+alkalinity. Phosphorus weathering parameters (ie, P amount in source rocks: P_rock, P2C_ker and P2C_carb) are defined in
+source/constante.f90. Carbonate weathering should be modified directly in cont_weath.f. In both cases, a simple cross-multiplication
+is sufficient to get the right flux.
+* Finally, re-do as many runs as needed to get 1 PAL of atmospheric O2 and 29 mol/m3 of mean oceanic sulfate (using acceleration
+coefficients will help). There is no other way than to manually run the model, adjust the parameters if O2 and sulfate are too
+low or too high, re-compile, re-run, and so on. I recommend tuning the value of the parameter 'OC_in_rocks' (in source/constante.f90)
+that corresponds to "siliclate sediments", because it is the most poorly constrained parameter. This parameter specifies the mass
+fraction of petrogenic carbon in each rock type. A higher value will result in higher kerogen weathering, and thus less oxygen (and vice versa).
+A standard value for siliclate sediment is ~1%, though is highly depends on the type of sediment. For the sulfur cycle, the parameter
+'Sulf_rock' (amount of sulfide in source rocks, still in source/cont_weath.f) is controlled by the S:C ratio, and determine the
+sulfide weathering flux. With the acceleration parameters at 100, the model should be run for 2-5 Myr to have an idea of the equilibrium
+O2 and SO4^2-
+* To be more accurate, the oceanic alkalinity, DIC and the O2 gradient can be checked. If needed, they can be adjusted by modifying the
+parameters controlling ocean chemistry, that are defined in source/constante.f90.
 
-
-
-## Further information
-
-### How to generate boundary conditions
+### Defining new physical units
 ...
 
-### Basic code modifications
+### Generate oceanic temperature ascii input file from GCM outputs
+...
+
+### Generate boundary conditions
+##### Climatology average
+...
+##### oceanic boundary conditions
+...
+
+### Basic code modification
 ...
 
 ### Advanced customization
@@ -388,11 +418,21 @@ However, make sure to do it **before** oxygen tuning, as it may affect the effic
 
 ## Technical notes
 
-### How to install netCDF-Fortran library
-
-#### Mac OS
+### Install ifort compiler on Mac OS
 Note: the following instructions worked in June 2018, on Mac OS High Sierra 10.13.5
 
+* download the student version
+    * https://software.intel.com/en-us/qualify-for-free-software/student
+* click `macOS (Fortran)`
+* follow sign up
+* download and install
+    * `source /opt/intel/bin/compilervars.sh intel64`
+* documentation
+    * file:///opt/intel/documentation_2018/en/ps2018/getstart_comp_mf.htm
+
+### How to install netCDF-Fortran library
+
+#### With ifort compiler, on Mac OS
 Check the following before completing the steps outlined below:
 * check if gfortran is installed by typing `gfortran` onto the command line
     * there may be conflict issues between ifort and gfortran (these instructions are meant for ifort compiler)
@@ -440,18 +480,10 @@ Check the following before completing the steps outlined below:
         * `make install`
 
 #### With Linux OS
-`apt-get install libnetcdff` :)
+The simplest way is with apt-get: `apt-get install libnetcdff`
+This will ensure the compatibility with the installed Fortran compiler.
 
 ### Non-required software instructions for installation (Mac OS)
-* ifort
-    * download the student version
-        * https://software.intel.com/en-us/qualify-for-free-software/student
-    * click `macOS (Fortran)`
-    * follow sign up
-    * download and install
-        * `source /opt/intel/bin/compilervars.sh intel64`
-    * documentation
-        * file:///opt/intel/documentation_2018/en/ps2018/getstart_comp_mf.htm
 * pyFerret
     * download for python 3.6
         * https://github.com/NOAA-PMEL/PyFerret/releases
