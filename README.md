@@ -250,6 +250,10 @@ directory, as all the paths in the code are absolute paths.
 
 ### Inputs error handling
 GEOCLIM performs tests on the input files before the "main" execution. They are 4 types:
+
+TO UPDATE: NOW 5 TYPES OF ERRORS
+...
+
 1. Axis mismatch between the input files (for instance, shifted longitude)
 2. missing values on continental pixels (continental pixels are defined by the "land area" input variable)
 3. invalid value for runoff (negative) and slope (negative or null)
