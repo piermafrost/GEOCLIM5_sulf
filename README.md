@@ -311,7 +311,43 @@ To do so, simply write the name of the run (as specified at the first uncommente
 You can put as many run names as you want in the deathnote, one by line. Don't forget to erase the names afterward!
 
 ### Multiple runs and job submission
-...
+'submit_chain.sh' (in the repertory job/) is a bash script for automatically launching a serie of GEOCLIM runs.
+A serie of runs are runs that have exactly the same configuration (except for their timesteps, starting and stopping times),
+each one starts from the end of the previous one (the very first one starts from the initial condition given by the user).
+This is useful for runs with an initial perturbation, requiring a short timestep, but whose long-term evolution (after
+the adaptation to the perturbation) can be computed with a longer timestep.
+In addition, it offers to possibility to submit the GEOCLIM run as batch processes (jobs), which is required on clusters.
+Clusters usually have a time limitation for jobs, which makes the automatic resubmission (series of run) helpful.
+Finally, this script provides a security for conflicting access to the configuration files, that is helpful for running
+several independent runs in parallel.
+
+Practically, the script 'submit_chain.sh' works in pair with a second script (usually, 'run_geoclim.sh'). The main script
+('submit_chain.sh') "submits" the second one (either executes it, or submits it with the cluster submission command), that
+actually run the geoclim model, and call the first script back when the run is completed.
+The main script does all the configuration, and move the restarts. The second is only for running the GEOCLIM executable,
+but must be configured for the current cluster (whereas the main one is a bash script meant to be executed directly).
+
+When using 'submit_chain.sh', the pre-compilation configuration must be done (and the code compiled). If you wants to launch
+in paralel several runs that need different pre-compilation configurations, save as many different GEOCLIM executable files.
+Here is the list of options that can be customized with 'submit_chain.sh':
+* The name of the run (for a series of runs, suffix '_1', '_2'... are added).
+* The submission command (cluster-dependent) and the name of the running script (usually, 'run_geoclim.sh').
+* The name of the GEOCLIM executable file.
+* GEOCLIM (COMBINE) and DynSoil initial condition.
+* Stopping (and restarting) times. Note: The "first" starting time is given by config/cond_p20.dat, and should normally be 0.
+* The different model timesteps and printing timesteps.
+* The job log file.
+* The name of GEOCLIM main configuration file (normally, config/IO_CONDITIONS. In case extra configuration customizations
+are needed. Usually, keeping the default one is sufficient).
+
+The script is designed for parallel runs. It edits the configuration files and ensures there is no conflict.
+Once you have submitted one run (serie of run), you can safely edit the file 'submit_chain.sh' and submit a second run (serie of
+runs). The script will tell you if a run is waiting to access the configuration files.
+If you need to do configuration modifications not available in 'submit_chain.sh', the safest way is to create a new config file
+"IO_CONDITIONS" and to tell 'submit_chain.sh' to use it (note: the name of the other config files, like cond_p20.dat, are stated
+in the main one). Remember that if you edit any of the configuration files, it will impact **all** the series of run that have
+been launched. When all the runs are completed, the original configuration files will be reinstated.
+
 
 ### Special runs
 
@@ -350,7 +386,7 @@ Increasing that time step to 250 years, or 1000 years will hasten the run, only 
 evolution. If it is too high, however, it can increase the model time needed to reach the steady-state.
 Moreover, the steady-state weathering flux of DynSoil module (in its "dynamic" version) are actually dependent of the DynSoil
 timestep, because of numerical accuracy. A longer timestep will result in slightly lower weathering flux (ie, higher equilibrium
-CO2). For instance, increasing the timestep from 100 year (default) to 1000 years cause the CO2 to rise by ~5 ppmv.
+CO2). For instance, increasing the timestep from 100 year (default) to 10000 years cause the CO2 to rise by a ~10 ppmv.
 
 #### Fixed CO2 run
 This is a special case of model configuration. If there is only 1 CO2 level (nclimber=1), it will be run in "fixed CO2 mode".
