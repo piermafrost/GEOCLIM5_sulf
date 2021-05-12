@@ -1,4 +1,6 @@
-﻿# GEOCLIM5.2
+﻿# GEOCLIM5.2 - sulf
+
+
 
 ## Updates from GEOCLIM5:
 * Possibility to read area, temperature and runoff inputs directly from GCM annual climatology files,
@@ -8,13 +10,36 @@
 * Add checks for axis matching, missing points, invalid runoff and slope, invalid lithology, and physical units.
   Interactively ask the users if error detected (by default).
 * Reorganize the main IO file ('config/IO_CONDITION'), can now add commented (#) and blank lines
+* Standardization of the oceanic temperature input (2 options, "parameterized" or "raw ascii input").
 * Minor code improvements (e.g., Runge-Kutta 4 scheme, biological 13C fractionation formula...)
-* Add simplified sulfur cycle (oceanic SO4^2-, sulfide weathering and sulfate-reduction).
+* Implementation of a simplified sulfur cycle (oceanic SO4^2-, sulfide weathering and sulfate-reduction).
+
+
+
+## Run GEOCLIM model in a nutshell
+After downloading the present repository, type `./make_test testname` (testname being one of "ERA5", "CESM", "paleo" and
+"ascii"). This command will compile and execute a short GEOCLIM run and compare the output to a reference template.
+This allows to verify that the compilation and execution of the model are performed without error, and yield the same
+results than reference runs. If not, the command should tell what error was encountered (see also section *Frequent issues*
+at the end of this file). You could try the 4 tests to make sure everything works as excepted.
+
+If the tests are conclusive, follow those step to create your run:
+* Compile the code with `build_GEOCLIM` (specifying the model set of components and resolution). Try `./build_GEOCLIM --help`
+for more information. This command create an executable file in 'executable/'
+* Configure the run by editing the files 'config/IO_CONDITIONS' and 'config/cond_p20.dat' (name of the run, initial condition,
+forcing fields, solver parameters...). This post-compilation configuration must be consistent with the specified set of components
+and resolution.
+* Run the model with `executable/exec_name` (name of the executable created at the compilation step). Alternatively, and if you
+are running the model on a cluster, you can use the files in 'job/' to submit the run as a batch process. 'job/submit_chain.sh'
+is a script designed for submitting a series of runs, each new one starting from the end of the previous one. See also section
+*Multiple runs and job submission* in *Run GEOCLIM*.
+
 
 
 ## Required software
 * Fortran compiler (note: the Makefile is configured for gfortran, ifort or pgfortran)
 * netCDF-Fortran library (see section "How to install netCDF-Fortran library")
+
 
 
 ## Recommended but not required software
@@ -29,6 +54,7 @@
 * PyFerret
 
 
+
 ## Templates
 A couple of template GEOCLIM runs are defined. They consist of a set of input data and corresponding configuration files.
 The script `make_test` does the complete configuration (pre and post compilation), compiles and runs the desired template
@@ -38,11 +64,14 @@ the same results.
 Type `./make_test` for more information.
 
 
-## `configure.sh` command
+
+## Useful commands
+
+### `configure.sh` command
 A script to quickly set up pre-defined GEOCLIM configurations, like ERA5 (ref) or GFDL.
+TO CONTINUE...
 
-
-## `build_GEOCLIM` command
+### `build_GEOCLIM` command
 `build_GEOCLIM` is a bash script, meant to edit the needed source files for pre-compilation configuration (data shape,
 activated modules, ...) and compile the code. The post-compilation configuration is left to do (which file to use as
 input data, names of output and solver parameters, see section "After-compilation configuration").
@@ -52,8 +81,10 @@ This command supports a large number of options (specify compiler and options to
 Type `./build_GEOCLIM --help` to get detailed information on how to use it.
 
 
+
 ## Pre-compilation configuration
-If you do not use the `build_GEOCLIM command`, here is the list of configuration steps you should follow:
+If you do not use the `build_GEOCLIM command`, here is the list of configuration steps you should follow *before
+compiling the code*:
 * Which modules to use (file 'source/coupler.inc')
 * Number of CO2 levels: 'nclimber' parameter in 'source/shape.inc'
 * Geographic resolution (must be consistent with input data): 'nlon' and 'nlat' parameters in 'source/shape.inc'
@@ -71,13 +102,15 @@ If you do not use the `build_GEOCLIM command`, here is the list of configuration
 * DynSoil vertical resolution: parameter 'nDSlev' in 'source/shape.inc' (must be defined even if not coupled with DynSoil).
   Traditionally 10 vertical levels are used, but it can be changed just by modifying that number.
   If not coupled with DynSoil, its value is not used.
-* If coupled to biodiversity module: number of groups (primary producers, predators, ...), in "source/combine_foam.inc"
-* The number of oceanic basins, as well as the number of geochemical variables, are not meant to be customized.
+* The number of oceanic basins, as well as the number of geochemical variables, are not meant to be customized, and requires
+modification of the source code to be changed. See section *Advanced customization*.
 * If you don't compile the code with the Makefile, you should also check that the file 'source/path.inc' exists and states
   the correct path of GEOCLIM root directory (with the line `character(len=*), parameter:: geoclim_path = "..."`). If you do
   use the Makefile, it will be updated automatically.
+* A certain number of configuration options are meant for a ecological network module. These options are left for further
+development, the ecological module is not available in the present distribution.
 
-The command `build_GEOCLIM` does all that pre-configuration, except the biodiversity module parameters.
+The command `build_GEOCLIM` does all that pre-configuration.
 
 All those parameters must be consistent with the initialization and forcing files (initial ocean chemistry, climate files...)
 
@@ -89,6 +122,7 @@ concentration (ocean-atmosphere diffusion) and to the carbon fluxes.
 
 This is useful for calibration runs where one wants to hold the atmospheric CO2 constant and adjust the degassing to balance the
 silicate weathering flux.
+
 
 
 ## Compilation
@@ -165,7 +199,7 @@ The GEOCLIM input/output interface is managed with 2 files (potentially 3):
   name of the output files and which variables to output (under which name).
 * 'config/cond_p20.dat':
   States the physical and numerical parameters: solver time steps, output writing frequency, duration of run, when to generate restarts,
-  biodiversity parameters, acceleration parameters, and volcanic degassing (CO2, SO4, Trapp setting...)
+  acceleration parameters, and volcanic degassing (CO2, SO4, Trapp setting...)
 * You can specify in config/IO_CONDITIONS to read the climatic inputs from GCM output files. In that case, the names of those files
   and their variables must be provided in 'config/GCM_input_conditions'.
 
@@ -175,6 +209,10 @@ NOTE: you can find some examples of configuration files in config/templates/
 #### Input files
 The name of all input files needed by GEOCLIM must be provided in config/IO_CONDITIONS
 * Oceanic configuration (basin volumes, surfaces, water circulation between them). Reference files are in INPUT/COMBINE/ref/
+* Oceanic temperature: 2 options (specified in config/IO_CONDITIONS). "parameteric", the temperature of oceanic boxes are
+computed with a parametric function of pCO2. "file_name", the boxes temperature are read in an input ascii file stating the
+temperature of each box at each CO2 level. Each row of that file represents a CO2 level, each column states the temperature
+of the n-th box, except the first column that states the CO2 level (in ppmv).
 * Continental climate: total grid area, land area, temperature (at each CO2 levels) and runoff (at each CO2 levels).
   See examples in INPUT/ERA5/ (ascii files. Area in 1e6 km2, temperature in °C, runoff in cm/y).
   Alternatively, those 4 inputs can be read from GCM outputs (land annual climatology), in netCDF format.
@@ -196,11 +234,16 @@ GEOCLIM also needs an initial condition to start.
 * DynSoil (if coupled with): you can use the options 'startup:null' 'startup:eq' (in config/IO_CONDITIONS), to automatically
   generate initial conditions with null regolith (1st case) or regolith at equilibrium with initial climate (2nd case).
   Alternatively, the option 'restart' tells the code to use a DynSoil restart file (defined below).
-* Biodiversity module (if coupled with): needs 2 restart file, one for species and the other for chemical variables.
-  The name of those 2 files is stated in config/IO_CONDITIONS
 
 
-## Inputs error handling
+
+## Run GEOCLIM
+
+### Executable files
+`build_GEOCLIM` put the executable file in "executable/". The other methods let it in "source/". It can be run from any
+directory, as all the paths in the code are absolute paths.
+
+### Inputs error handling
 GEOCLIM performs tests on the input files before the "main" execution. They are 4 types:
 1. Axis mismatch between the input files (for instance, shifted longitude)
 2. missing values on continental pixels (continental pixels are defined by the "land area" input variable)
@@ -228,16 +271,9 @@ does not exist, or if the shape of the netCDF variables does not match the one s
 These will cause the run to crash. The code can, however, handle transposed 2D (x-y) variables in GCM input files, as well as
 degenerated (size-1) extra dimensions.
 
-
-## Executing
-`build_GEOCLIM` put the executable file in "executable/". The other methods let it in "source/". It can be run from any
-directory, as all the paths in the code are absolute.
-
-
-## Output
+### Output
 * 2 systematic netCDF files: geoclim and geographic
 * 1 netCDF file for DynSoil outputs (if coupled with)
-* 1 netCDF file for biodiversity outputs (if coupled with)
 * It is possible to automatically convert those outputs in ascii format,
   that option must be entered at the last line of config/cond_p20.dat
 
@@ -245,18 +281,16 @@ You can specify in "config/IO_CONDITIONS" which variable you want to output or n
 To not output a variable, write "#" in place of the output file name.
 You can also change the name of the output files, each variable can be placed in a separated file.
 
-The frequency at which outputs are written is specified in "config/cond_p20.dat". There are 3 frequencies: one for COMBINE and
-biodiversity output, one for geographic outputs (i.e., continental variables) and one for specific DynSoil outputs.
+The frequency at which outputs are written is specified in "config/cond_p20.dat". There are 3 frequencies: one for COMBINE
+output, one for geographic outputs (i.e., continental variables) and one for specific DynSoil outputs.
 
-
-## Restart
+### Restart
 Restarts are created in the output directory. It is a good habit to move them to "restart/.../"
 
 The time for restart generation is specified in "config/cond_p20.dat". By default, this time is set to "-1.", which
 is interpreted as "when the run is complete". Note that the restarts are generated 1 time only.
 
-
-## Killing a run
+### Killing a run
 Sometimes one may want to end a run and create restart files precociously. For instance, if a run has reached the steady-state
 sooner than expected and one wants to launch "perturbation runs" from that steady-state.
 
@@ -264,8 +298,10 @@ To do so, simply write the name of the run (as specified at the first uncommente
 "deathnote.txt". It will cause the run to stop and generate restart files (if they were not already created).
 You can put as many run names as you want in the deathnote, one by line. Don't forget to erase the names afterward!
 
+### Multiple runs and job submission
+...
 
-## Special runs
+### Special runs
 
 #### Equilibrium run
 An "equilibrium run" is a run whose transient evolution is of no interest because one only wants to get the geochemical
@@ -333,19 +369,26 @@ back and forth runs.
 However, make sure to do it **before** oxygen tuning, as it may affect the efficiency of organic carbon burial.
 
 
-## How to generate boundary conditions
+
+## Further information
+
+### How to generate boundary conditions
+...
+
+### Basic code modifications
+...
+
+### Advanced customization
+...
+
+### Visualization?
 ...
 
 
-## Basic code modifications
-...
 
+## Technical notes
 
-## Visualization?
-...
-
-
-## How to install netCDF-Fortran library
+### How to install netCDF-Fortran library
 
 #### Mac OS
 Note: the following instructions worked in June 2018, on Mac OS High Sierra 10.13.5
@@ -399,8 +442,7 @@ Check the following before completing the steps outlined below:
 #### With Linux OS
 `apt-get install libnetcdff` :)
 
-
-## Non-required software instructions for installation (Mac OS)
+### Non-required software instructions for installation (Mac OS)
 * ifort
     * download the student version
         * https://software.intel.com/en-us/qualify-for-free-software/student
@@ -418,6 +460,7 @@ Check the following before completing the steps outlined below:
     * every time a new terminal is opened, you have to run `. ferret_paths.sh` (note the space)
         * recommend adding to `.bash_profile`:
             * `alias enable_pyferret=‘. /path/to/dir/pyferret-7.4-MacOSX-Python-3.6/ferret_paths.sh’`
+
 
 
 ## Frequent issues
@@ -578,7 +621,8 @@ ocean mixing to dissipate aberrant concentrations (100-1000 years) may solve the
 run normally from the new restart.
 
 
-## Notes
+
+## Notes and acknowledgements
 Reference for ERA5 climate dataset:
 Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicolas, J., Peubey, C., Radu, R., Rozum, I.,
 Schepers, D., Simmons, A., Soci, C., Dee, D., Thépaut, J-N. (2019): ERA5 monthly averaged data on single" levels from 1979 to present.
@@ -587,8 +631,10 @@ https://doi.org/10.24381/cds.f17050d7
 distributed under Copernicus Products license: https://cds.climate.copernicus.eu/api/v2/terms/static/licence-to-use-copernicus-products.pdf
 
 
+
 ## Contact
 pierre.maffre@normalesup.org
 
 
 godderis was here
+
