@@ -8,8 +8,9 @@
 # The successive runs will be renamed: *_1, *_2, *_3, ...
 #
 # The actual "job" file that launch geoclime run is a separate file,
-# stated by the variable JOB_FILE
-# This file must be configured for the user's cluster.
+# stated by the variable JOB_FILE (usually, run_geoclim.sh)
+# This file must be configured for the user's cluster, if submitted as
+# a batch process. Templates can be found in the current repertory.
 #
 # This script use the log file .config-queue (in main GEOCLIM directory)
 # to resolve conflict of access to GEOCLIM configuration files.
