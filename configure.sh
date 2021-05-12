@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# Set GEOCLIM configuration, provided that the files exist in templates
+# Set a predefined GEOCLIM configuration, provided that the files exist in templates
+# Practically, this script some current files (config files and some Fortran
+# source files) by predefined ones, stored in local template/ directory
+#
 # 1 input argument: name of configuration 
+# Existing predefined configurations are:
+#   ref   (ERA5 reanalysis forcings)
+#   GFDL  (GFDL climate outputs forcings)
+
 
 cd config/
 cp -f templates/IO_CONDITIONS.$1 IO_CONDITIONS
