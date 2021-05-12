@@ -41,8 +41,9 @@ GEOCLIM_IO_FILE='config/IO_CONDITIONS'
 RUN_NAME='.jobtest'
 
 # Job file (configured for the cluster) and submission commmand
-JOB_FILE='run_geoclim.sh'
-SUBMIT_COMMAND='' #'qsub' # note: put '' (empty variable) to directly execute the job file, and not submit it as a batch process 
+# If you want to simply run the model, and not submitting a batch process, set JOB_FILE='run_geoclim_basic.sh' and SUBMIT_COMMAND=''
+JOB_FILE='run_geoclim_basic.sh'
+SUBMIT_COMMAND='' #'qsub' # note: '' (empty variable) means direct execution of the job file, and not submitting it as a batch process
 
 # "real" executable file (if undefined, default is ../executable/geoclim.exe)
 # (RELATIVE TO GEOCLIM ROOT DIRECTORY!)
