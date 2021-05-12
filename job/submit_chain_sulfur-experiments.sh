@@ -7,11 +7,6 @@
 # will edit the configuration files automatically.
 # The successive runs will be renamed: *_1, *_2, *_3, ...
 #
-# NOTE: if the argument "CONTINUE_RUN" is passed to the present script,
-# it will expect the internal configuration to be already done,
-# and will edit the GEOCLIM configuration file and launch the next run.
-# This trick is used for the recursive submission of GEOCLIM run.
-#
 # The actual "job" file that launch geoclime run is a separate file,
 # stated by the variable JOB_FILE
 # This file must be configured for the user's cluster.
@@ -52,7 +47,7 @@ GEOCLIM_IO_FILE='config/IO_CONDITIONS'
 
 # Job file (configured for the cluster) and submission commmand
 JOB_FILE='run_geoclim.sh'
-SUBMIT_COMMAND=qsub
+SUBMIT_COMMAND='qsub' # note: put '' (empty variable) to directly execute the job file, and not submit it as a batch process 
 
 LOG_FILE="geoclim.log"
 
@@ -308,37 +303,28 @@ function read_lines() {
 
 
 
-# Select case according to argument passed to the script
-# ======================================================
-
-case $1 in 
+# Select case according to argument passed to the script, or presence of "CONTINUE_RUN"
+# =====================================================================================
 
 
 
-
-    #======================================================================#
-
-
-
-
-    "ERASE_CONFIG_QUEUE")
-	rm -f ../.config-queue
-	test $? -eq 0 && echo "Warning: queue file for configuration access deleted."
-	exit 0
-	;;
+if [ "$1" == "ERASE_CONFIG_QUEUE" ]
+then
+    rm -f ../.config-queue
+    test $? -eq 0 && echo "Warning: queue file for configuration access deleted."
+    exit 0
+fi
 
 
 
-
-    #======================================================================#
-
+#======================================================================#
 
 
 
-    ""|"RESTORE_CONFIG") # no argument passed => Internal configuration
-                         # 'RESTORE_CONFIG' => read GEOCLIM main config file
-                         #                     and restore all config files
-                         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if [ ! -e CONTINUE_RUN ]
+then
+    # No file "CONTINUE_RUN" in the current repertory => Internal configuration
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
     # Read GEOCLIM main IO file
@@ -622,6 +608,8 @@ case $1 in
     cp $0        $RUN_NAME/run/
     cp $JOB_FILE $RUN_NAME/run/
     chmod u+x $RUN_NAME/run/*
+    # !!Signal to the script's copy that next run will be a resubmission (with configuration already done)!!
+    touch $RUN_NAME/run/CONTINUE_RUN
 
 
 
@@ -640,10 +628,14 @@ case $1 in
     # Modify the log file of the job file (if asked)
     test -z $LOG_FILE || perl -pi -e "s/geoclim.log/$LOG_FILE/g" $JOB_FILE
 
-    #=======================#
-    $SUBMIT_COMMAND $JOB_FILE
-    #./run_geoclim.sh
-    #=======================#
+    #===========================#
+    if [ -z $SUBMIT_COMMAND ]
+    then
+        ./$JOB_FILE
+    else
+        $SUBMIT_COMMAND $JOB_FILE
+    fi
+    #===========================#
 
     if [ $? -ne 0 ] # if submission failed, put back original GEOCLIM config files
     then
@@ -651,22 +643,19 @@ case $1 in
 	test -e .backup/IO_CONDITIONS && mv -f .backup/IO_CONDITIONS ../$GEOCLIM_IO_FILE
 	test -e .backup/cond_p20.dat  && mv -f .backup/cond_p20.dat  $CONFIG_FILE
     fi
-    ;;
 
 
 
-
-    #======================================================================#
-
+#======================================================================#
 
 
 
-    "CONTINUE_RUN") # configuration already done => continue run
-                    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+else
+    # configuration already done => continue run
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #
     # WARNING: This part is supposed to be executed in the copy the present file
     # that is in ./$RUN_NAME/run/
-
 
 
     # Get configuration info
@@ -836,10 +825,14 @@ case $1 in
 	rm -f ../config/run_number
 	echo $RUN_NUMBER > ../config/run_number
 
-	#=======================#
-	$SUBMIT_COMMAND $JOB_FILE
-	#./run_geoclim.sh
-	#=======================#
+	#===========================#
+	if [ -z $SUBMIT_COMMAND ]
+	then
+	    ./$JOB_FILE
+	else
+	    $SUBMIT_COMMAND $JOB_FILE
+	fi
+	#===========================#
 
 	if [ $? -ne 0 ] # if submission failed, put back original GEOCLIM config files
 	then
@@ -855,24 +848,8 @@ case $1 in
 	test -e ../../.backup/cond_p20.dat  && mv -f ../../.backup/cond_p20.dat  $CONFIG_FILE
 
     fi
-    ;;
 
 
 
-
-    #======================================================================#
-
-
-
-
-    *) # Unrecognized argument
-       #%%%%%%%%%%%%%%%%%%%%%%
-        echo ""
-        echo "ERROR: illegal argument \"$1\""
-        exit 1
-        ;;
-
-
-
-esac
+fi
 
