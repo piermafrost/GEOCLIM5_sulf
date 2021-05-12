@@ -16,7 +16,10 @@
 
 
 
-## Run GEOCLIM model in a nutshell
+## GEOCLIM model in a nutshell
+...
+
+##### How to run the model:
 After downloading the present repository, type `./make_test testname` (testname being one of "ERA5", "CESM", "paleo" and
 "ascii"). This command will compile and execute a short GEOCLIM run and compare the output to a reference template.
 This allows to verify that the compilation and execution of the model are performed without error, and yield the same
@@ -67,11 +70,23 @@ Type `./make_test` for more information.
 
 ## Useful commands
 
-### `configure.sh` command
-A script to quickly set up pre-defined GEOCLIM configurations, like ERA5 (ref) or GFDL.
-TO CONTINUE...
+### `configure.sh`
+A script to quickly set up pre-defined GEOCLIM configurations (pre- and post-compilation), like "ref" (ERA5) or "GFDL".
+It replaces some current GEOCLIM files by predefined ones, stored in local template/ directory.
+The replaced files are the 3 config files (IO_CONDITIONS, cond_p20.dat and GCM_input_conditions, in config/),
+and some Fortran source files, (constante.f90, shape.inc and coupler.inc, in source/).
+GEOCLIM is then configured for the given forcings (climate fields, oceanic geometry...) with the corresponding
+model parameters calibrated for those forcings.
 
-### `build_GEOCLIM` command
+The "new" configuration files can still be modified after invoking that command, for instance, to run the model
+in a paleo configuration using the same GCM and parameterization as a pre-defined one.
+
+Because this script updates the source code, it should be invoked before compilation. Furthermore, as it performs
+the pre-complitation, it is not needed to use the command `build_GEOCLIM` to compile the code, the Makefile (in source/)
+is enough. `build_GEOCLIM` can still be used, but the user will have to re-specified the model resolution and set of
+components.
+
+### `build_GEOCLIM`
 `build_GEOCLIM` is a bash script, meant to edit the needed source files for pre-compilation configuration (data shape,
 activated modules, ...) and compile the code. The post-compilation configuration is left to do (which file to use as
 input data, names of output and solver parameters, see section "After-compilation configuration").
@@ -83,19 +98,19 @@ Type `./build_GEOCLIM --help` to get detailed information on how to use it.
 
 
 ## Pre-compilation configuration
-If you do not use the `build_GEOCLIM command`, here is the list of configuration steps you should follow *before
-compiling the code*:
+If you do not use the `build_GEOCLIM` nor `configure.sh` commands, here is the list of configuration steps you should
+follow *before compiling the code*, in order to define your run:
 * Which modules to use (file 'source/coupler.inc')
 * Number of CO2 levels: 'nclimber' parameter in 'source/shape.inc'
 * Geographic resolution (must be consistent with input data): 'nlon' and 'nlat' parameters in 'source/shape.inc'
-* Number of lithological classes: variable 'nlitho' in 'source/shape.inc'. Traditionally, 6 classes are used.
-  The subroutine 'source/cont_weath.f' explicitly assumes that carbonate rocks is the last lithology class (regardless of
+* Number of lithological classes: variable 'nlitho' in 'source/shape.inc'. The model is parameterized for 6 classes, and
+  the subroutine 'source/cont_weath.f' explicitly assumes that carbonate rocks is the last lithology class (regardless of
   the number of classes).
   If you want to define more (or less) lithology classes, you should:
     * Leave carbonates as last lithology
-    * Update the lithology-dependent parameters in 'source/combine_foam.inc' ('rsw_litho', 'CaMg_rock' and 'OC_in_rock')
-    * Update the lithology-dependent parameters in 'source/dynsoil_physical_parameters.inc'
-    * Specify which lithology corresponds to "basalt" (variable 'BASALT_LITHO_NUM' in 'source/combine_foam.inc')
+    * Update the lithology-dependent parameters in 'source/constante.f90'
+    * Update the lithology-dependent parameters in 'source/dynsoil_physical_parameters.f90'
+    * Specify which lithology corresponds to "basalt" (variable 'BASALT_LITHO_NUM' in 'source/constante.f90)
 
   Note that even though 'CaMg_rock' and DynSoil parameters are *not used* if GEOCLIM is not coupled with DynSoil,
   they must be defined consistently with 'nlitho' or the compilation will fail. You may simply fill them with zeros.
@@ -110,18 +125,7 @@ modification of the source code to be changed. See section *Advanced customizati
 * A certain number of configuration options are meant for a ecological network module. These options are left for further
 development, the ecological module is not available in the present distribution.
 
-The command `build_GEOCLIM` does all that pre-configuration.
-
 All those parameters must be consistent with the initialization and forcing files (initial ocean chemistry, climate files...)
-
-#### Fixed CO2 run
-There is a special case in the model configuration. If there is only 1 CO2 level (nclimber=1), it will be run in "fixed CO2 mode".
-This means the amount of CO2 in the atmospheric reservoir will be held constant at the value of the unique CO2 level, whatever
-the carbon fluxes. The concentration of the various forms of carbon in the other reservoirs will adjust freely to the atmospheric
-concentration (ocean-atmosphere diffusion) and to the carbon fluxes.
-
-This is useful for calibration runs where one wants to hold the atmospheric CO2 constant and adjust the degassing to balance the
-silicate weathering flux.
 
 
 
@@ -249,29 +253,27 @@ GEOCLIM also needs an initial condition to start.
 directory, as all the paths in the code are absolute paths.
 
 ### Inputs error handling
-GEOCLIM performs tests on the input files before the "main" execution. They are 4 types:
-
-TO UPDATE: NOW 5 TYPES OF ERRORS
-...
+GEOCLIM performs tests on the input files before the "main" execution. They are 5 types:
 
 1. Axis mismatch between the input files (for instance, shifted longitude)
 2. missing values on continental pixels (continental pixels are defined by the "land area" input variable)
 3. invalid value for runoff (negative) and slope (negative or null)
 4. sum of all lithology classes differs from 1
+5. units not recognized in netCDF inputs
 
 By default, the executable interactively asks the user what to do when an error is encountered. This can be problematic when run
-as a batch process on a cluster (with no interactive interface). It is possible to pass 4 arguments to the executable, as follows:
+as a batch process on a cluster (with no interactive interface). It is possible to pass 5 arguments to the executable, as follows:
 
-`./executable i1 i2 i3 i4`
+`./executable i1 i2 i3 i4 i5`
 
-where i1...i4 are integer numbers, between -1 and 3, and correspond respectively to the 4 kind of errors above-mentioned.
+where i1...i5 are integer numbers, between -1 and 3, and correspond respectively to the 5 kind of errors above-mentioned.
 * -1 means 'ask the user interactively' (default)
 *  0 means 'abort the execution'
-*  1 means 'remove the problematic pixels' (not possible for axis mismatch)
+*  1 means 'remove the problematic pixels' (not possible for axis mismatch or units not recognized)
 *  2 means 'ignore the issue and continue execution without any change'
 *  3 means 'replace the invalid value' (only possible for runoff and slope)
 
-For instance, I recommend `./geoclim.exe 0 1 3 0`, or if you are sure of your axis and lithology mask `./geoclim.exe 2 1 3 2`
+For instance, I recommend `./geoclim.exe 0 1 3 0 0`, or if you are sure of your axis, lithology mask and units `./geoclim.exe 2 1 3 2 2`
 
 NOTE: these tests cannot be done with ascii input files (except the negative runoff test), use that format at your own risk!
 
@@ -294,7 +296,8 @@ The frequency at which outputs are written is specified in "config/cond_p20.dat"
 output, one for geographic outputs (i.e., continental variables) and one for specific DynSoil outputs.
 
 ### Restart
-Restarts are created in the output directory. It is a good habit to move them to "restart/.../"
+Restarts are created in the output directory. It is a good habit to move them to "restart/.../". Automatic launching script,
+like submit_chain.sh (in job/) will automatically move the restart files in that directory.
 
 The time for restart generation is specified in "config/cond_p20.dat". By default, this time is set to "-1.", which
 is interpreted as "when the run is complete". Note that the restarts are generated 1 time only.
@@ -319,7 +322,7 @@ In that case, a couple of things can be modified to shorten the time needed to r
 
 ###### Before compilation: 
 Only if you are using DynSoil module in its dynamic version, should you decrease the value of 'scaling_factor' in
-"source/dynsoil_physical_parameters.inc". The scaling factor controls the inertia of the regolith, and does not affect
+"source/dynsoil_physical_parameters.f90". The scaling factor controls the inertia of the regolith, and does not affect
 its steady-state. 1 is for a normal regolith. In some places, regolith can take millions of years to reach its steady-state.
 To shorten that time, set it to 1d-3. You can put a value as close to zero as you want, it will not generate
 any numerical instability. However, it will become useless if the evolution time-scale of the regolith is lower than the
@@ -340,16 +343,39 @@ time down to Carbon residence time. An excessively value will cause the model to
 * Sulfur cycle acceleration: Similarly to oxygen, an acceleration coefficient can be tuned in 'config/cond_p20.dat' to reduce
 the time needed for sulfur cycle to reach equilibrium (the residence time of sulfur is ~30 Myr). 100 is a good value.
 * Asynchronous coupling with continental weathering: The standard time-step for continental weathering is 25 years, and
-the model spends a significant amount of time on the continental computation, especially at high resolution (1° or less)
+100 years for DynSoil module (if activated).
+The model spends a significant amount of time on the continental computation, especially at high resolution (1° or less)
 and when coupled to DynSoil.
 Increasing that time step to 250 years, or 1000 years will hasten the run, only degrading the quality of the transient
 evolution. If it is too high, however, it can increase the model time needed to reach the steady-state.
+Moreover, the steady-state weathering flux of DynSoil module (in its "dynamic" version) are actually dependent of the DynSoil
+timestep, because of numerical accuracy. A longer timestep will result in slightly lower weathering flux (ie, higher equilibrium
+CO2). For instance, increasing the timestep from 100 year (default) to 1000 years cause the CO2 to rise by ~5 ppmv.
 
 #### Fixed CO2 run
-...
+This is a special case of model configuration. If there is only 1 CO2 level (nclimber=1), it will be run in "fixed CO2 mode".
+This means the amount of CO2 in the atmospheric reservoir will be held constant at the value of the unique CO2 level, whatever
+the carbon fluxes. The concentration of the various forms of carbon in the other reservoirs will adjust freely to the atmospheric
+concentration (ocean-atmosphere diffusion) and to the carbon fluxes.
+In other words, in fixed CO2 mode, the mass balance is not respected for carbon.
+
+This is useful for calibration runs where one wants to hold the atmospheric CO2 constant and adjust the degassing to balance the
+silicate weathering flux.
 
 #### Run with locked geochemical cycles
-...
+This can be usefull if one wants to investigate the behaviour of inorganic carbon cycle only, without the retroaction of the
+other cycles, while still respecting mass-balance. 2 geochemical cycles can be "locked": the sulfur cycle, and the oxygen cycle.
+The model "lock" a cycle be imposing that the sources balance the sink at each timestep. More specifically, the sinks (oceanic
+processes) are computed freely, and the sources (continental weathering) are force to match the sinks.
+* For the sulfur cycle, the sulfuric silicate weathering is still compute freely, and the sulfuric carbonate weathering is adjusted
+so that the sum of th two matches the sulfate reduction (the release of H2SO4 is set to 0).
+* For the oxygen cycle, the kerogen weathering is adjusted so that when added to sulfide weathering, it matches the organic carbon
+burial (whether or not the sulfur cycle is locked).
+
+The mass balance is still respected, which means those modified fluxes affect the other geochemical species (carbon, alkalinity...)
+
+To lock one or several cycle, set the value `.true.` of the corresponding parameters in source/coupler.inc (*before compilation*),
+or use the options `--lock OS` (O for oxygen, S for sulfur, a single one works as well) in `build_GEOCLIM`.
 
 
 
@@ -406,6 +432,7 @@ parameters controlling ocean chemistry, that are defined in source/constante.f90
 ### Generate boundary conditions
 ##### Climatology average
 ...
+
 ##### oceanic boundary conditions
 ...
 
