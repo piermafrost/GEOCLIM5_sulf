@@ -177,7 +177,7 @@ In any case, you can check the compilation command that will be used by doing:
 `make echo [all the options you want]`
 
 #### Without Makefile
-`make` is not necessary to compile the code, but ensure that:
+`make` is not necessary to compile the code. If you do not use it, make sure that:
 * The pre-compilation configuration is done (see previous section)
 * The file 'source/path.inc' exists and contains the line `character(len=*), parameter:: geoclim_path = "..."`
   Where '...' is the path of the GEOCLIM root directory (this file is edited automatically by the Makefile)
@@ -221,8 +221,8 @@ of the n-th box, except the first column that states the CO2 level (in ppmv).
   See examples in INPUT/ERA5/ (ascii files. Area in 1e6 km2, temperature in °C, runoff in cm/y, if INPUT_MODE is 'ascii').
   Alternatively, those 4 inputs can be read from GCM outputs (land annual climatology), in netCDF format.
   Set INPUT_MODE as 'GCM' in config/IO_CONDITIONS. The GCM output files info must be provided in config/GCM_input_conditions.
-  The model expect 1 netCDF file per CO2 level. It recognizes several units and completes automatic conversions. If the units are not
-  recognized, the default units will be assumed, but the user will be asked interactively to validate it. New units and conversion
+  The model expect 1 netCDF file per CO2 level. It recognises several units and completes automatic conversions. If the units are not
+  recognised, the default units will be assumed, but the user will be asked interactively to validate it. New units and conversion
   factors can easily be added in source/physical_units.f90 (see section *defining new physical units* in *Further information*).
 * Lithology mask: a netCDF file containing the area fraction covered by each lithology class in every land pixels.
   Alternatively, the user can specify directly in config/IO_CONDITIONS a geographically uniform lithology fraction for each class.
@@ -255,11 +255,11 @@ directory, as all the paths in the code are absolute paths.
 ### Inputs error handling
 GEOCLIM performs tests on the input files before the "main" execution. They are 5 types:
 
-1. Axis mismatch between the input files (for instance, shifted longitude)
+1. axis mismatch between the input files (for instance, shifted longitude)
 2. missing values on continental pixels (continental pixels are defined by the "land area" input variable)
 3. invalid value for runoff (negative) and slope (negative or null)
 4. sum of all lithology classes differs from 1
-5. units not recognized in netCDF inputs
+5. units not recognised in netCDF inputs
 
 By default, the executable interactively asks the user what to do when an error is encountered. This can be problematic when run
 as a batch process on a cluster (with no interactive interface). It is possible to pass 5 arguments to the executable, as follows:
@@ -269,7 +269,7 @@ as a batch process on a cluster (with no interactive interface). It is possible 
 where i1...i5 are integer numbers, between -1 and 3, and correspond respectively to the 5 kind of errors above-mentioned.
 * -1 means 'ask the user interactively' (default)
 *  0 means 'abort the execution'
-*  1 means 'remove the problematic pixels' (not possible for axis mismatch or units not recognized)
+*  1 means 'remove the problematic pixels' (not possible for axis mismatch or units not recognised)
 *  2 means 'ignore the issue and continue execution without any change'
 *  3 means 'replace the invalid value' (only possible for runoff and slope)
 
@@ -330,7 +330,7 @@ but must be configured for the current cluster (whereas the main one is a bash s
 When using 'submit_chain.sh', the pre-compilation configuration must be done (and the code compiled). If you wants to launch
 in paralel several runs that need different pre-compilation configurations, save as many different GEOCLIM executable files.
 Here is the list of options that can be customized with 'submit_chain.sh':
-* The name of the run (for a series of runs, suffix '_1', '_2'... are added).
+* The name of the run (for a series of runs, suffix '_1', '_2'... are automatically added).
 * The submission command (cluster-dependent) and the name of the running script (usually, 'run_geoclim.sh').
 * The name of the GEOCLIM executable file.
 * GEOCLIM (COMBINE) and DynSoil initial condition.
@@ -417,7 +417,7 @@ or use the options `--lock OS` (O for oxygen, S for sulfur, a single one works a
 
 ## Further information
 
-#### Calibration procedure
+### Calibration procedure
 To be fully consistent, the model should be recalibrated for each new set of boundary conditions.
 The current calibration is done with ERA5 reanalysis fields for temperature and runoff, SRTM slope, and
 Hartmann et al. 2013 lithology mask, all at a resolution of 0.5°. A second calibration is available for the GFDL boundary
@@ -460,22 +460,66 @@ O2 and SO4^2-
 parameters controlling ocean chemistry, that are defined in source/constante.f90.
 
 ### Defining new physical units
-...
+When reading netCDF inputs (in "GCM" input mode), the code read the attribute "units" (a string) of the netCDF variables. If the "units"
+string matches a defined ones, the corresponding conversion is performed to set the variable into the model's reference units.
+It may be needed to add new unit string if the code do not recognise a given netCDF input file (for instance, in my experience, there are
+as many runoff units as there are GCM). The string has to match exactly to be recognised (space and case sensitive).
+
+Physical units are defined in the source code in 'source/physical_units.f90'. To define a new one, go to the desired variable (eg,
+'temperature_units'), increment the variable 'naccepted' by 1, then go to the last line of 'accept_unit' definition, and add a line defining
+'accept_unit(n)%string' (your unit string) and 'accept_unit(n)%conversion' (conversion factor and offset), 'n' being the number of your
+newly defined units. The rule for converting variable into the reference unit is 'ref_unit_var = factor\*var + offset'.
 
 ### Generate oceanic temperature ascii input file from GCM outputs
-...
+This is still experimental, but the Python file 'make_oceanic_input.py' in 'preproc/python/' is meant to read oceanic temperature from GCM
+netCDF output for each CO2 level, as well as the ocean grid definition (ie, longitude, latitude and depth), average the temperature on GEOCLIM
+(COMBINE) oceanic boxes and generate a ascii input file readable by the model (1 CO2 level per row, CO2 value + boxes temperature on each column).
+See description in the Python file.
 
-### Generate boundary conditions
-##### Climatology average
-...
+### Other boundary conditions
+##### Note on climatology average
+The continental climate (temperature and runoff), as well as the oceanic temperature, that are considered by GEOCLIM model, are supposed to be
+annual mean variables, averaged over many years (climatology average. eg, 30 years). The model does not take into account the seasonal cycle, or
+other form of climatic variability.
 
-##### oceanic boundary conditions
-...
+##### Oceanic boundary conditions
+Although it is the only GCM and CO2 dependent one, seawater temperature is not the only oceanic boundary condition considered by
+the model. The rest of the boundary conditions are defined in 'INPUT/COMBINE/ref/' (the name of the input files can actually be
+changed in 'config/IO_CONDITIONS').
+
+They consist of:
+* boxes (ie, oceanic bassin) definition: a series of ascii files define with 0/1 wich boxes are surface (indice_surface.dat), deep
+(indice_deep.dat), thermocline (thermocline.dat), polar (indice_polar.dat), epicontinental (indice_epicont.dat), as well as which
+receive continental (riverine) fluxes (apport_ct.dat) and which one are connected to seafloor (indice_sedi.dat).
+* boxes geometry: a series of ascii files define the volume (oce_vol.dat), top surface (oce_surf.dat) and sedimenting surface
+(surf_sedi.dat) of each box.
+* box pressure: the file 'press_box.dat' define the mean pressure of each box (used for chemical constants). Technically, there are
+2 variables per line, temperature and pressure, but the first value is ignored (as temperature is read in another file).
+* particle sinking rate: the files 'fsink.dat' and 'fsink_inorg.dat' define the sinking parameter of organic and inorganic particles
+(respectively) on each box. That parameter is technically the fraction of particles that leave the box by sinking per unit of time
+(ie, per year).
+* oceanic circulation: 'exchange_2.dat'. Unless the other files that are single-column ascii files (one box per line), this one
+is a "2D matrix" ascii file. Each point {i,j} (ie, line i, column j) represent the flux of water (in Sv, ie, 1e6m3/s) going from
+the box j (column) to the box i (line). Hence, *the sum of each line must yields the same vector than the sum of each column*. 
+The advection of the geochemical species in computed as 'water flux time concentration'.
+
+Though the oceanic circulation is CO2-dependent, it is not taken into account in the code (the model assumes this dependence to be
+negligible).
 
 ### Basic code modification
+##### Model parameters
+...
+
+##### Output additional variables
 ...
 
 ### Advanced customization
+##### Change oceanic bassin definition
+...
+TOP-BOTTOM ORDER + ATMOSPHERIC BOX
+SINGLE EPICONTINENTAL BOX
+
+##### Add a new geochemical species
 ...
 
 ### Visualization?
@@ -503,7 +547,7 @@ Note: the following instructions worked in June 2018, on Mac OS High Sierra 10.1
 Check the following before completing the steps outlined below:
 * check if gfortran is installed by typing `gfortran` onto the command line
     * there may be conflict issues between ifort and gfortran (these instructions are meant for ifort compiler)
-    * if the command is recognized, then gfortran is installed, and may need to be removed
+    * if the command is recognised, then gfortran is installed, and may need to be removed
 * XCode is (probably) required - make sure it is installed, up to date, and the licence has been accepted
     * to accept the licence: `sudo xcodebuild -license`
 * if something went wrong with the installation, make sure that the source directories (zlib, hdf5, netcdf) are "fresh"
@@ -591,7 +635,7 @@ contains `-I.../include -l.../lib` (for instance, try `make echo`). If it does c
 and '.../lib' probably do not have netCDF library. Try to find where the library is installed.
 This information can normally be obtained with `nc-config --prefix` (note that it is what `build_GEOCLIM` uses).
 
-###### library not recognized
+###### library not recognised
 This error is harder to detect. The modules and objects are generally successfully created. The error comes while creating
 the executable. The compiler often returns plenty of error messages (which does not make the task any easier). Most of them
 would that look like:
