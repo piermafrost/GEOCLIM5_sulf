@@ -117,7 +117,7 @@ VEGETATION_FILE:    'INPUT/vegetation/new_map_allveg.out'  # unit=48
 OCEAN_TEMP_FILE:    'parametric'                            # unit=32
 # Write 'parametric' instead of file name to use parametric CO2-Toce relation
 # Could also write 'parametric' in the given input ascii file
-HYPSO_FILE:         'INPUT/COMBINE/ref/hypso.dat'           # unit=4
+HYPSO_FILE:         'INPUT/COMBINE/ref/hypso.dat'           # OBSOLETE (formerly unit=4). IGNORED BY THE CODE
 
 ####### Earth physical dimensions
 OCEBOX_VOLUME_FILE: 'INPUT/COMBINE/ref/oce_vol.dat'         # unit=33
