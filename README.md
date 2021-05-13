@@ -488,7 +488,7 @@ the model. The rest of the boundary conditions are defined in 'INPUT/COMBINE/ref
 changed in 'config/IO_CONDITIONS').
 
 They consist of:
-* boxes (ie, oceanic bassin) definition: a series of ascii files define with 0/1 wich boxes are surface (indice_surface.dat), deep
+* boxes (ie, oceanic basin) definition: a series of ascii files define with 0/1 wich boxes are surface (indice_surface.dat), deep
 (indice_deep.dat), thermocline (thermocline.dat), polar (indice_polar.dat), epicontinental (indice_epicont.dat), as well as which
 receive continental (ie, riverine) fluxes (apport_ct.dat) and which ones are connected to the seafloor (indice_sedi.dat).
 * boxes geometry: a series of ascii files define the volume ('oce_vol.dat', in 1e15m3), top area ('oce_surf.dat') and bottom
@@ -596,7 +596,7 @@ attention on which dimension the variable is defined on.
 is called.
 
 ### Advanced customization
-##### Change oceanic bassin definition
+##### Change oceanic basin definition
 The definition of COMBINE basins is supposedly entirely controlled by the input files (in 'INPUT/COMBINE/ref/', see section
 *Oceanic boundary conditions*), and could be flexible. However, there are several points in the source code that make it tricky
 to customize:
@@ -615,7 +615,42 @@ that define the volume for all boxes and variables (with still "box" dimension b
 volume of 1d-15 for atmosphere box and for all isotopic variables.
 
 ##### Add a new geochemical species
-...
+Currently, there are 20 main geochemical species, that are species whose oceanic advection is computed, as well as ocean-atmosphere
+exchange (only for O2 and CO2) and sinking for particulate variables. They are:
+1. DIC (Dissolved Inorganic Carbon)
+2. Alkalinity
+3. Phosphate (PO4^3-)
+4. Calcium (Ca^2+)
+5. Strontium (Sr^2+)
+6. Sr in PIC (Particulate Inorganic Carbon)
+7. POP (Particulate Organic Phosphorus)
+8. PIP (Particulate Inorganic Phosphorus)
+9. POC (Particulate Organic Carbon)
+10. PIC (Particulate Inorganic Carbon)
+11. Oxygen (dissolved + atmospheric)
+12. atmospheric CO2 (value set to 0 for oceanic boxes)
+13. delta 13 C of DIC
+14. delta 13 C of PIC
+15. delta 13 C of POC
+16. delta 13 C of atmospheric CO2 (value set to 0 for oceanic boxes)
+17. 87 Sr / 86 Sr isotopic ratio
+18. Not attributed
+19. Not attributed
+20. Sulfate (SO4^2-)
+
+The variables are in concentration (mol/m3) in the oceanic boxes and in amount (mol) in the atmospheric box, except for the isotopic ones.
+
+Here are the instruction to add a new main ocean-atmosphere:
+
+* Update the total number of main variables (parameter 'nvar_real' in 'source/combine_foam.inc')
+* Add a section in 'source/creades.f', which is the subroutine defining the input-output fluxes due to chemical reaction, continental
+input, sinking (for particulate variables only) and sedimentation on seafloor. This net local I/O rate is the code variable 'R'.
+* Add a section in 'source/derivs.f' defining the derivative, that is the sum of 'R' and the oceanic advection **for dissolved
+variables only**. Particulate variables are not affected by oceanic advection, and the advection part for isotopic ratio (of
+dissolved variables) is including in 'R' in 'source/creades.f', because its mathematical expression is different from concentration
+variables.
+* Update COMBINE restart file and the input file 'oce_vol.dat' (see previous section *Change oceanic basin definition*).
+* Update whatever routine needed to compute the geochemical fluxes of that new variable.
 
 ### Visualization?
 ...
