@@ -542,9 +542,9 @@ a value for each COMBINE box.
 paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
 * In 'source/geoclim_write_output.f90', at the end of the section "write variables", (just before the secion "output file
 closing"), add a block of 3 lines (eg, copy and paste the last 3 lines) that looks like:
-> ! 
-> i = 107 
-> if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), (/real(...)/),   (/nt(i)/), (/1/) )
+> !  
+> i = 107  
+> if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), (/real(...)/),   (/nt(i)/), (/1/) ) 
 
 With the *code* variable instead of '...'. If that variable is defined on each box, the line should be a little different:
 >                                                            , real(...(:)), (/1,nt(i)/), (/nbasin,1/)  )
@@ -568,14 +568,8 @@ and paste the last line) stating the name of the variable *in the netCDF output 
 * In 'source/geographic_write_output.f90', at the end of the section "write variables", (just before the secion "output file
 closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) that looks like:
 > i = 15  
->      1  
-> Fatal Error: Can't open module file ‘netcdf.mod’ for reading at (1): No such file or directory
-
-
-
-> i = 15 
-> if (filenum(i)>0) then 
->   call put_var_real2D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny/))) , (/1,1,nt(i)/) , (/nx,ny,1/) ) 
+> if (filenum(i)>0) then  
+>   call put_var_real2D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny/))) , (/1,1,nt(i)/) , (/nx,ny,1/) )   
 > end if
 
 With the *code* variable instead of '...'. If that variable is lithology-defined on each box, the line should be:
