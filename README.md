@@ -10,20 +10,35 @@
 * Add checks for axis matching, missing points, invalid runoff and slope, invalid lithology, and physical units.
   Interactively ask the users if error detected (by default).
 * Reorganize the main IO file ('config/IO_CONDITION'), can now add commented (#) and blank lines
-* Standardization of the oceanic temperature input (2 options, "parameterized" or "raw ascii input").
+* Standardization of the oceanic temperature input (2 options, "parameteric" or "raw ascii input").
 * Minor code improvements (e.g., Runge-Kutta 4 scheme, biological 13C fractionation formula...)
+* Logarithmic or linear interpolation available for CO2 dimension (default: log)
+* COMBINE (oceanic) restart in concentration instead of molar amount.
 * Implementation of a simplified sulfur cycle (oceanic SO4^2-, sulfide weathering and sulfate-reduction).
 
 
 
 ## GEOCLIM model in a nutshell
-...
+GEOCLIM is cluster of models, more or less adaptable, computing geochemical cycles of several species (C, O...) at geological
+timescale.
+The core of the model is an ocean-atmosphere chemistry model (advection-reaction) COMBINE. Ocean an atmosphere are discretized
+in 10 reservoirs (boxes).
+This core is closely associated to an early diagenesis module computing the "output" fluxes (burial of elements in marine sediments)
+for each box.
+It is also associated to an continental weathering module computing the "input" fluxes. This weathering module is spatially-resolved
+(using a geograhic mesh grid), its resolution is adaptable, and several options exist for the silicate weathering part.
+This triplet is indirectly coupled to a climate model (GCM).
+Climate simulations must be run before using GEOCLIM, for a range of CO2 levels. Any climate model can be used, as long as it computes
+surface air temperature and continental runoff. Oceanic temperature from the climate model can be used, or parameterized if not
+available. Climate fields are then interpolated on the "CO2 dimension", at the current atmospheric CO2 computed by GEOCLIM, and
+used to compute continental weathering, and oceanic boxes temperature.
+The resolution (ie, the spatial grid) of the continental weathering module must be the same than the GCM.
 
 ##### How to run the model:
 After downloading the present repository, type `./make_test testname` (testname being one of "ERA5", "CESM", "paleo" and
 "ascii"). This command will compile and execute a short GEOCLIM run and compare the output to a reference template.
 This allows to verify that the compilation and execution of the model are performed without error, and yield the same
-results than reference runs. If not, the command should tell what error was encountered (see also section *Frequent issues*
+results than reference runs. If not, the command should tell what type of error was encountered (see also section *Frequent issues*
 at the end of this file). You could try the 4 tests to make sure everything works as excepted.
 
 If the tests are conclusive, follow those step to create your run:
