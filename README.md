@@ -490,16 +490,19 @@ changed in 'config/IO_CONDITIONS').
 They consist of:
 * boxes (ie, oceanic bassin) definition: a series of ascii files define with 0/1 wich boxes are surface (indice_surface.dat), deep
 (indice_deep.dat), thermocline (thermocline.dat), polar (indice_polar.dat), epicontinental (indice_epicont.dat), as well as which
-receive continental (riverine) fluxes (apport_ct.dat) and which one are connected to seafloor (indice_sedi.dat).
-* boxes geometry: a series of ascii files define the volume (oce_vol.dat), top surface (oce_surf.dat) and sedimenting surface
-(surf_sedi.dat) of each box.
+receive continental (ie, riverine) fluxes (apport_ct.dat) and which ones are connected to the seafloor (indice_sedi.dat).
+* boxes geometry: a series of ascii files define the volume ('oce_vol.dat', in 1e15m3), top area ('oce_surf.dat') and bottom
+area ('surf_sedi.dat', both in 1e15m2) of each box. The volume is actually define for each box and each "internal" variable,
+because the variables representing isotopic variables are treated differently than the others, and the volume must be 1e-15 (=> 1)
+for them. The volume of the atmosphere must also be 1e-15 because the atmospheric variables are in molar amount, and not in
+concentration.
 * box pressure: the file 'press_box.dat' define the mean pressure of each box (used for chemical constants). Technically, there are
-2 variables per line, temperature and pressure, but the first value is ignored (as temperature is read in another file).
+2 values per line, temperature and pressure, but the first value is ignored (as temperature is read in another file).
 * particle sinking rate: the files 'fsink.dat' and 'fsink_inorg.dat' define the sinking parameter of organic and inorganic particles
 (respectively) on each box. That parameter is technically the fraction of particles that leave the box by sinking per unit of time
 (ie, per year).
 * oceanic circulation: 'exchange_2.dat'. Unless the other files that are single-column ascii files (one box per line), this one
-is a "2D matrix" ascii file. Each point {i,j} (ie, line i, column j) represent the flux of water (in Sv, ie, 1e6m3/s) going from
+is a "2D matrix" ascii file. Each point {i,j} (ie, line i, column j) represents the flux of water (in Sv, ie, 1e6m3/s) going from
 the box j (column) to the box i (line). Hence, *the sum of each line must yields the same vector than the sum of each column*. 
 The advection of the geochemical species in computed as 'water flux time concentration'.
 
@@ -518,6 +521,7 @@ negligible).
 ...
 TOP-BOTTOM ORDER + ATMOSPHERIC BOX
 SINGLE EPICONTINENTAL BOX
+BOX VOLUME
 
 ##### Add a new geochemical species
 ...
