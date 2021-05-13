@@ -542,11 +542,15 @@ a value for each COMBINE box.
 paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
 * In 'source/geoclim_write_output.f90', at the end of the section "write variables", (just before the secion "output file
 closing"), add a block of 3 lines (eg, copy and paste the last 3 lines) that looks like:
+
 > !
 > i = 107
 > if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), (/real(...)/),   (/nt(i)/), (/1/) )
+
 With the *code* variable instead of '...'. If that variable is defined on each box, the line should be a little different:
+
 >                                                            , real(...(:)), (/1,nt(i)/), (/nbasin,1/)  )
+
 The output variable can be computed directly in that outputting line.
 
 ###### Geographic variable
@@ -565,12 +569,16 @@ dimension (it is then a 3D field).
 and paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
 * In 'source/geographic_write_output.f90', at the end of the section "write variables", (just before the secion "output file
 closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) that looks like:
+
 > i = 15
 > if (filenum(i)>0) then
 >   call put_var_real2D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny/))) , (/1,1,nt(i)/) , (/nx,ny,1/) )
 > end if
+
 With the *code* variable instead of '...'. If that variable is lithology-defined on each box, the line should be:
+
 >   call put_var_real3D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny,nlit/), order=(/3,1,2/))) , (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
+
 * If that output variable cannot be computed from the variable present in 'source/geographic_write_output.f90', declare the code
 variable you need as input arguments of the subroutine 'geographic_write_output', and add them in 'source/printf.f', where the
 subroutine is called.
