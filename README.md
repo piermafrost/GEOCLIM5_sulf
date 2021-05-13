@@ -567,6 +567,12 @@ dimension (it is then a 3D field).
 and paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
 * In 'source/geographic_write_output.f90', at the end of the section "write variables", (just before the secion "output file
 closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) that looks like:
+>   use netcdf  
+>      1  
+> Fatal Error: Can't open module file ‘netcdf.mod’ for reading at (1): No such file or directory
+
+
+
 > i = 15 
 > if (filenum(i)>0) then 
 >   call put_var_real2D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny/))) , (/1,1,nt(i)/) , (/nx,ny,1/) ) 
