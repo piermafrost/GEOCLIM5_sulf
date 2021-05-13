@@ -652,8 +652,13 @@ variables.
 * Update COMBINE restart file and the input file 'oce_vol.dat' (see previous section *Change oceanic basin definition*).
 * Update whatever routine needed to compute the geochemical fluxes of that new variable.
 
-### Visualization?
-...
+### Visualization
+A couple of external scripts are designed for the visualization of GEOCLIM output, in 'visualiation/python/' (Python scripts) and
+'visualization/jnl/' (Ferret scripts)
+
+'visualization/python/plot_final_state.py' draw the main oceanic profiles and geochemical fluxes at the end of a run and save them
+in two pdf files 'final_fluxes--\*.pdf' and 'final_ocean_chemistry--\*.pdf'.
+Usage: `python plot_final_state.py geoclime_output_file_path`.
 
 
 
