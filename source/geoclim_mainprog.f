@@ -164,10 +164,11 @@ program geoclim
     ! Store GMST in last box (atmosphere) of Toceclimber:
     Toceclimber(nbasin,:) = GMSTclimber
 
-    do j=1,13
-        read(4,*)deephyp(j),shyp(j)
-    end do
-    close(unit=4)
+    ! Obsolete: hypso file
+    !do j=1,13
+    !    read(4,*)deephyp(j),shyp(j)
+    !end do
+    !close(unit=4)
 
     areal=0.
 

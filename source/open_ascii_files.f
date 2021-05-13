@@ -152,11 +152,11 @@ subroutine open_ascii_files(ID)
         open (32 ,status='old',file=filename)
     end if
     
-    !HYPSO_FILE:
+    ! **OBSOLETE** (former HYPSO_FILE):
     call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (4  ,status='old',file=filename)
+    read(unit=ID,fmt=*)! dummychar, filename
+    !call add_path(filename)
+    !open (4  ,status='old',file=filename)
     
     
     !ccccccc +++++++++++++++++++++++++++++++++ 

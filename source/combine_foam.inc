@@ -130,7 +130,7 @@
                      ,ws(nbasin),fin_sed(nbasin),Corg_BE(nbasin)
     double precision F_seafloor_cdiss(1:nbasin)
     double precision tend  
-    double precision deephyp(13),shyp(13)
+    !double precision deephyp(13),shyp(13) ! obsolete
     double precision dplysc(1:nbasin),dplysa(1:nbasin)
     double precision value_keep1(1:npixel),value_keep2(1:npixel)
     double precision fphos(1:nbasin)
@@ -320,7 +320,7 @@
                         ,fdissol_carb,fdissol_carbP,ws,fin_sed,Corg_BE
     common /dissolution/ F_seafloor_cdiss
     common /final_t/ tend  
-    common /hypsometry/ deephyp,shyp
+    !common /hypsometry/ deephyp,shyp ! obsolete
     common /interclimate/ ATe,BTe,ARu,BRu
     common /litho/ litho_frac
     common /lithium/ FrivLi,dLiriv,FhydLi
