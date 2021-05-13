@@ -511,10 +511,85 @@ negligible).
 
 ### Basic code modification
 ##### Model parameters
-...
+Most of the empirical parameters of GEOCLIM are defined in 'source/constante.f90'. Those parameters concern the oceanic and diagenesis
+components (COMBINE module) and the continental weathering parameters, with the exception of DynSoil module parameters.
+However, there are still some parameters defined, or written "in hard" into the subroutines.
+
+The chemical equilibrium constants, for oceanic chemistry (like carbonate speciation), are computed dynamically in 'source/eqcte.f90',
+because they depends on temperature, pressure and salinity. Those relationships are better constrained by thermodynamics, and less
+susceptible to be modified.
+
+All the parameters of DynSoil module are defined in 'source/dynsoil_physical_parameters.f90'
 
 ##### Output additional variables
-...
+There are a certain number of predefined output variables that the user can choose to output or not simply by editing the main
+configuration file 'config/IO_CONDITIONS'.
+However, to output a variable that is not in that predefined list, here are the steps to follow.
+
+###### COMBINE variable
+ie, oceanic variable, that have a value for each COMBINE box (like salinity), or a single value (for instance, atmospheric
+variable, or continental flux).
+
+First, you need to know the name of the variable *in the Fortran source code*, or the way to compute it.
+
+* Increment by 1 the parameter 'nGEOoutvar' in 'source/combine_foam.inc'.
+* Increment by 1 the parameter 'nvar' in 'source/geoclim_create_output.f90'. It must have the same value than 'nGEOoutvar' (this
+subroutine does not use combine_foam.inc).
+* Add a value in the vector parameter 'indice_boxdef' in both 'source/geoclim_create_output.f90' and 'source/geoclim_write_output.f90'
+(that vector must be the same in both files). The value must be 0 is the output variable is a scalar (single value), or 1 if it has
+a value for each COMBINE box.
+* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS", "GEOCLIM", add a line (eg, copy and
+paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
+* In 'source/geoclim_write_output.f90', at the end of the section "write variables", (just before the secion "output file
+closing"), add a block of 3 lines (eg, copy and paste the last 3 lines) that looks like:
+> !
+> i = 107
+> if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), (/real(...)/),   (/nt(i)/), (/1/) )
+With the *code* variable instead of '...'. If that variable is defined on each box, the line should be a little different:
+>                                                            , real(...(:)), (/1,nt(i)/), (/nbasin,1/)  )
+The output variable can be computed directly in that outputting line.
+
+###### Geographic variable
+ie, 2D geographic field (for instance, runoff). This is more complex because the variable can also be defined on the lithology
+dimension (it is then a 3D field).
+
+* Increment by 1 the parameter 'nGEOGoutvar' in 'source/combine_foam.inc'.
+* Increment by 1 the parameter 'nvar' in 'source/geographic_create_output.f90' and 'source/geographic_write_output.f90'.
+* If the output variable is defined on the lithology dimension (currently, only the variables # 11 and 12 are lithology-defined):
+    * add the variable number to the loop lines 209-225 of 'source/geographic_create_output.f90'.
+    * add the variable number to the loop lines 307-125 of 'source/geographic_create_output.f90'.
+    * make the loop lines 317-325 of 'source/geographic_create_output.f90' go from 13 to *nvar-1* instead of from 13 to nvar, as
+      the last output variable (ie, the one just added) is defined lithology-defined.
+* If the output variable is not defined on the lithology dimension, nothing more should be changed in 'source/geographic_create_output.f90'.
+* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS", "GEOGRAPHIC", add a line (eg, copy
+and paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
+* In 'source/geographic_write_output.f90', at the end of the section "write variables", (just before the secion "output file
+closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) that looks like:
+> i = 15
+> if (filenum(i)>0) then
+>   call put_var_real2D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny/))) , (/1,1,nt(i)/) , (/nx,ny,1/) )
+> end if
+With the *code* variable instead of '...'. If that variable is lithology-defined on each box, the line should be:
+>   call put_var_real3D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny,nlit/), order=(/3,1,2/))) , (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
+* If that output variable cannot be computed from the variable present in 'source/geographic_write_output.f90', declare the code
+variable you need as input arguments of the subroutine 'geographic_write_output', and add them in 'source/printf.f', where the
+subroutine is called.
+
+###### DynSoil variable
+Similar to geographic variable, but output only if DynSoil module is activated, and can be defined on lithology and/or vertical
+dimension.
+
+* Increment by 1 the parameter 'nDSvar' in 'source/combine_foam.inc'.
+* Increment by 1 the parameter 'nvar' in 'source/dynsoil_create_output.f90' and 'source/dynsoil_write_output.f90'.
+* Look on 'source/dynsoil_create_output.f90' for all the specific cases for variable defined (or not) on lithology and vertical
+dimensions.
+* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS", "DYNSOIL", add a line (eg, copy and
+paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
+* In 'source/dynsoil_write_output.f90', at the end of the section "write variables", (just before the secion "output file
+closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) similarly to 'geographic_write_output.f90', paying special
+attention on which dimension the variable is defined on.
+* Similarly to geographic variables, if needed, declare new input argument and add them in 'source/printf.f', where the subroutine
+is called.
 
 ### Advanced customization
 ##### Change oceanic bassin definition
