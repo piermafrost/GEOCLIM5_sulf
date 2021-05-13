@@ -547,7 +547,7 @@ closing"), add a block of 3 lines (eg, copy and paste the last 3 lines) that loo
 > if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), (/real(...)/),   (/nt(i)/), (/1/) ) 
 
 With the *code* variable instead of '...'. If that variable is defined on each box, the line should be a little different:
->                                                            , real(...(:)), (/1,nt(i)/), (/nbasin,1/)  )
+> if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), real(...(:)), (/1,nt(i)/), (/nbasin,1/)  )
 
 The output variable can be computed directly in that outputting line.
 
@@ -597,10 +597,22 @@ is called.
 
 ### Advanced customization
 ##### Change oceanic bassin definition
-...
-TOP-BOTTOM ORDER + ATMOSPHERIC BOX
-SINGLE EPICONTINENTAL BOX
-BOX VOLUME
+The definition of COMBINE basins is supposedly entirely controlled by the input files (in 'INPUT/COMBINE/ref/', see section
+*Oceanic boundary conditions*), and could be flexible. However, there are several points in the source code that make it tricky
+to customize:
+* The number of boxes (parameter 'nbasin', standard number is 10) is defined in 'source/shape.inc', and *systematically set as 10*
+by the script `build_GEOCLIM` (line 660). Make sure to update those if you want to change the number of boxes.
+* Some routines (mostly 'creades.f') explicitely assume that the boxes are ordered **top to bottom**: for every non-surface boxes k,
+the fluxes of sinking particles is taken from the box k-1.
+* The atmospheric box must be **the last box** (this is how it is identified by the code routines). Moreover, the indices corresponding
+to the atmospheric box **must be kept as it is currently** (1 in 'apport_ct.dat', 0 for all the others), or the loops on boxes
+will crash.
+* Some routines may assume that there is only 1 box that receives the continental fluxes (currently, epicontinental surface box).
+If you divide that box in several ones, there is a risk that the continental fluxes will be multiplied.
+* Update accordingly all the box definition files, **and the COMBINE restart file**, that contains a list of value for all variables
+in all boxes (the "box" dimension being the most rapidly varying one). Pay particular attention to the input file 'oce_val.dat'
+that define the volume for all boxes and variables (with still "box" dimension being the most rapidly varying one). Do keep a
+volume of 1d-15 for atmosphere box and for all isotopic variables.
 
 ##### Add a new geochemical species
 ...
