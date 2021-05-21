@@ -603,8 +603,52 @@
                    (var(i,k)-var(i,j))/(9.43+var(i,k))) &
                    *(9.43+var(i,j))/(var(5,j)*vol(j))
         end do
-
     end do
+
+
+
+
+!cccccccccccccccccccccccccccccccc
+!cccccccccccccccccccccccccccccccc
+        i=18 ! PIC 87Sr/86Sr
+!cccccccccccccccccccccccccccccccc
+!cccccccccccccccccccccccccccccccc
+    do j0=1,nnosurfnobelappcont-1!<- SKIP ATMOSPHERE BOX!
+            j = jbox_nosurfnobelappcont(j0)
+            if (var(6,j).gt.1.e-6) then
+                    R(i,j)= (finorgC(j)*rSrdep(j)*(var(i-1,j)-var(i,j)) &
+                           /(9.43+var(i-1,j)) &
+                           +fsink_inorg(j-1)*(vol(j-1))*var(6,j-1)*(var(i,j-1)-var(i,j)) &
+                           /(9.43+var(i,j-1))) &
+                           *(9.43+var(i,j))/(var(6,j)*vol(j))
+            else
+                    R(i,j)=0.
+            endif
+    end do
+    do j0=1,nnosurfbelappcont
+            j = jbox_nosurfbelappcont(j0)
+            if (var(6,j).gt.1.e-6) then
+                    R(i,j)= (finorgC(j)*rSrdep(j)*(var(i-1,j)-var(i,j)) &
+                           /(9.43+var(i-1,j)) &
+                           +(1.-gotoshelf)*fsink_inorg(j-1)*(vol(j-1)) &
+                           *var(6,j-1)*(var(i,j-1)-var(i,j)) &
+                           /(9.43+var(i,j-1))) &
+                           *(9.43+var(i,j))/(var(6,j)*vol(j))
+            else
+                    R(i,j)=0.
+            endif
+    end do
+    do j0=1,nsurface
+            j = jbox_surface(j0)
+            if (var(6,j).gt.1.e-6) then
+                    R(i,j)= (finorgC(j)*rSrdep(j)*(var(i-1,j)-var(i,j)) &
+                           /(9.43+var(i-1,j))) &
+                           *(9.43+var(i,j))/(var(6,j)*vol(j))
+            else
+                    R(i,j)=0.
+            endif
+    end do
+
 
 
 !ccccccccccccccccccccccccccccccccc
