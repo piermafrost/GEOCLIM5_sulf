@@ -648,8 +648,8 @@ exchange (only for O2 and CO2) and sinking for particulate variables. They are:
 14. delta 13 C of PIC
 15. delta 13 C of POC
 16. delta 13 C of atmospheric CO2 (value set to 0 for oceanic boxes)
-17. 87 Sr / 86 Sr isotopic ratio
-18. Not attributed
+17. 87 Sr / 86 Sr isotopic ratio of dissolved strontium
+18. 87 Sr / 86 Sr isotopic ratio in PIC
 19. Not attributed
 20. Sulfate (SO4^2-)
 
