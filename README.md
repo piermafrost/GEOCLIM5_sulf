@@ -667,6 +667,11 @@ variables.
 * Update COMBINE restart file and the input file 'oce_vol.dat' (see previous section *Change oceanic basin definition*).
 * Update whatever routine needed to compute the geochemical fluxes of that new variable.
 
+Do note that this newly added "main" variable will not be outputted. To do so, follow the procedure described in
+*output additional variables*, *COMBINE variable* section.
+To compute (and output) the oceanic average of the variable, update the lines 51-101 of 'source/geoclim_write_output.f90'.
+Note that the oceanic average of isotopic ratios is different than concentration variables.
+
 ### Visualization
 A couple of external scripts are designed for the visualization of GEOCLIM output, in 'visualization/python/' (Python scripts) and
 'visualization/jnl/' (Ferret scripts)
@@ -769,10 +774,18 @@ and see if the error still persists.
 This is by far the most frequent source of error, and they can be hard to detect and solve. They are basically 2 possibilities:
 
 ###### library not found
-To check if the library is found, try and compile only the file "netcdf_io_module.f90" (that does not use any other source file),
+If the netCDF library is not found, the compilation fails when it reaches the file "io_module.f90". The error should look like:
+> io_module.f90:193:5:  
+>   
+>   use netcdf  
+>      1  
+> Fatal Error: Can't open module file ‘netcdf.mod’ for reading at (1): No such file or directory  
+> compilation terminated.  
+> make: \*\*\* [Makefile:229: io_module.o] Error 1  
+
+To be sure, you can try and compile only the file "netcdf_io_module.f90" (that does not use any other source file),
 for instance: `make netcdf_io_module.o [your potential Make options]`
-If the library is not found, the error message should say that the netCDF module is not found, without even trying to use the
-functions. It should look like:
+The error message should look like:
 
 > netcdf_io_module.f90:8:5:
 >
@@ -786,20 +799,21 @@ and '.../lib' probably do not have netCDF library. Try to find where the library
 This information can normally be obtained with `nc-config --prefix` (note that it is what `build_GEOCLIM` uses).
 
 ###### library not recognized
-This error is harder to detect. The modules and objects are generally successfully created. The error comes while creating
-the executable. The compiler often returns plenty of error messages (which does not make the task any easier). Most of them
-would that look like:
+This error may be harder to detect. Sometimes, the compiler gives a specific indication, for instance, with gfortran:
+
+Sometimes, the compilation of the modules and objects is successful, but the error comes while creating the executable, and the
+compiler returns plenty of error messages, which does not make the task any easier, most of them looking like:
 
 > /usr/bin/ld: /tmp/cc7LF9wU.o: in function \`\_\_netcdf_io_module_MOD_put_att_int':  
 > netcdf_io_module.f90:(.text+0x8148): undefined reference to \`\_\_netcdf_MOD_nf90_put_att_one_fourbyteint'
 
-This indicates that there is a netCDF library, but the compiler didn't manage to use it. 
+This indicates that the compiler failed to used the netCDF library. 
 It can happen for several reasons:
 * Some compilation options are missing. Compilers generally need a specific option to use netCDF, `-lnetcdff` (gfortran),
 `-lnetcdf` (ifort). The Makefile put those 2 options among the compilation flags (unless you override the flags with `FFLAGS=...`).
 Make sure that you have those 2 options in your compilation command.
-Sometimes (with ifort notably) those options need to be *at the very end* of the compilation command, which is what the Makefile
-normally does.
+Sometimes (notably with ifort on Mac OS) those options need to be *at the very end* of the compilation command, which is what the
+Makefile normally does.
 * Incompatible library: another possibility is that the netCDF library is not compatible with the compiler. It may be a version
 issue, or the fact that it is installed for the wrong compiler (try `nc-config --fc` to check the compiler the library is
 configured for). In that case, there is no better solution than reinstalling the netCDF library (or using another Fortran compiler).
@@ -848,6 +862,8 @@ Slope and lithology mask must be in netCDF format. Note however that you can spe
 It is possible that on some continental points (ie, points with area > 0), climatic fields have missing value (runoff notably).
 Note that the code will always check if there are points with negative runoff.
 
+Re-compile the code with debugging option to determine where the first error occured (with `build_GEOCLIM`, add options
+`--mode debug --reset`, with Makefile, do `make clc`, then `make MODE=debug [your personal options]`)
 If the missing value is far enough from the valid range (like -9d33, or 1d36), you should get an error message like:
 
 > Program received signal SIGFPE: Floating-point exception - erroneous arithmetic operation.
@@ -855,19 +871,22 @@ If the missing value is far enough from the valid range (like -9d33, or 1d36), y
 In one of those files:
 
 > 0x55a5bfc51603 in eqcte\_  
-> 	at /home/piermafrost/GitHub/GEOCLIM5.2/source/eqcte.f:16
+> 	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/eqcte.f:16
+
+> 0x55f31b341c98 in phfunc\_  
+>	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/phfunc.f:34
 
 > 0x55fc6d79cb98 in bio\_frac\_  
-> 	at /home/piermafrost/GitHub/GEOCLIM5.2/source/bio_frac.f:8
+> 	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/bio_frac.f:8
 
->  0x5578b564025d in carbo\_  
-> 	at /home/piermafrost/GitHub/GEOCLIM5.2/source/carbo.f:9
+> 0x5578b564025d in carbo\_  
+> 	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/carbo.f:9
 
-> 0x55c3a02db371 in carbo\_  
->	at /home/piermafrost/GitHub/GEOCLIM5.2/source/carbo.f:24
+> 0x55e19454c99d in newton\_  
+>	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/newton.f:23
 
 > 0x55a479b87442 in ocean\_atm\_flu\_  
-> 	at /home/piermafrost/GitHub/GEOCLIM5.2/source/ocean_atm_flu.f:15
+> 	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/ocean_atm_flu.f:16
 
 If the missing value is close from the valid range, there may be no error, simply wrong continental fluxes.
 
@@ -885,12 +904,12 @@ The unit assumed by the code are:
 * temperature: °C
 * runoff: cm/yr
 
-If the temperature is in Kelvin, you should receive an error message like:
+If the temperature is in Kelvin, you should receive (with debugging compilation options) an error message like:
 
 > Program received signal SIGFPE: Floating-point exception - erroneous arithmetic operation.
 >
 > 0x55a479b87442 in ocean\_atm\_flu\_  
-> 	at /home/piermafrost/GitHub/GEOCLIM5.2/source/ocean_atm_flu.f:15
+> 	at /home/piermafrost/GitHub/GEOCLIM5\_sulf/source/ocean_atm_flu.f:16
 
 Wrong runoff or area units will generally not trigger a crash, but will generate aberrant continental fluxes:
 too high by a factor ~10 (runoff in mm/yr), or too low by a factor that is often 1/10, 1/100, 1d-6, 1d-12.
@@ -903,12 +922,10 @@ You can also simply check the climatic and area variables in the geographic outp
 Combine input data (size of oceanic basins, seawater temperature...) is expected to be different for each paleo configuration.
 It is possible that a new input dataset may make the model crash, because of error in its generation, or because it is not
 compatible with the initial condition.
-A reason for that is that the restart file (COMBINE initial condition) gives the model the absolute amount of chemical
-species in each basin (in moles). If the volume of one basin is significantly changed from the configuration that the restart
-came from, that may generate aberrant concentration of chemical species.
 
 To see if the errors come from Combine input data, try and re-run the model with the reference dataset (files in
-"INPUT/COMBINE/ref/").  
+"INPUT/COMBINE/ref/"), keeping your COMBINE initial condition.
+
 If the COMBINE initial condition is solely responsible for the crash, reducing the time step just for the time to the
 ocean mixing to dissipate aberrant concentrations (100-1000 years) may solve the problem. The model could then be
 run normally from the new restart.
