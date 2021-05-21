@@ -24,6 +24,7 @@
   4000        Print geographically-distributed outputs every ....*timestep yrs --- for long runs, 2500000 is good
   1d9         Age for generating an initialisation file (null or negative value means "at the end of the run")
   1.          oxygen acceleration factor (1. is for no acceleration) -- 100. is a good value for equilibrium-reaching
+  1.          sulfate acceleration factor (1. is for no acceleration) -- 100. is a good value for equilibrium-reaching
   0           0:rk4 solver
   100         integrate continental weathering every ....*timestep (yrs) --- can be raised to 1000 to hasten equilibrium-reaching
   4           integrate DYNSOIL variables every .... * cont_weath_jump * timestep (yrs)
