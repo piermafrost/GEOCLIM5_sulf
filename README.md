@@ -775,6 +775,7 @@ This is by far the most frequent source of error, and they can be hard to detect
 
 ###### library not found
 If the netCDF library is not found, the compilation fails when it reaches the file "io_module.f90". The error should look like:
+
 > io_module.f90:193:5:  
 >   
 >   use netcdf  
@@ -800,6 +801,15 @@ This information can normally be obtained with `nc-config --prefix` (note that i
 
 ###### library not recognized
 This error may be harder to detect. Sometimes, the compiler gives a specific indication, for instance, with gfortran:
+
+> io_module.f90:193:5:  
+>  
+>   193 |  use netcdf  
+>       |     1  
+> Fatal Error: Cannot read module file ‘netcdf.mod’ opened at (1), because it was created by a different version of GNU Fortran  
+> compilation terminated.  
+> Makefile:229: recipe for target 'io_module.o' failed  
+> make: *** [io_module.o] Error 1
 
 Sometimes, the compilation of the modules and objects is successful, but the error comes while creating the executable, and the
 compiler returns plenty of error messages, which does not make the task any easier, most of them looking like:
