@@ -35,11 +35,11 @@ used to compute continental weathering, and oceanic boxes temperature.
 The resolution (ie, the spatial grid) of the continental weathering module must be the same than the GCM.
 
 ##### How to run the model:
-After downloading the present repository, type `./make_test testname` (testname being one of "ERA5", "CESM", "paleo" and
+After downloading the present repository, type `./make_test testname` (testname being one of "ERA5", "GFDL", "CESM", "paleo" and
 "ascii"). This command will compile and execute a short GEOCLIM run and compare the output to a reference template.
 This allows to verify that the compilation and execution of the model are performed without error, and yield the same
 results than reference runs. If not, the command should tell what type of error was encountered (see also section *Frequent issues*
-at the end of this file). You could try the 4 tests to make sure everything works as excepted.
+at the end of this file). You could try the 5 tests to make sure everything works as excepted.
 
 If the tests are conclusive, follow those step to create your run:
 * Compile the code with `build_GEOCLIM` (specifying the model set of components and resolution). Try `./build_GEOCLIM --help`
