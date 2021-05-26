@@ -6,7 +6,7 @@ Information about GEOCLIM runs for the sulfide weathering perturbation experimen
 
 #### Where to find the output
 
-#### Output nomenclature
+#### Run nomenclature
 
 
 ## How to reproduce the runs
