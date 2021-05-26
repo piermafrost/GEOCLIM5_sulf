@@ -250,7 +250,7 @@ case $case_name in
 	cp config/templates/IO_CONDITIONS.GFDL-test config/IO_CONDITIONS
 	config_iostat=$?
         test -e 'source/constante.f90' && rm -f 'source/constante.f90'
-	cp 'source/templates/constante.f90.GFDL-test' 'source/constante.f90'
+	cp 'source/templates/constante.f90.GFDL' 'source/constante.f90'
 	test $? -ne 0 && config_iostat=1
 	#
 	# Check that other configuration files exist
