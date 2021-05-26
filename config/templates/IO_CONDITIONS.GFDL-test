@@ -1,0 +1,398 @@
+############################################################################################################################################
+############################################################################################################################################
+####                                                                                                                                    ####
+####                                                                                                                                    ####
+####                                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                            ####
+####                                             %%  GEOCLIM INPUT-OUTPUT INTERFACE FILE  %%                                            ####
+####                                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                            ####
+####                                                                                                                                    ####
+####                                                                                                                                    ####
+####    States the run name, the paths of the configuration files, directories, restart files, input files and output files.            ####
+####    For netCDF files, states also the variable names, dimensions and units.                                                         ####
+####                                                                                                                                    ####
+####    Any blank (empty) line or line whose first non-blank character is a hash (#) will be interpreted as a commented line, and be    ####
+####    ignored by the reading subroutines. Feel free to put as much comments as you wish.                                              ####
+####                                                                                                                                    ####
+####    All given file paths are considered relative to the GEOCLIM MAIN DIRECTORY (and NOT any subdirectory, such as executables/),    ####
+####    regardless of the directory the executable command is launched in. This unless the file path STARTS WITH A '/', in that         ####
+####    case, it is interpreted as an absolute path.                                                                                    ####
+####    The GEOCLIM main directory is stated in source/path.inc, automatically generated at compilation with Makefile.                  ####
+####                                                                                                                                    ####
+####    In fortran free-format reading, slash (/) is interpretated as a string separator. To avoid errors, always write between         ####
+####    quotes (' or ") every strings containing a slash, such as file paths or units. Strings not containing any usual string          ####
+####    separators (blank, comma...) do not need to be written between quotes.                                                          ####
+####                                                                                                                                    ####
+####    File name convention:                                                                                                           ####
+####        Axis variables, boxes volume and cells area are automatically written in needed files, so files name ('.') are not read.    ####
+####        '-' in first position of output file name means "same name as the closest previous line not beginning by "#".               ####
+####        '#' in first position of output file name means "don't write this variable".                                                ####
+####                                                                                                                                    ####
+####    If the code has to be modified (for instance, to output more variables), one must keep in mind that a single uncommented        ####
+####    line of this file can be read by different subroutines, depending on the chosen set of components.                              ####
+####                                                                                                                                    ####
+####    The present file is the only one whose name is stated within the code of GEOCLIM (first line of geoclim_mainprog.f), and        ####
+####    cannot be changed (unless changing the source code). All other files names are defined here.                                    ####
+####                                                                                                                                    ####
+####                                                                                                                                    ####
+############################################################################################################################################
+############################################################################################################################################
+
+
+
+
+############################################################################################################################################
+##                                                           MAIN IO CONDITIONS:                                                          ##
+############################################################################################################################################
+
+RUN_NAME:           '.testrun_GFDL'
+OUTPUT_DIRECTORY:   'OUTPUT/'
+PHYS_COND_FILE:     'config/templates/cond_p20.GFDL-test.dat'    # unit=3
+#                     => contains most of the run configuration, such as solver time steps, printing time steps,
+#                        model components to use, and volcanic degassing rate
+KILLING_FILE:       'deathnote.txt'                              # unit=666
+
+############################################################################################################################################
+##                                  INITIALIZATION FILES (ie, RESTARTS) FOR COMBINE, AND BIODIV MODULES:                                  ##
+############################################################################################################################################
+
+GEOC_VAR_INIT_FILE: 'restart/geoclim/output.GFDL_PI_eq'          # unit=2
+SPECIES_INIT_FILE:  'restart/biodiv/current_init_species'        # unit=1
+BIOD_VAR_INIT_FILE: 'restart/biodiv/current_init_varbio'         # unit=300
+
+############################################################################################################################################
+##                                                               INPUT FILES:                                                             ##
+############################################################################################################################################
+
+
+##################################
+######  CONTINENTAL INPUTS  ######
+##################################
+
+INPUT_MODE: 'GCM' # 'ascii' or 'GCM'
+# 'ascii' => read inputs from ascii files ("old" way)
+# 'GCM' => read inputs from GCM netCDF outputs (land module annual climatology)
+
+# <-- Only read in 'ascii' input mode -->
+
+  ####### Continental grid
+  GRID_AREA_FILE:     'INPUT/ERA5/area_tot_1e6km2_ERA5.dat'        # unit=301
+  CONT_AREA_FILE:     'INPUT/ERA5/area_land_1e6km2_ERA5.dat'       # unit=7
+
+  ####### Climate under several CO2 levels
+  TEMPERATURE_FILE:   'INPUT/ERA5/temperature_degC_ERA5.dat'       # unit=30
+  RUNOFF_FILE:        'INPUT/ERA5/runoff_cmpy_ERA5.dat'            # unit=31
+  INTERPOL_T_factor:  'INPUT/FOAM/CTRL_48x40/factorT.out'          # unit=302  # NOTE: file *not read* in current version
+  INTERPOL_R_factor:  'INPUT/FOAM/CTRL_48x40/factorR.out'          # unit=303  # NOTE: file *not read* in current version
+
+# <-- -->
+
+# <-- Only read in 'GCM' input mode -->
+
+  GCM_INPUT_CONDITION_FILE: 'config/templates/GCM_input_conditions.GFDL'         # unit=333
+
+# <-- -->
+
+
+####### Lithology map (netCDF file => create scratch file: unit=304)
+#                   file_name                                                       var_name      fillvalue_name
+LITHOLOGICAL_MASK:  'INPUT/lithology/lithology_fraction_PI_6class_30minx30min.nc'   lithfrac      _FillValue
+
+# Alternatively, you can specify directly ON A SINGLE LINE the lithology fraction of each class
+# (must be consistent with nlitho variable!). A geographically-uniform lithology will be assumed.
+# Note: the traditional 6 lithology classes version of GEOCLIM is:
+#  1: metamorphic; 2: felsic; 3: intermediate; 4: mafic; 5: siliclastic sediments; 6: carbonates
+#0.144	0.074	0.023	0.053	0.616	0.090 
+# #=> derived from Hartmann & Moodsorf, G3, 2012 (10.1029/2012GC004370)
+
+
+####### vegetation map (through time). Ignored if vegetation flag not activated
+VEGETATION_FILE:    'INPUT/vegetation/new_map_allveg.out'  # unit=48
+
+
+############################################
+######  OCEANIC (ie, COMBINE) INPUTS  ######
+############################################
+
+####### Main inputs
+OCEAN_TEMP_FILE:    'parametric'                            # unit=32
+# Write 'parametric' instead of file name to use parametric CO2-Toce relation
+# Could also write 'parametric' in the given input ascii file
+HYPSO_FILE:         'INPUT/COMBINE/ref/hypso.dat'           # OBSOLETE (formerly unit=4). IGNORED BY THE CODE
+
+####### Earth physical dimensions
+OCEBOX_VOLUME_FILE: 'INPUT/COMBINE/ref/oce_vol.dat'         # unit=33
+OCE_SURF_FILE:      'INPUT/COMBINE/ref/oce_surf.dat'        # unit=34
+SURF_SEDI_FILE:     'INPUT/COMBINE/ref/surf_sedi.dat'       # unit=37
+
+####### definition of boxes
+DEEP_BOX_FILE:      'INPUT/COMBINE/ref/indice_deep.dat'     # unit=35
+SEDI_BOX_FILE:      'INPUT/COMBINE/ref/indice_sedi.dat'     # unit=36
+BOX_PRESS_FILE:     'INPUT/COMBINE/ref/press_box.dat'       # unit=38
+APP_CONT_BOX_FILE:  'INPUT/COMBINE/ref/apport_ct.dat'       # unit=39
+THERMOCLINE_FILE:   'INPUT/COMBINE/ref/thermocline.dat'     # unit=40
+SURF_BOX_FILE:      'INPUT/COMBINE/ref/indice_surface.dat'  # unit=41
+EXCHANGE_FILE:      'INPUT/COMBINE/ref/exchange_2.dat'      # unit=42
+FSINK_INORG_FILE:   'INPUT/COMBINE/ref/fsink_inorg.dat'     # unit=44
+FSINK_FILE:         'INPUT/COMBINE/ref/fsink.dat'           # unit=45
+EPIC_BOX_FILE:      'INPUT/COMBINE/ref/indice_epicont.dat'  # unit=46
+POLA_BOX_FILE:      'INPUT/COMBINE/ref/indice_polar.dat'    # unit=47
+
+
+
+############################################################################################################################################
+##                                                       RESTART FILES AND BIODIV FILES:                                                  ##
+############################################################################################################################################
+
+# Names in this section usually do not need to be modified
+
+################################################## GEOCLIM:
+#
+RESTART_FILE:       'output'  # unit=10
+
+################################################## BIODIV:
+#
+# offline files:
+WHO_EATS_WHO:       'who_eats_who' # unit=104
+TEMP_TOLERANCE:     'temp_tol'     # unit=105
+TEMP_OPTIMUM:       'temp_opt'     # unit=106
+PH_TOLERANCE:       'pH_tol'       # unit=107
+PH_OPTIMUM:         'pH_opt'       # unit=108
+BIRTH_RATE:         'birth'        # unit=109
+DEATH_RATE:         'death'        # unit=110
+CARB_PROD_RATE:     'carb_prod'    # unit=111
+ECOLOGICAL_WEB:     'ecoweb'       # unit=112
+EVOLUTION:          'evolution'    # unit=203
+# restart files:
+VAR_RESTART_FILE:   'output_bio'       # unit=9
+SPECIES_RESTART_F:  'species_restart'  # unit=202
+
+################################################## DYNSOIL:
+#
+RESTART_FILE:       'dynsoil_restart'       # define the name of the dynsoil restart file
+
+
+
+############################################################################################################################################
+##                                               DYNSOIL INITIALIZATION FILES AND VARIABLES:                                              ##
+############################################################################################################################################
+
+# DynSoil initialization mode
+# ---------------------------
+# 3 possibilities:
+#   * 'restart' => read restart from existing file
+#   * 'startup:null' => create null initial condition (reg. thick. = 0 everywhere)
+#   * 'startup:eq' => create initial conditions at equilibrium with given climatology and init pCO2 (using analytical formulas)
+'startup:eq'
+
+# Initialization file path (only used in 'restart' initialization mode):
+# ----------------------------------------------------------------------
+'restart/dynsoil/dynsoil_restart.GFDL_PI_eq.nc'
+
+# WHICH VAR         VARIABLE NAME     FILLVALUE NAME
+#---------------------------------------------------
+X_AXIS_VARIABLE:    lon
+Y_AXIS_VARIABLE:    lat
+Z_AXIS_VARIABLE:    xlevs
+INITIAL_REG_THICKN: reg_thickness     _FillValue
+INITIAL_SURF_XCAT:  x_P_surf          _FillValue
+INITIAL_SURF_AGE:   age_surf          _FillValue
+INITIAL_Z_PROFILE:  z                 _FillValue
+INITIAL_AGE_PROF:   age               _FillValue
+
+
+##################################
+######        SLOPE         ######
+##################################
+#
+# Continental output that is only used by DynSoil module
+
+# FILE PATH                                                                             VARIABLE_NAME     FILLVALUE_ATT_NAME
+#---------------------------------------------------------------------------------------------------------------------------
+'INPUT/slope/slope_PD_SRTM_30min.nc'                                                    slope             _FillValue
+
+
+
+
+############################################################################################################################################
+##                                                           OUTPUT CONDITIONS:                                                           ##
+############################################################################################################################################
+
+# Select here the variable you want to output, in which (netCDF) output file and under which name
+# "fillvalue" attribute name and value are put in the output file (by convention, '_FillValue').
+# "units" are the units of the variables in the source code, do not change it.
+# "long name" is a description of the variable ('long_name' netCDF attribute)
+
+
+# WHICH VAR             FILE NAME                     VARIABLE NAME       UNITS           FILLVALUE NAME     FILLVALUE      LONG NAME
+#------------------------------------------------------------------------------------------------------------------------------------
+
+################################################## GEOCLIM:
+
+BOX_AXIS_VARIABLE:      .                             box                 1
+t_AXIS_VARIABLE:        .                             time                y
+BOX_VOLUME:             .                             box_volume          m3
+BOX_TOP_SURFACE:        .                             box_surface         m2
+BOX_SEDIM_SURFACE:      .                             box_sedim_surface   m2
+VAR_01--DIC:            'geoclim_output'              DIC                 'mol/m3'            _FillValue     9.96921e+36    'Dissolved Organic Carbon concentration'
+VAR_02--ALKALINITY:     -                             alkalinity          'eq/m3'             _FillValue     9.96921e+36    'Seawater alkalinity'
+VAR_03--PO4_DISS:       -                             PO4                 'mol/m3'            _FillValue     9.96921e+36    'Phosphate ion concentration'
+VAR_04--Ca_DISS:        -                             Ca                  'mol/m3'            _FillValue     9.96921e+36    'Calcium ion concentration'
+VAR_05--Sr_DISS:        -                             Sr                  'mol/m3'            _FillValue     9.96921e+36    'Strontium ion concentration'
+VAR_06--Sr_IN_PIC:      -                             Sr_PIC              'mol/m3'            _FillValue     9.96921e+36    'Sr in Particulate Inorganic Carbon (moles of Sr / m3 of water)'
+VAR_07--POP:            -                             POP                 'mol/m3'            _FillValue     9.96921e+36    'Particulate Organic Phosphorus (moles of P / m3 of water)'
+VAR_08--PIP:            -                             PIP                 'mol/m3'            _FillValue     9.96921e+36    'Particulate Inorganic Phosphorus (moles of P / m3 of water)'
+VAR_09--POC:            -                             POC                 'mol/m3'            _FillValue     9.96921e+36    'Particulate Organic Carbon (moles of C / m3 of water)'
+VAR_10--PIC:            -                             PIC                 'mol/m3'            _FillValue     9.96921e+36    'Particulate Inorganic Carbon (moles of C / m3 of water)'
+VAR_11--O2_DISS:        -                             O2                  'mol/m3'            _FillValue     9.96921e+36    'Dioxygen concentration'
+VAR_12--PCO2:           -                             PCO2                'mol'               _FillValue     9.96921e+36    'Partial pressure of CO2 (equiv. in moles)'
+VAR_13--DIC_DELTA_13C:  -                             DIC_d13C            -                   _FillValue     9.96921e+36    'delta C 13 of Dissolved Inorganic Carbon'
+VAR_14--PIC_DELTA_13C:  -                             PIC_d13C            -                   _FillValue     9.96921e+36    'delta C 13 of Particulate Inorganic Carbon'
+VAR_15--POC_DELTA_13C:  -                             POC_d13C            -                   _FillValue     9.96921e+36    'delta C 13 of Particulate Organic Carbon'
+VAR_16--CO2_DELTA_13C:  -                             CO2_d13C            -                   _FillValue     9.96921e+36    'delta C 13 of CO2'
+VAR_17--86-87_Sr_RATIO: -                             Sr_iso_ratio        -                   _FillValue     9.96921e+36    'Sr 87 / Sr 86 isotopic ratio'
+VAR_18--PIC_Sr_RATIO:   -                             PIC_Sr_iso_ratio    -                   _FillValue     9.96921e+36    'Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
+VAR_19--NOT-ATTRIBUTED: #                             obsolete            -                   _FillValue     9.96921e+36    'not attributed GEOCLIM variable'
+VAR_20--SO4^2-_DISS:    -                             SO4                 'mol/m3'            _FillValue     9.96921e+36    'Sulfate ion concentration'
+H2CO3:                  -                             H2CO3               'mol/m3'            _FillValue     9.96921e+36    'H2CO3 ion concentration'
+HCO3-:                  -                             HCO3                'mol/m3'            _FillValue     9.96921e+36    'HCO3 - ion concentration'
+CO3_2-:                 -                             CO3                 'mol/m3'            _FillValue     9.96921e+36    'CO3 2- ion concentration'
+H2CO3_D13C:             -                             H2CO3_d13C          -                   _FillValue     9.96921e+36    'delta C 13 of H2CO3'
+HCO3-_D13C:             -                             HCO3_d13C           -                   _FillValue     9.96921e+36    'delta C 13 of HCO3 -'
+CO3_2-_D13C:            -                             CO3_d13C            -                   _FillValue     9.96921e+36    'delta C 13 of CO3 2-'
+SEAWATER_PH:            -                             pH                  -                   _FillValue     9.96921e+36    'potential of hydrogen'
+SEAWATER_OMEGA:         -                             omega               -                   _FillValue     9.96921e+36    'Calcite solubility product'
+SEAWATER_TEMPERATURE:   -                             temperature         degrees_celsius     _FillValue     9.96921e+36    'Seawater temperature'
+SEAWATER_SALINITY:      -                             salinity            PSU                 _FillValue     9.96921e+36    'Seawater salinity'
+DEPTH_LYSOCLINE_CARB:   -                             lysoc_depth_carb    km                  _FillValue     9.96921e+36    'Calcite lysocline depth'
+DEPTH_LYSOCLINE_ARAG:   -                             lysoc_depth_arag    km                  _FillValue     9.96921e+36    'Aragonite lysocline depth'
+GLOBAL_OCEAN_DIC:       -                             DIC_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Dissolved Organic Carbon concentration'
+GLOBAL_OCEAN_ALK:       -                             alk_glob            'eq/m3'             _FillValue     9.96921e+36    'Mean ocean alkalinity'
+GLOBAL_OCEAN_PO4:       -                             PO4_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Phosphate ion concentration'
+GLOBAL_OCEAN_Ca:        -                             Ca_glob             'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Calcium ion concentration'
+GLOBAL_OCEAN_Sr:        -                             Sr_glob             'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Strontium ion concentration'
+GLOBAL_OCEAN_PIC_Sr:    -                             Sr_PIC_glob         'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Sr in Particulate Inorganic Carbon (moles of Sr)'
+GLOBAL_OCEAN_POP:       -                             POP_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Particulate Organic Phosphorus (moles of P)'
+GLOBAL_OCEAN_PIP:       -                             PIP_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Particulate Inorganic Phosphorus (moles of P)'
+GLOBAL_OCEAN_POC:       -                             POC_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Particulate Organic Carbon (moles of C)'
+GLOBAL_OCEAN_PIC:       -                             PIC_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean Particulate Inorganic Carbon (moles of C)'
+GLOBAL_OCEAN_O2:        -                             O2_glob             'mol/m3'            _FillValue     9.96921e+36    'Mean ocean dioxygen concentration'
+GLOBAL_OCEAN_DIC_D13C:  -                             DIC_d13C_glob       -                   _FillValue     9.96921e+36    'Mean ocean delta C 13 of Dissolved Inorganic Carbon'
+GLOBAL_OCEAN_PIC_D13C:  -                             PIC_d13C_glob       -                   _FillValue     9.96921e+36    'Mean ocean delta C 13 of Particulate Inorganic Carbon'
+GLOBAL_OCEAN_POC_D13C:  -                             POC_d13C_glob       -                   _FillValue     9.96921e+36    'Mean ocean delta C 13 of Particulate Organic Carbon'
+GLOBAL_OCEAN_86-87_Sr:  -                             Sr_iso_rat_glob     -                   _FillValue     9.96921e+36    'Mean ocean Sr 87 / Sr 86 isotopic ratio'
+GLOBAL_OCEAN_PIC:       -                             PIC_Sr_iso_rat_glob -                   _FillValue     9.96921e+36    'Mean ocean Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
+GLOB_VAR_19--NOT-ATTRI: #                             obsolete            -                   _FillValue     9.96921e+36    ''
+GLOBAL_OCEAN_SO4:       -                             SO4_glob            'mol/m3'            _FillValue     9.96921e+36    'Mean ocean sulfate concentration'
+GLOBAL_OCEAN_PH:        -                             pH_glob             -                   _FillValue     9.96921e+36    'Mean ocean potential of hydrogen'
+GLOBAL_OCEAN_OMEGA:     -                             omega_glob          -                   _FillValue     9.96921e+36    'Mean ocean calcite solubility product'
+GLOBAL_OCEAN_TEMP:      -                             temperature_glob    degrees_celsius     _FillValue     9.96921e+36    'Mean ocean temperature'
+GLOBAL_OCEAN_SALINITY:  -                             salinity_glob       psu                 _FillValue     9.96921e+36    'Mean ocean salinity'
+O2_ATMOSPHERIC_LEVEL:   -                             O2_atm_level        PAL                 _FillValue     9.96921e+36    'Atmospheric O2 amount relative to Pre-Indutrial'
+CO2_ATMOSPHERIC_LEVEL:  -                             CO2_atm_level       PAL                 _FillValue     9.96921e+36    'Atmospheric CO2 amount relative to Pre-Industrial'
+O2_ATMOSPHERIC_CONCENT: -                             O2_atm_conc         '%'                 _FillValue     9.96921e+36    'Atmospheric O2 mixing ratio'
+CO2_ATMOSPHERIC_CONCEN: -                             CO2_atm_conc        ppm                 _FillValue     9.96921e+36    'Atmospheric CO2 mixing ratio'
+EXPORTED_POP_FLUX:      #                             xPOPexport          'mol/y'             _FillValue     9.96921e+36    ''
+F_CO2_ANTHROS:          -                             fCO2anthros         'mol/y'             _FillValue     9.96921e+36    'Anthropogenic CO2 flux'
+F_CO2_ATM->OCE_PER_BOX: -                             AO_CO2_flux         'mol/y'             _FillValue     9.96921e+36    'Net CO2 flux from atmosphere to ocean basin'
+F_CO2_ATM->OCE_TOT:     -                             AO_tot_CO2_flux     'mol/y'             _FillValue     9.96921e+36    'Total net CO2 flux from atmosphere to ocean'
+F_CARBONATE_PRODUCT:    -                             carb_prod_C_flux    'mol/y'             _FillValue     9.96921e+36    'Oceanic carbonate production flux'
+F_DISS_CARB:            -                             carb_diss_C_flux    'mol/y'             _FillValue     9.96921e+36    'Oceanic carbonate dissolution flux'
+F_ALL_SILICATE_WEATH:   -                             sil_wth_C_flux      'mol/y'             _FillValue     9.96921e+36    'Silicate weathering flux from continents (moles of Ca-Mg)'
+F_BASALT_WEATH:         -                             bas_wth_C_flux      'mol/y'             _FillValue     9.96921e+36    'Basalts weathering flux from continents (moles of Ca-Mg)'
+F_CARBON_WEATH:         -                             carb_wth_C_flux     'mol/y'             _FillValue     9.96921e+36    'Carbonate weathering flux from continents (moles of Ca-Mg)'
+F_KEROG_WEATH:          -                             ker_wth_C_flux      'mol/y'             _FillValue     9.96921e+36    'Land petrogenic carbon oxidation flux'
+F_NERI_CARBONATE_DEPOS: -                             carb_ner_dep_flux       'mol/y'         _FillValue     9.96921e+36    'Neritic carbonate deposition flux'
+F_NERI_CARB_DEP_TOT:    -                             carb_ner_tot_dep_flux   'mol/y'         _FillValue     9.96921e+36    'Total neritic carbonate deposition flux'
+F_PELA_CARB_DEP_TOT:    -                             carb_pel_tot_dep_flux   'mol/y'         _FillValue     9.96921e+36    'Total Pelagic carbonate deposition flux'
+F_ORG_C_BURIAL_PER_BOX: -                             org_C_dep_flux      'mol/y'             _FillValue     9.96921e+36    'Organic carbon burial flux'
+F_ORG_C_BURIAL_TOT:     -                             org_C_tot_dep_flux  'mol/y'             _FillValue     9.96921e+36    'Total organic carbon burial flux'
+PIC_SINKING_FLUX:       -                             PIC_sink_flux       'mol/y'             _FillValue     9.96921e+36    'Sinking flux of carbonate particles'
+F_PHOS_WEATH:           -                             P_wth_flux          'mol/y'             _FillValue     9.96921e+36    'Phosphorus weathering from continents'
+BIOLOGICAL_C_PRODUCTIV: -                             org_C_bio_prod      'mol/y'             _FillValue     9.96921e+36    'Oceanic bioproductivity (moles of C)'
+F_SEAFLOOR_C_DISS:      -                             seafloor_C_diss_flux      'mol/y'       _FillValue     9.96921e+36    'Seafloor weathering flux (moles of C)'
+F_SEAFLOOR_C_DISS_TOT:  -                             seafloor_C_tot_diss_flux  'mol/y'       _FillValue     9.96921e+36    'Total seafloor weathering flux (moles of C)'
+F_C_TRAPP_RELEASE:      -                             trapp_C_rel_flux    'mol/y'             _FillValue     9.96921e+36    'CO2 flux from trapp degassing'
+UNKOWN                  #                             fCO2crust           -                   _FillValue     9.96921e+36    ''
+UNKOWN                  #                             fSO4_basin          -                   _FillValue     9.96921e+36    ''
+UNKOWN                  #                             fSO4_crust          -                   _FillValue     9.96921e+36    ''
+Li_FLUX_FROM_RIVER:     #                             Li_Friv             'mol/y'             _FillValue     9.96921e+36    'Lithium flux from continental silicate weathering'
+RIVER_DELTA_7Li:        #                             Li_driv             -                   _FillValue     9.96921e+36    'delta Li 7 of Lithium from silicate weathering'
+CONT_POC_EXPORT:        -                             total_cont_POC_export  'mol/y'          _FillValue     9.96921E+36    ''
+F_ALL_CO2_DEGASSING:    -                             tot_CO2_degassing   'mol/y'             _FillValue     9.96921e+36    'Total CO2 degassing flux into ocean-atmosphere'
+WATER_DISCHARGE:        -                             discharge           'm3/y'              _FillValue     9.96921e+36    'Freshwater discharge from continents'
+SEDIMENT_DISCHARGE:     -                             TSS                 'kg/y'              _FillValue     9.96921E+36    'Sediment discharge from continents'
+OCN_13C_OC-BURIAL_FRAC  -                             ocn_epsilon_OC      -                   _FillValue     9.96921e+36    'C 13 fractionation coefficient during oceanic org. C production'
+CONT_ORG_C_d13C:        #                             cont_org_C_d13C     -                   _FillValue     9.96921e+36    'delta 13 C of continental organic carbon'
+GLOBAL_MEAN_SURF_TEMP:  -                             GMST                degrees_celsius     _FillValue     9.96921e+36    'Global Mean Surface Temperature'
+SEDIMENTATION_RATE:     -                             sedim_rate          'm/y'               _FillValue     9.96921e+36    'sedimentation rate'
+SEDIMENTATION_FLUX:     -                             sedim_flux          'kg/y'              _FillValue     9.96921e+36    'sedimentation massic flux'
+CORG_BURIAL_EFFICIENCY: -                             burial_efficiency   '-'                 _FillValue     9.96921e+36    'Organic Carbon burial efficiency'
+P_DEP_ORG_C-BOUND:      -                             P_dep_flux_orgC     'mol/y'             _FillValue     9.96921e+36    'Organic carbon-bound phosphorus deposition flux'
+P_DEP_PHOSPHORITE:      -                             P_dep_flux_phosph   'mol/y'             _FillValue     9.96921e+36    'Phosphorus deposition flux in form of phosphorite'
+P_DEP_HYDROTHERMAL:     -                             P_dep_flux_hydro    'mol/y'             _FillValue     9.96921e+36    'Hydrothermal Fe-bound phosphorus deposition flux'
+PYRITE_WTH_S_FLUX:      -                             pyrite_wth_S_flux   'mol/y'             _FillValue     9.96921E+36    'Sulfur flux from continental pyrite oxidation'
+SIL_SULF_WTH_Ca_FLUX:   -                             sil_sulfwth_Ca_flux 'mol/y'             _FillValue     9.96921E+36    'Silicate weathering flux by sulfuric acid (moles of Ca-Mg)'
+CARB_SULF_WTH_Ca_FLUX:  -                             carb_sulfwth_Ca_flux 'mol/y'            _FillValue     9.96921E+36    'Carbonate weathering flux by sulfuric acid (moles of Ca-Mg)'
+SULFATE_RED_S_FLUX:     -                             sulf_red_flux       'mol/y'             _FillValue     9.96921E+36    'Sulfate-reduction flux in marine sediment (moles of S)'
+ORG_C_BURIAL_O2_FLUX:   -                             orgC_dep_O2_flux    'mol/y'             _FillValue     9.96921E+36    'O2 flux due to organic carbon burial'
+
+################################################## GEOGRAPHIC:
+#
+X_AXIS_VARIABLE:        .                             lon                 degrees_east
+Y_AXIS_VARIABLE:        .                             lat                 degrees_north
+LITHO_AXIS_VARIABLE:    .                             litho               -
+t_AXIS_VARIABLE:        .                             time                y
+GRID_CELLS_AREA:        .                             area                m2                  _FillValue     9.96921e+36    'land area of grid cells'
+LITHOLOGY_FRACTION      'geographic_output'           litho_frac          -                   _FillValue     9.96921e+36    'fraction of land covered by each lithology class'
+TEMPERATURE:            -                             temperature         degrees_celsius     _FillValue     9.96921e+36    'Surface temperature'
+RUNOFF:                 -                             runoff              'cm/y'              _FillValue     9.96921e+36    'Total runoff'
+SLOPE:                  -                             slope               'm/m'               _FillValue     9.96921e+36    'Slope of the land'
+SIL_WTH_C_FLUX:         -                             sil_weathering      'mol/y/m2'          _FillValue     9.96921e+36    'Total silicate Ca-Mg weathering rate '
+ALL_WTH_C_FLUX_WEIGHT:  -                             weathering_lithwgh  'mol/y/m2'          _FillValue     9.96921e+36    'Ca-Mg weathering rate per lithology (fraction-weighted)'
+ALL_WTH_C_FLUX_UNWGH:   #                             weathering_unwgh    'mol/y/m2'          _FillValue     9.96921e+36    'Ca-Mg weathering rate per lithology (unweighted)'
+KERO_WTH_C_FLUX:        -                             kerog_weathering    'mol/y/m2'          _FillValue     9.96921e+36    'Kerogen weathering rate (moles of C)'
+BIO_ORG_C_EXPORT_FLUX:  -                             biosph_org_C_export 'mol/y/m2'          _FillValue     9.96921e+36    'Rate of biospheric organic carbon export to the oceans'
+PHOSPH_WTH_FLUX:        -                             phos_weathering     'mol/y/m2'          _FillValue     9.96921e+36    'Phosphorus weathering rate'
+
+################################################## BIODIV:
+#
+# ignored if no coupled to biodiversity module
+#
+EQUAT_AXIS_VARIABLE:    .                             equat               1
+BOX_AXIS_VARIABLE:      .                             box                 1
+t_AXIS_VARIABLE:        .                             time                y
+BOX_VOLUME:             .                             box_volume          m3
+BOX_TOP_SURFACE:        .                             box_surface         m2
+VAR_BIO:                'biodiv_output'               VAR                 -                   _FillValue     9.96921e+36    ''
+SPECIES_COUNT:          -                             species_count       1                   _FillValue     -1             'Number of species'
+
+################################################## DYNSOIL:
+#
+# ignored if no coupled to DynSoil module
+#
+X_AXIS_VARIABLE:        .                             lon                 degrees_east
+Y_AXIS_VARIABLE:        .                             lat                 degrees_north
+LITHO_AXIS_VARIABLE     .                             litho               -
+Z_AXIS_VARIABLE:        .                             xlevs               -
+t_AXIS_VARIABLE:        .                             time                y
+GRID_CELLS_AREA:        .                             area                m2                  _FillValue     9.96921e+36    'land area of grid cells'
+LITHOLOGY_FRACTION      'dynsoil_output'              litho_frac          -                   _FillValue     9.96921e+36    'fraction of land covered by each lithology class'
+SLOPE:                  -                             slope               'm/m'               _FillValue     9.96921e+36    'Slope of the land'
+TEMPERATURE:            #                             temperature         degrees_celsius     _FillValue     9.96921e+36    'Surface temperature'
+RUNOFF:                 #                             runoff              'cm/y'              _FillValue     9.96921e+36    'Total runoff'
+REGOLITH_THICKNESS:     -                             reg_thickness       m                   _FillValue     9.96921e+36    'Regolith thickness'
+SURFACE_PRIM_PH_PROP:   -                             x_P_surf            -                   _FillValue     9.96921e+36    'Fraction of primary phases at top of regolith'
+AGE_SURFACE:            #                             age_surf            y                   _FillValue     9.96921e+36    'Age of particles at top of regolith'
+Z:                      #                             z                   m                   _FillValue     9.96921e+36    'Height (from base of regolith) of x levels'
+AGE:                    #                             age                 y                   _FillValue     9.96921e+36    'Age of particles on x levels'
+REG_PRODUCTION_RATE:    -                             reg_prod_rate       'm/y'               _FillValue     9.96921e+36    'Regolith production rate'
+REG_EROSION_RATE:       -                             reg_eros_rate       'm/y'               _FillValue     9.96921e+36    'Regolith erosion rate'
+PRIM_PH_DISS_VOL_RATE:  -                             reg_P_diss_rate     'm/y'               _FillValue     9.96921e+36    'Volumetric dissolution rate of primary phases'
+PRIM_PH_EROS_VOL_RATE:  #                             reg_P_eros_rate     'm/y'               _FillValue     9.96921e+36    'Volumetric erosion rate of unweathered primary phases'
+EROSIVE_X_P_SURFACE:    #                             x_P_surf_eros       -                   _FillValue     9.96921e+36    'Erosive fraction of primary phases'
+TOT_P_DEPLET_FACTOR:    -                             x_P_mean            -                   _FillValue     9.96921e+36    'Mean regolith fraction of primary phases'
+REG_MEAN_AGE:           -                             reg_mean_age        y                   _FillValue     9.96921e+36    'Mean regolith age'
+LITHIUM_RIVERINE_FLUX:  #                             Li_friv             'mol/m2/y'          _FillValue     9.96921e+36    'Specific flux of lithium leaching into rivers'
+LITHIUM_SEC_PH_FLUX:    #                             Li_fsp              'mol/m2/y'          _FillValue     9.96921e+36    'Specific flux of lithium kept in secondary phases'
+LITHIUM_RIV_ISOT_DELTA: #                             Li_delta_riv        -                   _FillValue     9.96921e+36    'delta Li 7 of leached lithium'
+
