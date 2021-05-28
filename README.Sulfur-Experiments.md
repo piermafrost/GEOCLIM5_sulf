@@ -127,7 +127,7 @@ Here are the steps to follow to reproduce the runs presented in the article:
 
     Alternatively, go back to the main repertory (`cd ..`) and compile with `build_GEOCLIM`:
 
-    `./build_GEOCLIM --compset default --res 3,360,720`
+    `./build_GEOCLIM --compset default --res 3,720,360`
 
     If you compile the code with `make`, the executable "geoclim.exe" will be created in the "source/" directory. I recommand to
     move it into the "executable/" directory.
@@ -137,4 +137,51 @@ Here are the steps to follow to reproduce the runs presented in the article:
 
 5. **chain job submission**:
 
-    Hey?
+    The most convenient way to run the simulations is to use the scripts for "chain" job submission, especially on a cluster, and
+    if you wants to run several simulations in the same time.
+    Those scripts ("submit_chain.sh" and "run_geoclim.sh") can be found in the "job/" directory
+
+    * Go to the "job/" directory (`cd job`).
+    * Replace the template "submit_chain.sh" by "submit_chain_sulfur-experiments.sh": `cp -f submit_chain_sulfur-experiments.sh
+    submit_chain.sh`  
+    This last template contains the configuration for all the experiment presented in the article, whereas the first one is a
+    default template.
+    * Edit the "new" script "submit_chain.sh" to configure your run. The script is currently configure for the "carbonate sulfuric
+    weathering" perturbation experiment. The configuration for all experiment are between the lines 38 and 238. You can simply
+    comment the default config and uncomment the one corresponding to your run.
+    The configuration variable that need to be edited are:
+        * `RUN_NAME`: the name of your run
+        * `EXECUTABLE`: the path & name or your GEOCLIM executable file 
+        * `STOP_TIMES`, `COMBINE_DT`, `CONTWTH_NSKIP`, `DYNSOIL_NSKIP`, `COMBINE_PRINT_NSKIP`, `GEOGRAP_PRINT_NSKIP` and
+	`DYNSOIL_PRINT_NSKIP`: variables (lists) controlling the times to stop and restart the runs, the timesteps of the different
+	modules (COMBINE, continental weathering and DynSoil) and the printing timesteps.
+	The default (uncommented) values are the ones that were used for all the abrupt perturbations.
+        * `COMBINE_INIT`: the path & name for the initial condition of COMBINE variables. "restart/geoclim/output.ref" can be used for
+	all simulations since they all start from a quasi identical pre-industrial steady-state.
+	Yet, in order to start more closely to the numerical steady-state, different COMBINE restarts are available for all the
+	oxygen feedback strength cases (see commented examples of configuration).
+        * `DYNSOIL_INIT`: Path & name of the DynSoil initial condition file. Similarly to COMBINE initial condition, it would be
+	preferrable to start from the numerical steady-state of the calibration run.
+	However, DynSoil initialization files take a lot of memory and cannot be stored on GitHub. For this reason, the current
+	configuration starts from the analytical steady-state (computed by the code): `DYNSOIL_INIT='startup:eq'`.
+	This inaccuracy of numerical versus analytical steady-state of the regolith profiles will cause a rapid (50kyr) peak of CO2
+	of +15ppmv, resorbing in ~1Myr, if one launches a unperturbeb run with 'startup:eq' DynSoil initial condition.  
+	This "artificial" peak of CO2 is negligible with respect to the amplitude of the perturbations applied.
+	To generate an exact steady-state DynSoil initial condition, re-compile and run the model without perturbation for 1Myr
+        *with accelerated parameters* (i.e., S and O cycle accelerated x100, in "config/cond_p20.dat", and reduced regolith inertia:
+	`scaling_factor` set to 1d-3 in "source/dynsoil_physical_parameters.f90")
+        * `SUBMIT_COMMAND`: the command used to submit job on the cluster, if you are running the model on a cluster (on Cheyenne
+	cluster, `qsub` (PBS) or `sbatch` (Slurm)).
+	If you wants to directly run the model, without submitting a job, set `SUBMIT_COMMAND=''`.
+        * `JOB_FILE`: the name of the 2nd script that actually run the executable. Let it 'run_geoclim.sh' if you want to submit
+	a job (you will likely need to edit the file). If you are not submitting a job (SUBMIT_COMMAND=''), then, set it to
+	'run_geoclim_basic.sh'
+        * `LOG_FILE`: The name of the log file of the run. This is optional.
+        * `GEOCLIM_IO_FILE`: The name of GEOCLIM main config file. Since all the configuration can be done "submit_chain.sh", there
+	is no need to use another file, so let it 'config/IO_CONDITIONS'.
+    * If you are running the model by submitting a job on a cluster, edit the script "run_geoclim.sh". It should contain the "job"
+    information (cluster account, required walltime, ...). A template for Cheyenne cluster (using PBS) is available:
+    "run_geoclim_cheyenne_cluster.sh".  
+    The script should normally contain the line `./geoclim.exe`, or `./geoclim.exe 0 1 3 0 0`. **Do not change the name** 'geoclim.exe',
+    it is an automatically-generated link toward the actual executable.  
+    In any case, *the last line of the script must be* `test $? -eq 0 && ./submit_chain.sh`, that is the resubmission command.
