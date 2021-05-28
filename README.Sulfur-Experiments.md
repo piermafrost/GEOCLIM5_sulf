@@ -68,13 +68,49 @@ case "feedback+2".
 Here are the steps to follow to reproduce the runs presented in the article:
 
 1. **configure the model for the GFDL forcings**:
+
     The model is currently configured for ERA5 forcings. To link the paths to the GFDL forcings and use the GFDL-calibration parameters,
-    type `./configure.sh GFDL` (in the main repertory).
+    type (in the main repertory):  
+    `./configure.sh GFDL` 
 
-2. **set the perturbation in the source code and compile the code**:
-    blablabla
+2. **set the perturbation in the source code**:
 
-    toto
+    Go to the source directory (`cd source/`).
+    The code is now calibrated for the GFDL pre-industrial steady-state. Running the code without any modification will leave all
+    geochemical species constant at their steady-state values.
+
+    The modifications made for the different "perturbation" simulations are:
+
+    * Sulfide (pyrite) weathering perturbation:
+
+        In the source file "cont_weath.f", divided in 3 steps:
+	* lines 312-323: uncomment one of the lines `faddsulfw = ...` to define the perturbation: abrupt or progressive, and which
+	amplitude (+50%, +10.32%, or other).
+	* lines 326-338: uncomment of one the lines to apply the perturbation in the desired case: additional carbonate dissolution,
+	additional silicate dissolution, H2SO4 leaching.
+	For the perturbation "silicate trade-off", ucomment the line 337 that deduces the additional flux from carbonic silicate
+	weathering.
+	* lines 427-434: for the perturbation "carbonate trade-off" only, uncomment the line 433 that deduces the additional flux
+        from carbonic carbonate weathering.
+
+    * Petrogenic carbon (kerogen) weathering perturbation:
+
+        Still in the source file "cont_weath.f":
+	* line 272-277: uncomment the line `fker(j) = ... * fker(j)` to apply the desired perturbation
+	* line 391-395: if you want not to propagate the kerogen weathering perturbation to the phosphorus weathering flux,
+	comment line 390 `+  P2C_ker * fker(j)`, and replace it by uncommenting one of the line `+  P2C_ker * fker(j) / ...`,
+	where '...' is the kerogen weathering factor ou applied.
+
+	Both sulfide weathering and petrogenic carbon weathering perturbations can be applied simultaneously.
+
+    * Oxygen feedback strength:
+	* case "feedback-1":
+	* case "feedback-2":
+	* case no-feedback"":
+	* case "feedback+1":
+	* case "feedback+2":
+	* case "feedback+3":
+	* case "feedback+4":
 
 3. **Chain job submission**:
     Hey?
