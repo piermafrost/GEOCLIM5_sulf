@@ -135,7 +135,7 @@ Here are the steps to follow to reproduce the runs presented in the article:
     you want to do several modifications, and have to create as many executable as modifications. Otherwise, the executable will
     be overwritten at each new compilation.
 
-5. **chain job submission**:
+5. **Chain run submission**:
 
     The most convenient way to run the simulations is to use the scripts for "chain" job submission, especially on a cluster, and
     if you wants to run several simulations in the same time.
@@ -185,8 +185,10 @@ Here are the steps to follow to reproduce the runs presented in the article:
     The script should normally contain the line `./geoclim.exe`, or `./geoclim.exe 0 1 3 0 0`. **Do not change the name**
     'geoclim.exe', it is an automatically-generated link toward the actual executable.  
     In any case, *the last line of the script must be* `test $? -eq 0 && ./submit_chain.sh`, that is the resubmission command.
-    * Launch the run with `./submit\_chain.sh`.  
+    * Launch the run with `./submit_chain.sh`.  
     The script will automatically re-launch the successive runs. Several independent runs can be launched in parallel, as the
     script check for any usage conflict of the configuration files.
-    If for some reason, the submission is stalled (you keep receiving the message "configuration files busy. Run set-up postponed
-    for 1 minute" while there is no other run launched), you can erase the security log with `./submit_chain.sh ERASE_CONFIG_QUEUE`.
+    If for some reason the submission is stalled (you keep receiving the message "configuration files busy. Run set-up postponed
+    for 1 minute" while there is no other run launched), you can erase the security log with `./submit_chain.sh ERASE_CONFIG_QUEUE`.  
+    The script "submit_chain.sh" creates a repertory named after the run name (usually, starting with '.', so it is a hidden
+    repertory) that contains the main information of the chain of runs, *including the log file* (in the subrepertory "run/").
