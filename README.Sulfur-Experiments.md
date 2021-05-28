@@ -13,7 +13,7 @@ The geographic outputs are too heavy be be stored in GitHub.
 #### Run nomenclature
 
 Several run outputs are stored in the repertory. All their names follow the same structure:  
-`geoclim\_output.runname\_?.nc`  
+`geoclim_output.runname_?.nc`  
 Where "runname" is the name of the GEOCLIM run, and "?" is integer number, denoting the subdivision of a single run.
 
 Simulations with abrupt perturbation where run in 3 parts: 0--100kyr ("\_1"), 100kyr--1Myr ("\_2") and 1--50Myr ("\_3"),
@@ -25,7 +25,7 @@ and of output printing were increase for each following "sub-run", everything el
 The names of perturbation run with increase sulfide (pyrite) weathering start by `.PyrW+50`, the ones with proportional
 increase of sulfide and petrogenic carbon (kerogen) weathering startss by `.PyrKerW+10-noP` for run with phosphorus weathering
 left unchanged, and `.PyrKerW+10-P`.
-In addition, runs where conducted with petrogenic carbon weathering increased by 50% (everythin else unchanged), and with *oxygen
+In addition, runs where conducted with petrogenic carbon weathering increased by 50% (everything else unchanged), and with *oxygen
 cycle, sulfur cycle and DynSoil module accelerated, for fast reaching of steady-state*.
 Those run names start by `.ker+50`, and do not have the "\_1" ending.
 
