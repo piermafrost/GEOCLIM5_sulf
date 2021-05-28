@@ -65,3 +65,16 @@ case "feedback+2".
 
 ## How to reproduce the runs
 
+Here are the steps to follow to reproduce the runs presented in the article:
+
+1. **configure the model for the GFDL forcings**:
+    The model is currently configured for ERA5 forcings. To link the paths to the GFDL forcings and use the GFDL-calibration parameters,
+    type `./configure.sh GFDL` (in the main repertory).
+
+2. **set the perturbation in the source code and compile the code**:
+    blablabla
+
+    toto
+
+3. **Chain job submission**:
+    Hey?
