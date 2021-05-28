@@ -108,18 +108,33 @@ Here are the steps to follow to reproduce the runs presented in the article:
         * case "feedback-2": follow the instruction for "feedback-1", then in file "org_dep.f", comment line 55, and replace it
 	by uncommenting line 57 ([O2]^0.5 dependency).
         * case no-feedback"": follow the instruction for "feedback-1", then in file "org_dep.f", comment line 55, and replace it
-	by uncommenting line 58 (no O2 dependency).
+	by uncommenting line 59 (no O2 dependency).
         * case "feedback+1": add an [O2] dependency to hydrothermal P burial by commenting lines 8-9 in "Phydrotherm.f" and replacing
-	them by uncommenting lines 11-12
+	them by uncommenting lines 11-12.
         * case "feedback+2": add an [O2]^2 dependency to hydrothermal P burial by commenting lines 8-9 in "Phydrotherm.f" and replacing
-	them by uncommenting lines 14-15
+	them by uncommenting lines 14-15.
         * case "feedback+3": follow the instruction for "feedback+2", then in "cont_weath.f", comment line 290 and replace it by
-	uncommenting line 292 (add a pO2^-0.5 dependency)
+	uncommenting line 292 (add a pO2^-0.5 dependency).
         * case "feedback+3": follow the instruction for "feedback+2", then in "cont_weath.f", comment line 290 and replace it by
-	uncommenting line 294 (add a pO2^-1 dependency)
+	uncommenting line 294 (add a pO2^-1 dependency).
 
-5. **Compile the code**:
+4. **Compile the code**:
 
-4. **chain job submission**:
+    Once you have done the desired modifications in the source code, you can compile the code with `make` (since the pre-compilation
+    configuration is already done with `configure.sh`), in the "source/" repertory:
+
+    `make FC=your_fortran_compiler ncpath=path_to_netCDF_library`
+
+    Alternatively, go back to the main repoertory (`cd ..`) and compile with `build_GEOCLIM`:
+
+    `build_GEOCLIM --compset default --res 3,360,720`
+
+    If you compile the code with `make`, the executable "geoclim.exe" will be created in the "source/" directory. I recommand to
+    move it into the "executable/" directory.
+    In any case, you should rename the executable just created to identify the code modifications you have made, especially if
+    you want to do several modifications, and have to create as many executable as modifications. Otherwise, the executable will
+    be overwritten at each new compilation.
+
+5. **chain job submission**:
 
     Hey?
