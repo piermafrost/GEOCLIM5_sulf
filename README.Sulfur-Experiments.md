@@ -81,8 +81,7 @@ Here are the steps to follow to reproduce the runs presented in the article:
 
     The modifications made for the different "perturbation" simulations are:
 
-    * Sulfide (pyrite) weathering perturbation:
-
+    * Sulfide (pyrite) weathering perturbation:  
         In the source file "cont_weath.f", divided in 3 steps:
 	* lines 312-323: uncomment one of the lines `faddsulfw = ...` to define the perturbation: abrupt or progressive, and which
 	amplitude (+50%, +10.32%, or other).
@@ -93,8 +92,7 @@ Here are the steps to follow to reproduce the runs presented in the article:
 	* lines 427-434: for the perturbation "carbonate trade-off" only, uncomment the line 433 that deduces the additional flux
         from carbonic carbonate weathering.
 
-    * Petrogenic carbon (kerogen) weathering perturbation:
-
+    * Petrogenic carbon (kerogen) weathering perturbation:  
         Still in the source file "cont_weath.f":
 	* line 272-277: uncomment the line `fker(j) = ... * fker(j)` to apply the desired perturbation
 	* line 391-395: if you want not to propagate the kerogen weathering perturbation to the phosphorus weathering flux,
@@ -104,13 +102,13 @@ Here are the steps to follow to reproduce the runs presented in the article:
 	Both sulfide weathering and petrogenic carbon weathering perturbations can be applied simultaneously.
 
     * Oxygen feedback strength:
-	* case "feedback-1":
-	* case "feedback-2":
-	* case no-feedback"":
-	* case "feedback+1":
-	* case "feedback+2":
-	* case "feedback+3":
-	* case "feedback+4":
+        * case "feedback-1":
+        * case "feedback-2":
+        * case no-feedback"":
+        * case "feedback+1":
+        * case "feedback+2":
+        * case "feedback+3":
+        * case "feedback+4":
 
 3. **Chain job submission**:
     Hey?
