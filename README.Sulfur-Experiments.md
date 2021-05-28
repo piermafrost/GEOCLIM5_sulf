@@ -165,23 +165,23 @@ Here are the steps to follow to reproduce the runs presented in the article:
 	However, DynSoil initialization files take a lot of memory and cannot be stored on GitHub. For this reason, the current
 	configuration starts from the analytical steady-state (computed by the code): `DYNSOIL_INIT='startup:eq'`.
 	This inaccuracy of numerical versus analytical steady-state of the regolith profiles will cause a rapid (50kyr) peak of CO2
-	of +15ppmv, resorbing in ~1Myr, if one launches a unperturbeb run with 'startup:eq' DynSoil initial condition.  
+	of +15ppmv, resorbing in ~1Myr, if one launches a unperturbed run with 'startup:eq' DynSoil initial condition.  
 	This "artificial" peak of CO2 is negligible with respect to the amplitude of the perturbations applied.
 	To generate an exact steady-state DynSoil initial condition, re-compile and run the model without perturbation for 1Myr
         *with accelerated parameters* (i.e., S and O cycle accelerated x100, in "config/cond_p20.dat", and reduced regolith inertia:
-	`scaling_factor` set to 1d-3 in "source/dynsoil_physical_parameters.f90")
+	`scaling_factor` set to 1d-3 in "source/dynsoil\_physical\_parameters.f90")
         * `SUBMIT_COMMAND`: the command used to submit job on the cluster, if you are running the model on a cluster (on Cheyenne
 	cluster, `qsub` (PBS) or `sbatch` (Slurm)).
 	If you wants to directly run the model, without submitting a job, set `SUBMIT_COMMAND=''`.
-        * `JOB_FILE`: the name of the 2nd script that actually run the executable. Let it 'run_geoclim.sh' if you want to submit
-	a job (you will likely need to edit the file). If you are not submitting a job (SUBMIT_COMMAND=''), then, set it to
-	'run_geoclim_basic.sh'
+        * `JOB_FILE`: the name of the 2nd script that actually run the executable. Let it 'run\_geoclim.sh' if you want to submit
+	a job (you will likely need to edit the file). If you are not submitting a job (SUBMIT\_COMMAND=''), then, set it to
+	'run\_geoclim\_basic.sh'
         * `LOG_FILE`: The name of the log file of the run. This is optional.
-        * `GEOCLIM_IO_FILE`: The name of GEOCLIM main config file. Since all the configuration can be done "submit_chain.sh", there
-	is no need to use another file, so let it 'config/IO_CONDITIONS'.
-    * If you are running the model by submitting a job on a cluster, edit the script "run_geoclim.sh". It should contain the "job"
+        * `GEOCLIM_IO_FILE`: The name of GEOCLIM main config file. Since all the configuration can be done "submit\_chain.sh", there
+	is no need to use another file, so let it 'config/IO\_CONDITIONS'.
+    * If you are running the model by submitting a job on a cluster, edit the script "run\_geoclim.sh". It should contain the "job"
     information (cluster account, required walltime, ...). A template for Cheyenne cluster (using PBS) is available:
-    "run_geoclim_cheyenne_cluster.sh".  
+    "run\_geoclim\_cheyenne\_cluster.sh".  
     The script should normally contain the line `./geoclim.exe`, or `./geoclim.exe 0 1 3 0 0`. **Do not change the name** 'geoclim.exe',
     it is an automatically-generated link toward the actual executable.  
     In any case, *the last line of the script must be* `test $? -eq 0 && ./submit_chain.sh`, that is the resubmission command.
