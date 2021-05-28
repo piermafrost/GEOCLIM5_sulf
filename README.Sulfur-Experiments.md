@@ -125,9 +125,9 @@ Here are the steps to follow to reproduce the runs presented in the article:
 
     `make FC=your_fortran_compiler ncpath=path_to_netCDF_library`
 
-    Alternatively, go back to the main repoertory (`cd ..`) and compile with `build_GEOCLIM`:
+    Alternatively, go back to the main repertory (`cd ..`) and compile with `build_GEOCLIM`:
 
-    `build_GEOCLIM --compset default --res 3,360,720`
+    `./build_GEOCLIM --compset default --res 3,360,720`
 
     If you compile the code with `make`, the executable "geoclim.exe" will be created in the "source/" directory. I recommand to
     move it into the "executable/" directory.
