@@ -67,13 +67,13 @@ case "feedback+2".
 
 Here are the steps to follow to reproduce the runs presented in the article:
 
-1. **configure the model for the GFDL forcings**:
+1. **Configure the model for the GFDL forcings**:
 
     The model is currently configured for ERA5 forcings. To link the paths to the GFDL forcings and use the GFDL-calibration parameters,
     type (in the main repertory):  
     `./configure.sh GFDL` 
 
-2. **set the perturbation in the source code**:
+2. **Set the perturbation in the source code**:
 
     Go to the source directory (`cd source/`).
     The code is now calibrated for the GFDL pre-industrial steady-state. Running the code without any modification will leave all
@@ -99,18 +99,27 @@ Here are the steps to follow to reproduce the runs presented in the article:
         * line 272-277: uncomment the line `fker(j) = ... * fker(j)` to apply the desired perturbation
         * line 391-395: if you want not to propagate the kerogen weathering perturbation to the phosphorus weathering flux,
 	comment line 390 `+  P2C_ker * fker(j)`, and replace it by uncommenting one of the line `+  P2C_ker * fker(j) / ...`,
-	where '...' is the kerogen weathering factor ou applied.
+	where '...' is the kerogen weathering factor you applied.
 
 	Both sulfide weathering and petrogenic carbon weathering perturbations can be applied simultaneously.
 
     * Oxygen feedback strength:
-        * case "feedback-1":
-        * case "feedback-2":
-        * case no-feedback"":
-        * case "feedback+1":
-        * case "feedback+2":
-        * case "feedback+3":
-        * case "feedback+4":
+        * case "feedback-1": to impose a constant degree of anoxicity, comment the lines 6-7 in "DOfA.f" and uncomment line 15.
+        * case "feedback-2": follow the instruction for "feedback-1", then in file "org_dep.f", comment line 55, and replace it
+	by uncommenting line 57 ([O2]^0.5 dependency).
+        * case no-feedback"": follow the instruction for "feedback-1", then in file "org_dep.f", comment line 55, and replace it
+	by uncommenting line 58 (no O2 dependency).
+        * case "feedback+1": add an [O2] dependency to hydrothermal P burial by commenting lines 8-9 in "Phydrotherm.f" and replacing
+	them by uncommenting lines 11-12
+        * case "feedback+2": add an [O2]^2 dependency to hydrothermal P burial by commenting lines 8-9 in "Phydrotherm.f" and replacing
+	them by uncommenting lines 14-15
+        * case "feedback+3": follow the instruction for "feedback+2", then in "cont_weath.f", comment line 290 and replace it by
+	uncommenting line 292 (add a pO2^-0.5 dependency)
+        * case "feedback+3": follow the instruction for "feedback+2", then in "cont_weath.f", comment line 290 and replace it by
+	uncommenting line 294 (add a pO2^-1 dependency)
 
-3. **Chain job submission**:
+5. **Compile the code**:
+
+4. **chain job submission**:
+
     Hey?
