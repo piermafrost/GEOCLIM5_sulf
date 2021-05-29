@@ -446,7 +446,7 @@ then
     # Make a copy of present file and job file in the local storage directory
     # -----------------------------------------------------------------------
 
-    cp $0        $RUN_NAME/run/
+    cp $0        $RUN_NAME/run/submit_chain.sh
     cp $JOB_FILE $RUN_NAME/run/
     chmod u+x $RUN_NAME/run/*
     # !!Signal to the script's copy that next run will be a resubmission (with configuration already done)!!
