@@ -8,7 +8,7 @@ Information about GEOCLIM runs for the sulfide weathering perturbation experimen
 
 The outputs of the sulfide weathering simulations are stored in "OUTPUT/sulfur\_experiments/".
 Only the COMBINE outputs (i.e., ocean and atmosphere "box" variables and integrated fluxes) are available.
-The geographic outputs are too heavy be be stored in GitHub.
+The geographic outputs require too much memory be be stored in GitHub.
 
 #### Run nomenclature
 
@@ -143,7 +143,7 @@ Here are the steps to follow to reproduce the runs presented in the article:
 
     * Go to the "job/" directory (`cd job`).
     * Replace the template "submit_chain.sh" by "submit_chain_sulfur-experiments.sh": `cp -f submit_chain_sulfur-experiments.sh
-    submit_chain.sh`  
+    submit_chain.sh`.  
     This last template contains the configuration for all the experiment presented in the article, whereas the first one is a
     default template.
     * Edit the "new" script "submit_chain.sh" to configure your run. The script is currently configure for the "carbonate sulfuric
@@ -162,7 +162,7 @@ Here are the steps to follow to reproduce the runs presented in the article:
 	oxygen feedback strength cases (see commented examples of configuration).
         * `DYNSOIL_INIT`: Path & name of the DynSoil initial condition file. Similarly to COMBINE initial condition, it would be
 	preferrable to start from the numerical steady-state of the calibration run.
-	However, DynSoil initialization files take a lot of memory and cannot be stored on GitHub. For this reason, the current
+	However, DynSoil initialization files require too much memory to be stored on GitHub. For this reason, the current
 	configuration starts from the analytical steady-state (computed by the code): `DYNSOIL_INIT='startup:eq'`.
 	This inaccuracy of numerical versus analytical steady-state of the regolith profiles will cause a rapid (50kyr) peak of CO2
 	of +15ppmv, resorbing in ~1Myr, if one launches a unperturbed run with 'startup:eq' DynSoil initial condition.  
@@ -180,8 +180,8 @@ Here are the steps to follow to reproduce the runs presented in the article:
         * `GEOCLIM_IO_FILE`: The name of GEOCLIM main config file. Since all the configuration can be done "submit\_chain.sh",
 	there is no need to use another file, so let it 'config/IO\_CONDITIONS'.
     * If you are running the model by submitting a job on a cluster, edit the script "run\_geoclim.sh". It should contain the "job"
-    information (cluster account, required walltime, ...). A template for Cheyenne cluster (using PBS) is available:
-    "run\_geoclim\_cheyenne\_cluster.sh".  
+    information (cluster account, required walltime, number of nodes wanted...). A template for Cheyenne cluster (using PBS) is
+    available: "run\_geoclim\_cheyenne\_cluster.sh".  
     The script should normally contain the line `./geoclim.exe`, or `./geoclim.exe 0 1 3 0 0`. **Do not change the name**
     'geoclim.exe', it is an automatically-generated link toward the actual executable.  
     In any case, *the last line of the script must be* `test $? -eq 0 && ./submit_chain.sh`, that is the resubmission command.
@@ -192,3 +192,6 @@ Here are the steps to follow to reproduce the runs presented in the article:
     for 1 minute" while there is no other run launched), you can erase the security log with `./submit_chain.sh ERASE_CONFIG_QUEUE`.  
     The script "submit_chain.sh" creates a repertory named after the run name (usually, starting with '.', so it is a hidden
     repertory) that contains the main information of the chain of runs, *including the log file* (in the subrepertory "run/").
+    Once one chain of runs is launched, you can safely modify the file "submit_chain.sh" to launch another serie of runs.
+    * The outputs and restarts will be written in "OUTPUT/". The "intermediate" restarts will be automatically moved in
+    "restart/geoclim/" and "restart/dynsoil/".
