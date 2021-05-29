@@ -1,6 +1,6 @@
 # Sulfide weathering experiments from Maffre et al., submitted to GRL (2021)
 
-Information about GEOCLIM runs for the sulfide weathering perturbation experiments
+Information about GEOCLIM runs for the sulfide weathering perturbation experiments.
 
 ## Run outputs
 
@@ -14,22 +14,22 @@ The geographic outputs require too much memory be be stored in GitHub.
 
 Several run outputs are stored in the repertory. All their names follow the same structure:  
 `geoclim_output.runname_?.nc`  
-Where "runname" is the name of the GEOCLIM run, and "?" is integer number, denoting the subdivision of a single run.
+Where "runname" is the name of the GEOCLIM run, and "?" is an integer number, denoting the subdivision of a single run.
 
 Simulations with abrupt perturbation where run in 3 parts: 0--100kyr ("\_1"), 100kyr--1Myr ("\_2") and 1--50Myr ("\_3"),
-each run restart from the end of the previous run. The asynchronous time-step of continental weathering and DynSoil modules
-and of output printing were increase for each following "sub-run", everything else unchanged.
+each "new" run restarts from the end of the previous one. The asynchronous time-step of continental weathering and DynSoil
+modules and of output printing were increased for each following "sub-run", everything else unchanged.
 
-##### Correspondence between run names and simulation names in the article
+##### Correspondence between run names and experiment names in the article
 
-The names of perturbation run with increase sulfide (pyrite) weathering start by `.PyrW+50`, the ones with proportional
-increase of sulfide and petrogenic carbon (kerogen) weathering starts by `.PyrKerW+10-noP` for run with phosphorus weathering
-left unchanged, and `.PyrKerW+10-P`.
-In addition, runs where conducted with petrogenic carbon weathering increased by 50% (everything else unchanged), and with *oxygen
-cycle, sulfur cycle and DynSoil module accelerated, for fast reaching of steady-state*.
+The names of perturbation runs with increased sulfide (pyrite) weathering start by `.PyrW+50`, the ones with a proportional
+increase of sulfide and petrogenic carbon (kerogen) weathering start by `.PyrKerW+10-noP` for runs with phosphorus weathering
+left unchanged, and `.PyrKerW+10-P` for runs where the kerogen contribution to P weathering increases accordingly.
+In addition, runs were conducted with petrogenic carbon weathering increased by 50% (everything else unchanged), and with *oxygen
+cycle, sulfur cycle and DynSoil module accelerated*, for fast reaching of steady-state.
 Those run names start by `.ker+50`, and do not have the "\_1" ending.
 
-For simulations with increase sulfide weathering, they are 5 possibilities for the fate of the additional generated H2SO4. They
+For simulations with increased sulfide weathering, they are 5 possibilities for the fate of the additional generated H2SO4. They
 are denoted by the suffixes:
 * `-Carb`: "carbonate sulfuric weathering perturbation" (presented in main text)
 * `-Sil`: "silicate sulfuric weathering perturbation" (presented in main text)
@@ -37,7 +37,7 @@ are denoted by the suffixes:
 * `-Sil-trdf`: "silicate trade-off" (presented in the Supporting Information)
 * `-H2SO4`: "H2SO4 release" (presented in the Supporting Information)
 
-Most of the runs were repeated with different strength of oxygen feedback. The corresponding following suffixes were added to the
+Most of the runs were repeated with different strengths of oxygen feedback. The corresponding following suffixes were added to the
 run names:
 * `_noO2fdbk`: case "no-feedback"
 * `_noPfdbk-red`: case "feedback-2"
@@ -49,14 +49,14 @@ run names:
 
 For the simulations where the perturbation is set up progressively over 40Myr, the suffix `-prog` is added between the "perturbation
 type" and "oxygen feedback" suffixes. Those simulations were conducted in one run, without adapting the time-steps, so only the "\_1"
-output exist.
+output exists.
 
-Additional simulations, presenting in the SI, where run. Their run name suffixes are:
+Additional simulations, presenting in the SI, were run. Their run name suffixes are:
 * `_cst-oceT`: run with fixed oceanic temperature
 * `_cst-CO2`: run with fixed CO2
 
-Finally, one simulation (carbonate sulfuric weathering) was conducted with accelerated oxygen cycle, sulfur cycle and DynSoil module,
-to obtain the multi-cycle steady-sate following the perturbation. This run name has the suffix `-fast`, and no "\_1" ending.
+Finally, one simulation (carbonate sulfuric weathering perturbation) was conducted with accelerated oxygen cycle, sulfur cycle and
+DynSoil module, to obtain the multi-cycle steady-sate following the perturbation. This run name has the suffix `-fast`, and no "\_1" ending.
 
 **Example of run name**:  
 `geoclim_output.PyrW+50-Sil_Phyd-land-fdbk_2.nc`  
@@ -73,31 +73,31 @@ Here are the steps to follow to reproduce the runs presented in the article:
     type (in the main repertory):  
     `./configure.sh GFDL` 
 
-2. **Set the perturbation in the source code**:
+2. **Set the desired perturbation in the source code**:
 
     Go to the source directory (`cd source/`).
     The code is now calibrated for the GFDL pre-industrial steady-state. Running the code without any modification will leave all
-    geochemical species constant at their steady-state values.
+    geochemical species constant at their steady-state values (modulo the numerical inaccuracy of DynSoil analytical steady-state).
 
     The modifications made for the different "perturbation" simulations are:
 
     * Sulfide (pyrite) weathering perturbation:
 
         In the source file "cont_weath.f", divided in 3 steps:
-        * lines 312-323: uncomment one of the lines `faddsulfw = ...` to define the perturbation: abrupt or progressive, and which
+        * lines 312-322: uncomment one of the lines `faddsulfw = ...` to define the perturbation: abrupt or progressive, and which
 	amplitude (+50%, +10.32%, or other).
         * lines 326-338: uncomment of one the lines to apply the perturbation in the desired case: additional carbonate dissolution,
-	additional silicate dissolution, H2SO4 leaching.
+	additional silicate dissolution, or H2SO4 leaching.
 	For the perturbation "silicate trade-off", uncomment the line 337 that deduces the additional flux from carbonic silicate
 	weathering.
-        * lines 427-434: for the perturbation "carbonate trade-off" only, uncomment the line 433 that deduces the additional flux
+        * lines 427-434: for the perturbation "carbonate trade-off", uncomment the line 433 that deduces the additional flux
         from carbonic carbonate weathering.
 
     * Petrogenic carbon (kerogen) weathering perturbation:
 
         Still in the source file "cont_weath.f":
         * line 272-277: uncomment the line `fker(j) = ... * fker(j)` to apply the desired perturbation
-        * line 391-395: if you want not to propagate the kerogen weathering perturbation to the phosphorus weathering flux,
+        * line 390-395: if you want not to propagate the kerogen weathering perturbation to the phosphorus weathering flux,
 	comment line 390 `+  P2C_ker * fker(j)`, and replace it by uncommenting one of the line `+  P2C_ker * fker(j) / ...`,
 	where '...' is the kerogen weathering factor you applied.
 
@@ -121,9 +121,10 @@ Here are the steps to follow to reproduce the runs presented in the article:
 4. **Compile the code**:
 
     Once you have done the desired modifications in the source code, you can compile the code with `make` (since the pre-compilation
-    configuration is already done with `configure.sh`), in the "source/" repertory:
+    configuration is already done with `configure.sh`).
+    Still in the "source/" repertory, type:
 
-    `make FC=your_fortran_compiler ncpath=path_to_netCDF_library`
+    `make FC=your_Fortran_compiler ncpath=path_to_netCDF_library`
 
     Alternatively, go back to the main repertory (`cd ..`) and compile with `build_GEOCLIM`:
 
@@ -132,30 +133,31 @@ Here are the steps to follow to reproduce the runs presented in the article:
     If you compile the code with `make`, the executable "geoclim.exe" will be created in the "source/" directory. I recommend to
     move it into the "executable/" directory.
     In any case, you should rename the executable just created to identify the code modifications you have made, especially if
-    you want to do several modifications, and have to create as many executable as modifications. Otherwise, the executable will
+    you want to do several modifications, and have to create as many executables as modifications. Otherwise, the executable will
     be overwritten at each new compilation.
 
 5. **Chain run submission**:
 
     The most convenient way to run the simulations is to use the scripts for "chain" job submission, especially on a cluster, and
-    if you wants to run several simulations in the same time.
-    Those scripts ("submit_chain.sh" and "run_geoclim.sh") can be found in the "job/" directory
+    if you want to run several simulations in parallel.
+    Those scripts ("submit_chain.sh" and "run_geoclim.sh") can be found in the "job/" directory.
 
     * Go to the "job/" directory (`cd job`).
     * Replace the template "submit_chain.sh" by "submit_chain_sulfur-experiments.sh": `cp -f submit_chain_sulfur-experiments.sh
     submit_chain.sh`.  
-    This last template contains the configuration for all the experiment presented in the article, whereas the first one is a
+    This last template contains the configurations for all the experiment presented in the article, whereas the first one is a
     default template.
-    * Edit the "new" script "submit_chain.sh" to configure your run. The script is currently configure for the "carbonate sulfuric
-    weathering" perturbation experiment. The configuration for all experiment are between the lines 38 and 238. You can simply
-    comment the default config and uncomment the one corresponding to your run.
+    * Edit the "new" script "submit_chain.sh" to configure your run. The script is currently configured for the "carbonate sulfuric
+    weathering" perturbation experiment. The individual specific configurations for all experiments are between the lines 38
+    and 238. You can simply comment the default config and uncomment the one corresponding to your run.  
     The configuration variables that need to be edited are:
         * `RUN_NAME`: the name of your run
         * `EXECUTABLE`: the path & name or your GEOCLIM executable file 
         * `STOP_TIMES`, `COMBINE_DT`, `CONTWTH_NSKIP`, `DYNSOIL_NSKIP`, `COMBINE_PRINT_NSKIP`, `GEOGRAP_PRINT_NSKIP` and
-	`DYNSOIL_PRINT_NSKIP`: variables (lists) controlling the times to stop and restart the runs, the time-steps of the different
+	`DYNSOIL_PRINT_NSKIP`: variables (lists) controlling the times to stop and restart the run, the time-steps of the different
 	modules (COMBINE, continental weathering and DynSoil) and the printing time-steps.
-	The default (uncommented) values are the ones that were used for all the abrupt perturbations.
+	The default (uncommented) values are the ones that were used for all the abrupt perturbations, except for "carbonate trade-off"
+	for which DynSoil and continental weathering must be synchronous (i.e., `DYNSOIL_NSKIP="1 1 1"`).
         * `COMBINE_INIT`: the path & name for the initial condition of COMBINE variables. "restart/geoclim/output.ref" can be used
 	for all simulations since they all start from a quasi identical pre-industrial steady-state.
 	Yet, in order to start more closely to the numerical steady-state, different COMBINE restarts are available for all the
@@ -163,34 +165,34 @@ Here are the steps to follow to reproduce the runs presented in the article:
         * `DYNSOIL_INIT`: Path & name of the DynSoil initial condition file. Similarly to COMBINE initial condition, it would be
 	preferable to start from the numerical steady-state of the calibration run.
 	However, DynSoil initialization files require too much memory to be stored on GitHub. For this reason, the current
-	configuration starts from the analytical steady-state (computed by the code): `DYNSOIL_INIT='startup:eq'`.
-	This inaccuracy of numerical versus analytical steady-state of the regolith profiles will cause a rapid (50kyr) peak of CO2
-	of +15ppmv, relaxing in ~1Myr, if one launches a unperturbed run with 'startup:eq' DynSoil initial condition.  
+	configuration starts from the analytical steady-state (automatically computed by the code): `DYNSOIL_INIT='startup:eq'`.
+	This inaccuracy of numerical versus analytical steady-state of the regolith profiles will cause a rapid (50 kyr) peak of CO2
+	of +15 ppmv, relaxing in ~1 Myr, if one launches an unperturbed run with 'startup:eq' DynSoil initial condition.  
 	This "artificial" peak of CO2 is negligible with respect to the amplitude of the perturbations applied.
 	To generate an exact steady-state DynSoil initial condition, re-compile and run the model without perturbation for 1Myr
-        *with accelerated parameters* (i.e., S and O cycle accelerated x100, in "config/cond_p20.dat", and reduced regolith inertia:
-	`scaling_factor` set to 1d-3 in "source/dynsoil\_physical\_parameters.f90")
-        * `SUBMIT_COMMAND`: the command used to submit job on the cluster, if you are running the model on a cluster (on Cheyenne
+        *with accelerated parameters* (i.e., S and O cycles accelerated x100, in "config/cond_p20.dat", and reduced regolith inertia:
+	`scaling_factor` set to 1d-3 in "source/dynsoil\_physical\_parameters.f90").
+        * `SUBMIT_COMMAND`: the command used to submit jobs on the cluster, if you are running the model on a cluster (on Cheyenne
 	cluster, `qsub` (PBS) or `sbatch` (Slurm)).
-	If you wants to directly run the model, without submitting a job, set `SUBMIT_COMMAND=''`.
-        * `JOB_FILE`: the name of the 2nd script that actually run the executable. Let it 'run\_geoclim.sh' if you want to submit
-	a job (you will likely need to edit the file). If you are not submitting a job (SUBMIT\_COMMAND=''), then, set it to
-	'run\_geoclim\_basic.sh'
-        * `LOG_FILE`: The name of the log file of the run. This is optional.
-        * `GEOCLIM_IO_FILE`: The name of GEOCLIM main config file. Since all the configuration can be done "submit\_chain.sh",
+	If you want to directly execute the code, without submitting a job, set `SUBMIT_COMMAND=''`.
+        * `JOB_FILE`: the name of the 2nd script that actually runs the executable. Let it 'run\_geoclim.sh' if you want to submit
+	a job (you will need to edit the file). If you are not submitting a job (SUBMIT\_COMMAND=''), then, set it to
+	'run\_geoclim\_basic.sh'.
+        * `LOG_FILE`: The name of the log file of the run. Optional, can be left at its default value.
+        * `GEOCLIM_IO_FILE`: The name of GEOCLIM main config file. Since all the configuration can be done in "submit\_chain.sh",
 	there is no need to use another file, so let it 'config/IO\_CONDITIONS'.
     * If you are running the model by submitting a job on a cluster, edit the script "run\_geoclim.sh". It should contain the "job"
-    information (cluster account, required walltime, number of nodes wanted...). A template for Cheyenne cluster (using PBS) is
+    information (cluster account, required walltime, number of nodes required...). A template for Cheyenne cluster (using PBS) is
     available: "run\_geoclim\_cheyenne\_cluster.sh".  
     The script should normally contain the line `./geoclim.exe`, or `./geoclim.exe 0 1 3 0 0`. **Do not change the name**
     'geoclim.exe', it is an automatically-generated link toward the actual executable.  
     In any case, *the last line of the script must be* `test $? -eq 0 && ./submit_chain.sh`, that is the resubmission command.
     * Launch the run with `./submit_chain.sh`.  
-    The script will automatically re-launch the successive runs. Several independent runs can be launched in parallel, as the
-    script check for any usage conflict of the configuration files.
+    The script will automatically re-launch the successive runs. Several independent runs can be launched in parallel, for the
+    script check for any access conflict of the configuration files.
     If for some reason the submission is stalled (you keep receiving the message "configuration files busy. Run set-up postponed
     for 1 minute" while there is no other run launched), you can erase the security log with `./submit_chain.sh ERASE_CONFIG_QUEUE`.  
-    The script "submit_chain.sh" creates a repertory named after the run name (usually, starting with '.', so it is a hidden
+    The script "submit_chain.sh" creates a repertory named after the run name (usually, it starts with '.', so it is a hidden
     repertory) that contains the main information of the chain of runs, *including the log file* (in the sub-repertory "run/").
     Once one series of runs is launched, you can safely modify the file "submit_chain.sh" to launch another series of runs.
     * The outputs and restarts will be written in "OUTPUT/". The "intermediate" restarts will be automatically moved in
