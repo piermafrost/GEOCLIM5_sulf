@@ -1,4 +1,4 @@
-# Sulfide weathering experiments from Maffre et al., submitted to GRL (2021)
+# Sulfide weathering experiments from Maffre et al., submitted to GRL (May 28th 2021)
 
 Information about GEOCLIM runs for the sulfide weathering perturbation experiments.
 
@@ -195,6 +195,6 @@ Here are the steps to follow to reproduce the runs presented in the article:
     The script "submit_chain.sh" creates a repertory named after the run name (usually, it starts with '.', so it is a hidden
     repertory) that contains the main information of the chain of runs, *including the log file* (in the sub-repertory "run/").
     Once one series of runs is launched, you can safely modify the file "submit_chain.sh" to launch another series of runs.
-    * The outputs and restarts will be written in "OUTPUT/". The "intermediate" restarts will be automatically moved in
-    "restart/geoclim/" and "restart/dynsoil/".
+    * The outputs will be written in "OUTPUT/". The restart files will be automatically moved in "restart/geoclim/" and
+    "restart/dynsoil/".
     With the current asynchronous time-steps, an entire 50 Myr simulation should be completed in about 2 hours.
