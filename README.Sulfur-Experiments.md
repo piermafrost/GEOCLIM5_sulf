@@ -195,3 +195,4 @@ Here are the steps to follow to reproduce the runs presented in the article:
     Once one chain of runs is launched, you can safely modify the file "submit_chain.sh" to launch another serie of runs.
     * The outputs and restarts will be written in "OUTPUT/". The "intermediate" restarts will be automatically moved in
     "restart/geoclim/" and "restart/dynsoil/".
+    With the current asynchronous timesteps, an entire 50 Myr simulation should be completed in about 2 hours.
