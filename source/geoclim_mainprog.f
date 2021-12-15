@@ -384,11 +384,11 @@ program geoclim
     if (coupling_dynsoil) then
         do j = 1,npixel
             ! missing-value for initial fluxes on ALL pixels (can only be computed between two time steps)
-            reg_prod(:,i)        = DS_varout_missval(16)
-            reg_eros(:,i)        = DS_varout_missval(17)
-            reg_P_diss(:,i)      = DS_varout_missval(18)
-            reg_P_eros(:,i)      = DS_varout_missval(19)
-            reg_x_surf_eros(:,i) = DS_varout_missval(20)
+            reg_prod(:,j)        = DS_varout_missval(16)
+            reg_eros(:,j)        = DS_varout_missval(17)
+            reg_P_diss(:,j)      = DS_varout_missval(18)
+            reg_P_eros(:,j)      = DS_varout_missval(19)
+            reg_x_surf_eros(:,j) = DS_varout_missval(20)
             ! missing-value on non-continental pixels for other output variables
             if (areaclimber(j)==0) then
                 reg_thick(:,j)      = DS_varout_missval(11)
