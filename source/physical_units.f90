@@ -109,7 +109,7 @@ implicit none
         accept_units(5)%string = '(0-1)';        accept_units(5)%conversion = (/1d0, 0d0/)
         accept_units(6)%string = '0 - 1';        accept_units(6)%conversion = (/1d0, 0d0/)
         accept_units(7)%string = '(0 - 1)';      accept_units(7)%conversion = (/1d0, 0d0/)
-        accept_units(9)%string = 'unitless';     accept_units(8)%conversion = (/1d0, 0d0/)
+        accept_units(8)%string = 'unitless';     accept_units(8)%conversion = (/1d0, 0d0/)
         accept_units(9)%string = '%';            accept_units(9)%conversion = (/1d-2, 0d0/)
         accept_units(10)%string = 'percent';     accept_units(10)%conversion = (/1d-2, 0d0/)
         accept_units(11)%string = 'per cent';    accept_units(11)%conversion = (/1d-2, 0d0/)
