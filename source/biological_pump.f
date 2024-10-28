@@ -5,10 +5,6 @@
     include 'combine_foam.inc'
     
 
-!   estimation of the ratio C:Corg in the organic productivity:
-    a=0.3/0.2
-    b=-1.5*a
-
     do j=1,nbasin
         if (omega(j).lt.1.0) then
             rC_Corg(j)=0.
@@ -40,15 +36,6 @@
 
         fbioP(j)=(fbioP(j) + fpw*app_cont(j))*indice_surface(j)*xkill
 
-
-!       ***********************************************************
-!       coupling GEOCLIM biodiv
-        if (coupling_ecogeo) then
-            print *, 'ECOGEO module not available'
-            stop
-        endif
-!       ***********************************************************
-            
         fbioC(j)=fbioP(j)*cpred
         
 !       shelfal = 1. / ( 10. ** (2*(indice_epicont(j)-1)*ishelfal) )

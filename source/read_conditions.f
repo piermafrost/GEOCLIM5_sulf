@@ -12,11 +12,6 @@
     read(3,*) fCO2_atmos
     read(3,*) fCO2_deep
     read(3,*) ipeak
-    read(3,*) i_rnd
-    read(3,*) fauna
-    read(3,*) iextinct
-    read(3,*) extrinsic_flag
-    read(3,*) iweb
     read(3,*) clo
     read(3,*) shells
     read(3,*) ishelfal

@@ -17,7 +17,6 @@ program geoclim
     use GCM_io_module,                 only: load_climatology
     use geoclim_create_output_mod,     only: geoclim_create_output
     use geographic_create_output_mod,  only: geographic_create_output
-    use biodiv_create_output_mod,      only: biodiv_create_output
     use dynsoil_read_input_mod,        only: dynsoil_read_input
     use dynsoil_create_output_mod,     only: dynsoil_create_output
     use dynsoil_initialization_mod,    only: dynsoil_initialization
@@ -218,12 +217,12 @@ program geoclim
     call varset(y,nvar)
 
 
-!   BIODIV MODULE:
-!   --------------
+!   ECOLOGICAL NETWORK MODULE (=> LEFT FOR FUTURE DEVELOPMENT):
+!   -----------------------------------------------------------
 
     if (coupling_ecogeo) then
         print *, 'ECOGEO module not available'
-        stop
+        stop -1
     end if
 
 
@@ -309,17 +308,6 @@ program geoclim
 !   read geographic output conditions and create output file(s):
     call geographic_create_output( 0, output_path,run_name,ref_x_axis,ref_y_axis,areaclimber,slope, &
                  litho_frac,GEOG_ofile_name,GEOG_ofile_num,GEOG_varout_name,GEOG_varout_missval     )
-
-!   read biodiv output conditions and create output file(s):
-    if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-    else
-        do i = 1,nBIOoutvar
-            call read_comment(0)
-            read(0,*)
-        end do
-    end if
 
 !   read dynsoil output conditions and create output file(s):
     if (coupling_dynsoil) then
@@ -422,17 +410,8 @@ program geoclim
 
 !   End of initialization:
 
-    if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-    end if
-
-
     htot=0.
     icompteur=int(xjump)+1
-    do k=1,nbasin-1
-      iclado_veg(k)=nclado_veg
-    end do
     icount_cont_weath = ijump_cont_weath
 
 !   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
@@ -452,7 +431,6 @@ program geoclim
 
     ! SAVE INITIAL VAR:
     y_0 = y
-    ybio_0 = ybio
     ! dynsoil prognostic variables:
     if (coupling_dynsoil) then
       reg_thick_0    = reg_thick
@@ -472,18 +450,9 @@ program geoclim
       y(j)=yout(j)
     end do
 
-    if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-    end if
-
 
     ! RESET VARIABLES WITH INITIAL VALUES:
     y = y_0
-    ybio = ybio_0
-    var_bio(1:nequat,1:nbasin-1)=ybio_steady(1:nequat,1:nbasin-1)
-    extinct(1:nequat,1:nbasin-1)=1
-    iextext(1:nequat,1:nbasin-1)=1
     if (coupling_dynsoil) then
       reg_thick    = reg_thick_0
       reg_x_surf   = reg_x_surf_0
@@ -494,12 +463,11 @@ program geoclim
       reg_ktop     = reg_ktop_0
       icount_DS_int = ijump_DS_integration
     end if
-    call species_number(time)
     call varset(y,nvar)
     icount_cont_weath = ijump_cont_weath
     icount_veget = ijump_veget
 
-    call printf(time,icompteur,y,ybio)
+    call printf(time,icompteur,y)
 
     ! For not printing the initial state a second time but still counting it:
     if (coupling_dynsoil) icount_DS_pri = -1
@@ -535,14 +503,9 @@ program geoclim
         y(j)=yout(j)
       end do
 
-      if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-      end if
-
       call varset(y,nvar)
 
-      call printf(time,icompteur,y,ybio)
+      call printf(time,icompteur,y)
       time=time+htry
 
     end do
@@ -556,7 +519,7 @@ program geoclim
     ! => do not print anything
     ageYprint = time - 2*ts
     ! => create restart, if not already created
-    call printf(time, icompteur, y, ybio)
+    call printf(time, icompteur, y)
 
 
     print *

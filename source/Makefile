@@ -205,7 +205,7 @@ endif
 
 
 # source files:
-sources = anagenesis.f anoxic.f basin_geometry.f bio_frac.f biodiv.f biodiv_create_output.f90 biodiv_write_output.f90 biological_pump.f carb_dep.f carbo.f carbonate_prod_bio.f chimie.f cladogenesis.f co2_interpolation.f90 constante.f90 cont_weath.f creades.f dc13_speciation.f degassing.f derivs.f derivs_bio.f diss_oxygen.f DOfA.f dynsoil.f90 dynsoil_create_init_condition.f90 dynsoil_create_output.f90 dynsoil_create_restart.f90 dynsoil_empirical_laws.f90 dynsoil_initialization.f90 dynsoil_lithium.f90 dynsoil_offline_computation.f90 dynsoil_physical_parameters.f90 dynsoil_read_input.f90 dynsoil_steady_state.f90 dynsoil_write_output.f90 eco_network.f eqcte.f evolution.f extext.f facco2.f oceanic_T.f GCM_io_module.f90 geoclim_create_output.f90 geoclim_mainprog.f geoclim_write_output.f90 geographic_create_output.f90 geographic_write_output.f90 get_cont_pixel.f graze.f io_module.f90 life.f load_lithology.f lyso.f netcdf_io_module.f90 newton.f newton2.f ocean_atm_flu.f open_ascii_files.f org_dep.f output_netcdf2ascii.f90 pco2_atm.f phbor.f phfunc.f phfunc2.f phosphorite.f Phydrotherm.f physical_units.f90 printf.f read_conditions.f read_deathnote.f90 read_main_IO_conditions.f read_oceanic_temperature.f90 read_veget.f recycle.f rk4.f rk4_bio.f rtbis.f rtbis2.f salinity.f sea_omega.f species_char.f species_number.f strontium_ratio.f terrestrial_dep.f utils.f90 varset.f
+sources = anoxic.f basin_geometry.f bio_frac.f biological_pump.f carb_dep.f carbo.f chimie.f co2_interpolation.f90 constante.f90 cont_weath.f creades.f dc13_speciation.f degassing.f derivs.f diss_oxygen.f DOfA.f dynsoil.f90 dynsoil_create_init_condition.f90 dynsoil_create_output.f90 dynsoil_create_restart.f90 dynsoil_empirical_laws.f90 dynsoil_initialization.f90 dynsoil_lithium.f90 dynsoil_offline_computation.f90 dynsoil_physical_parameters.f90 dynsoil_read_input.f90 dynsoil_steady_state.f90 dynsoil_write_output.f90 eqcte.f facco2.f oceanic_T.f GCM_io_module.f90 geoclim_create_output.f90 geoclim_mainprog.f geoclim_write_output.f90 geographic_create_output.f90 geographic_write_output.f90 get_cont_pixel.f io_module.f90 load_lithology.f lyso.f netcdf_io_module.f90 newton.f newton2.f ocean_atm_flu.f open_ascii_files.f org_dep.f output_netcdf2ascii.f90 pco2_atm.f phbor.f phfunc.f phfunc2.f phosphorite.f Phydrotherm.f physical_units.f90 printf.f read_conditions.f read_deathnote.f90 read_main_IO_conditions.f read_oceanic_temperature.f90 read_veget.f recycle.f rk4.f rtbis.f rtbis2.f salinity.f sea_omega.f strontium_ratio.f terrestrial_dep.f utils.f90 varset.f
 
 
 # Executable file:
@@ -231,29 +231,18 @@ ${execut}: ${objects}
 
 
 # File dependencies:
-anagenesis.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 DOfA.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 anoxic.o: constante.o DOfA.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 basin_geometry.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 bio_frac.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
-eco_network.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
-cladogenesis.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
-evolution.o: anagenesis.o cladogenesis.o constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-extext.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-graze.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
-life.o: constante.o eco_network.o evolution.o extext.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-biodiv.o: graze.o life.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 utils.o: path.inc
 io_module.o: utils.o
-biodiv_create_output.o: io_module.o netcdf_io_module.o coupler.inc
-biodiv_write_output.o: netcdf_io_module.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 biological_pump.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 carb_dep.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 phfunc.o: constante.o eqcte.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 newton.o: phfunc.o
 rtbis.o: phfunc.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 carbo.o: newton.o rtbis.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-carbonate_prod_bio.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 co2_interpolation.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 dynsoil_physical_parameters.o: shape.inc
 dynsoil_empirical_laws.o: dynsoil_physical_parameters.o
@@ -278,7 +267,6 @@ strontium_ratio.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsour
 creades.o: anoxic.o biological_pump.o bio_frac.o carb_dep.o constante.o cont_weath.o dc13_speciation.o degassing.o diss_oxygen.o oceanic_T.o ocean_atm_flu.o org_dep.o pco2_atm.o phosphorite.o Phydrotherm.o recycle.o salinity.o sea_omega.o strontium_ratio.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 varset.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 derivs.o: varset.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-derivs_bio.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 get_cont_pixel.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 dynsoil_create_init_condition.o: co2_interpolation.o constante.o dynsoil_empirical_laws.o get_cont_pixel.o combine_foam.inc coupler.inc dynsoil_physical_parameters.o $(pathsource)
 dynsoil_create_output.o: io_module.o netcdf_io_module.o coupler.inc
@@ -298,18 +286,15 @@ newton2.o: phfunc2.o
 open_ascii_files.o: utils.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 output_netcdf2ascii.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 read_deathnote.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
-printf.o: biodiv_write_output.o dynsoil_create_restart.o dynsoil_offline_computation.o dynsoil_write_output.o geoclim_write_output.o geographic_write_output.o read_deathnote.o combine_foam.inc coupler.inc shape.inc $(pathsource)
+printf.o: dynsoil_create_restart.o dynsoil_offline_computation.o dynsoil_write_output.o geoclim_write_output.o geographic_write_output.o read_deathnote.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 read_conditions.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 read_main_IO_conditions.o: utils.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 read_oceanic_temperature.o: shape.inc
 read_veget.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 rk4.o: derivs.o
-rk4_bio.o: derivs_bio.o
 rtbis2.o: phfunc2.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-species_char.o: constante.o combine_foam.inc coupler.inc shape.inc $(pathsource)
-species_number.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
 terrestrial_dep.o: combine_foam.inc coupler.inc shape.inc $(pathsource)
-geoclim_mainprog.o: basin_geometry.o biodiv.o biodiv_create_output.o carbonate_prod_bio.o constante.o creades.o dynsoil_create_output.o dynsoil_initialization.o dynsoil_read_input.o GCM_io_module.o geoclim_create_output.o geographic_create_output.o get_cont_pixel.o load_lithology.o open_ascii_files.o output_netcdf2ascii.o printf.o read_conditions.o read_main_IO_conditions.o read_oceanic_temperature.o read_veget.o rk4.o rk4_bio.o species_char.o species_number.o utils.o varset.o combine_foam.inc coupler.inc shape.inc $(pathsource)
+geoclim_mainprog.o: basin_geometry.o constante.o creades.o dynsoil_create_output.o dynsoil_initialization.o dynsoil_read_input.o GCM_io_module.o geoclim_create_output.o geographic_create_output.o get_cont_pixel.o load_lithology.o open_ascii_files.o output_netcdf2ascii.o printf.o read_conditions.o read_main_IO_conditions.o read_oceanic_temperature.o read_veget.o rk4.o utils.o varset.o combine_foam.inc coupler.inc shape.inc $(pathsource)
 
 
 

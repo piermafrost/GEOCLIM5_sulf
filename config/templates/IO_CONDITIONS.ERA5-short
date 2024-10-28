@@ -52,12 +52,10 @@ PHYS_COND_FILE:     'config/templates/cond_p20.ERA5-short.dat'   # unit=3
 KILLING_FILE:       'deathnote.txt'                              # unit=666
 
 ############################################################################################################################################
-##                                  INITIALIZATION FILES (ie, RESTARTS) FOR COMBINE, AND BIODIV MODULES:                                  ##
+##                                            INITIALIZATION FILES (ie, RESTARTS) FOR COMBINE:                                            ##
 ############################################################################################################################################
 
 GEOC_VAR_INIT_FILE: 'restart/geoclim/output.ref'                 # unit=2
-SPECIES_INIT_FILE:  'restart/biodiv/current_init_species'        # unit=1
-BIOD_VAR_INIT_FILE: 'restart/biodiv/current_init_varbio'         # unit=300
 
 ############################################################################################################################################
 ##                                                               INPUT FILES:                                                             ##
@@ -140,7 +138,7 @@ POLA_BOX_FILE:      'INPUT/COMBINE/ref/indice_polar.dat'    # unit=47
 
 
 ############################################################################################################################################
-##                                                       RESTART FILES AND BIODIV FILES:                                                  ##
+##                                                            RESTART FILES:                                                              ##
 ############################################################################################################################################
 
 # Names in this section usually do not need to be modified
@@ -148,23 +146,6 @@ POLA_BOX_FILE:      'INPUT/COMBINE/ref/indice_polar.dat'    # unit=47
 ################################################## GEOCLIM:
 #
 RESTART_FILE:       'output'  # unit=10
-
-################################################## BIODIV:
-#
-# offline files:
-WHO_EATS_WHO:       'who_eats_who' # unit=104
-TEMP_TOLERANCE:     'temp_tol'     # unit=105
-TEMP_OPTIMUM:       'temp_opt'     # unit=106
-PH_TOLERANCE:       'pH_tol'       # unit=107
-PH_OPTIMUM:         'pH_opt'       # unit=108
-BIRTH_RATE:         'birth'        # unit=109
-DEATH_RATE:         'death'        # unit=110
-CARB_PROD_RATE:     'carb_prod'    # unit=111
-ECOLOGICAL_WEB:     'ecoweb'       # unit=112
-EVOLUTION:          'evolution'    # unit=203
-# restart files:
-VAR_RESTART_FILE:   'output_bio'       # unit=9
-SPECIES_RESTART_F:  'species_restart'  # unit=202
 
 ################################################## DYNSOIL:
 #
@@ -353,18 +334,6 @@ ALL_WTH_C_FLUX_UNWGH:   #                             weathering_unwgh    'mol/y
 KERO_WTH_C_FLUX:        -                             kerog_weathering    'mol/y/m2'          _FillValue     9.96921e+36    'Kerogen weathering rate (moles of C)'
 BIO_ORG_C_EXPORT_FLUX:  -                             biosph_org_C_export 'mol/y/m2'          _FillValue     9.96921e+36    'Rate of biospheric organic carbon export to the oceans'
 PHOSPH_WTH_FLUX:        -                             phos_weathering     'mol/y/m2'          _FillValue     9.96921e+36    'Phosphorus weathering rate'
-
-################################################## BIODIV:
-#
-# ignored if no coupled to biodiversity module
-#
-EQUAT_AXIS_VARIABLE:    .                             equat               1
-BOX_AXIS_VARIABLE:      .                             box                 1
-t_AXIS_VARIABLE:        .                             time                y
-BOX_VOLUME:             .                             box_volume          m3
-BOX_TOP_SURFACE:        .                             box_surface         m2
-VAR_BIO:                'biodiv_output'               VAR                 -                   _FillValue     9.96921e+36    ''
-SPECIES_COUNT:          -                             species_count       1                   _FillValue     -1             'Number of species'
 
 ################################################## DYNSOIL:
 #

@@ -17,17 +17,9 @@
     !            number of DynSoil levels ('nDSlev') 
     integer, parameter :: nvar_real=20
     integer, parameter :: npixel=nlon*nlat
-    integer, parameter :: nveg=80    !number of primary producers, including empty slots 80 60
-    integer, parameter :: npred=10   !number of predator type II  10 15
-    integer, parameter :: nspred=5    !number of p1edator type III 5 10
-    integer, parameter :: nsspred=3  !number of predator type IV  3
-    integer, parameter :: nclado_veg=0
-    integer, parameter :: nequat=nveg+npred+nspred+nsspred  !number of equation for the biodiversity model
-    integer, parameter :: nclass=4   !obsolete total number of bio types
-    integer, parameter :: nprint=100000
 
     integer, parameter :: nvar=nvar_real*nbasin,ndegas=1000000,nsres=24
-    integer, parameter :: nGEOoutvar=107, nBIOoutvar=7, nGEOGoutvar=15
+    integer, parameter :: nGEOoutvar=107, nGEOGoutvar=15
 
     integer, parameter :: nDSvar = 25       ! number of dynsoil output variables
     integer, parameter :: n_peaks = 5
@@ -40,48 +32,12 @@
 !   ==================================================================
     logical decide,check
     integer i,j,j0,k,kl,icount,n,ishelfal,k1,k2,ncount,icompteur,kbasin
-    integer i_rnd,iextinct,jmute,nrandom
     integer clock
-    integer extrinsic_flag,ipeak
+    integer ipeak
     integer:: convert2ascii
     integer ijump_cont_weath,icount_cont_weath, ijump_geogprint,icount_geogprint
     integer, dimension(:), allocatable :: seed
     integer, dimension(8):: computer_time
-    
-    integer kgrazed(1:npred+nspred+nsspred,1:nequat)
-    integer kgrazedFlag(1:npred+nspred+nsspred,1:nveg+npred+nspred+nsspred,1:nbasin)
-    integer f1bio(1:npred+nspred+nsspred)
-    integer extinct(1:nequat,1:nbasin),iextext(1:nequat,1:nbasin)
-    integer index_carb(1:nveg,1:nbasin)
-    integer web(1:nbasin,1:nveg,1:nveg),iclado_veg(1:nbasin)
-    integer num_pix_basin(1:nbasin),stop_clado(1:nbasin)
-    integer fauna,iweb
-    integer specount(1:nbasin)
-
-    double precision ybio(1:nequat),ybio_0(1:nequat),dydxbio(1:nequat),youtbio(1:nequat)
-    double precision ybio_steady(1:nequat,1:nbasin)
-    double precision yprint(1:nequat),percent(1:nequat)
-    double precision alphabio(1:nequat),omegabio(1:nequat),birth(1:nequat,1:nbasin)
-    double precision sigma2(1:nequat,1:nbasin),death(1:nequat,1:nbasin),temp0(1:nequat,1:nbasin)
-    double precision sigma3(1:nequat,1:nbasin),pH0(1:nequat,1:nbasin)
-    double precision r_ar(10)
-    double precision grazing_efficiency(1:npred+nspred+nsspred,1:nequat,1:nbasin)
-    double precision grazing(1:npred+nspred+nsspred,1:nequat)
-    double precision alphabio_prim(1:nbasin),ratio_survive(1:nequat)
-    double precision limiting_factor(1:nbasin)
-    
-    double precision rbio,xbio,biotemp,biopH,furious,revolution,rshift,rextext
-    double precision a,b,c,a2,b2,c2
-    double precision sigma,sigma_p
-    double precision biomass_veg,biomass_carb_prod
-    double precision total_bio(1:nclass),grazing_tot
-    double precision var_bio(1:nequat,1:nbasin)
-    double precision fbiodivC(1:nbasin)
-    double precision temp_adapt(1:nbasin),pH_adapt(1:nbasin)
-    double precision carb_ratio(1:nbasin),interact(1:nbasin,1:nveg,1:nveg)
-    double precision interact_ave(1:nbasin,1:nveg)
-
-    double precision revol,revol_type
 
     double precision tstart_deg2,tend_deg2
     double precision out,O2,shelfal,xkill,sluggish
@@ -209,10 +165,9 @@
     double precision FhydLi(1:nbasin)
 
     character(len=500), dimension(nGEOoutvar) :: GEO_ofile_name, GEO_varout_name
-    character(len=500), dimension(nBIOoutvar) :: BIO_ofile_name, BIO_varout_name
     character(len=500), dimension(nGEOGoutvar) :: GEOG_ofile_name, GEOG_varout_name
-    integer :: GEO_ofile_num(nGEOoutvar), BIO_ofile_num(nBIOoutvar), GEOG_ofile_num(nGEOGoutvar)
-    double precision :: GEO_varout_missval(nGEOoutvar), BIO_varout_missval(nBIOoutvar), GEOG_varout_missval(nGEOGoutvar)
+    integer :: GEO_ofile_num(nGEOoutvar), GEOG_ofile_num(nGEOGoutvar)
+    double precision :: GEO_varout_missval(nGEOoutvar), GEOG_varout_missval(nGEOGoutvar)
     character(len=500):: dummychar, filename
     character(len=100):: varname, fillvalname
 
@@ -251,11 +206,6 @@
     integer :: coupling_veget, icount_veget, ijump_veget, veget_occup(npixel)
     double precision :: veget_factor(npixel), veget_eros_factor(npixel)
 
-    
-    data temp_adapt /288.15,275.15,293.15,999,999,293.15,999,275.15,999,999/
-    data pH_adapt /7.949,7.50,8.076,999,999,8.015,999,7.955,999,999/
-
-
 
 !   time constraint for CAMP degassing
     data pulse_start    /0, 175e3, 195e3, 265e3, 623e3/  !yrs
@@ -287,10 +237,6 @@
                         jbox_appcont, jbox_noappcont, jbox_sediepicontsurf, jbox_sediepicontnosurf, jbox_sedinoepicont, &
                         jbox_surfappcont, jbox_surfnoappcont, jbox_nosurfbelappcont, jbox_nosurfnobelappcont
     common /biopump/ fbioP,fbioC,finorgC,finorgP
-    common /biomass1/ ybio_steady,extinct,web,iextext
-    common /biomass2/ carb_ratio,index_carb,interact,interact_ave
-    common /bio_div1/ alphabio,omegabio,sigma2,temp0,birth,death
-    common /bio_div2/ sigma3,pH0,fauna,iclado_veg
     common /calcite_diss_therm/ fdownt,fdowntP
     common /carb13/ dco3,dhco3,dh2co3 &
                     ,dc13atm,dctrap,edb
@@ -304,15 +250,13 @@
                        ,tstart_deg2,tend_deg2,ipeak
     common /closed_system/ clo,phosss
     common /concent/ var
-    common /bio_ab/ var_bio
-    common /biogeo_couple/ alphabio_prim,specount
     common /shell_alone/ shells,oxy_acc_fact,sulf_acc_fact
     common /condi/ volin,xMORin,xlumin,berner,fvegin,oblin &
                    ,xnoorg,xdrift,xsolar,temcondi,async,ageYprint &
-                   ,isolver,iweb,extrinsic_flag
+                   ,isolver
     common /CO2_em/ fanthros
     common /terrestrial_POC/ total_cont_POC_export, POC_export_rate
-    common /cste/ areaPTAS,areaPTACS,dcdiss,aconv,fevapnow,sigma &
+    common /cste/ areaPTAS,areaPTACS,dcdiss,aconv,fevapnow &
                   ,fog,ak1soil,ak2soil,akspsoil,betasoil
     common /deposition/ freef,fodc,fodp &
                         ,freefP,f_diss_c,f_diss_a &
@@ -355,14 +299,11 @@
     common /sulfred/ fSulfRed, fO2_odc ! variables for sulfate reduction
     common /water/ F
     common /creation/ R
-    common /predator_glob1/ grazing_efficiency,grazing
-    common /predator_glob2/ kgrazedFlag,i_rnd,kgrazed,iextinct
     common /shellsbug/ ishelfal
     common /outputs1/ GEO_ofile_name, GEO_varout_name
-    common /outputs2/ BIO_ofile_name, BIO_varout_name
-    common /outputs3/ GEOG_ofile_name, GEOG_varout_name
-    common /outputs4/ GEO_ofile_num, BIO_ofile_num, GEOG_ofile_num
-    common /outputs5/ GEO_varout_missval, BIO_varout_missval, GEOG_varout_missval
+    common /outputs2/ GEOG_ofile_name, GEOG_varout_name
+    common /outputs3/ GEO_ofile_num, GEOG_ofile_num
+    common /outputs4/ GEO_varout_missval, GEOG_varout_missval
     common /contpxl/ list_cont_pixel, ncontpxl
     common /dynsoil_char/     DS_init_mode
     common /dynsoil_intg0D/   ijump_DS_integration, ijump_DS_print, icount_DS_int, icount_DS_pri

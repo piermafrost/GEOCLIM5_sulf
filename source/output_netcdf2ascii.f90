@@ -25,8 +25,7 @@ use constante, only: PI_n_CO2_atm
 ! ********************************************************************************
   character(len=200) :: dummystr
   integer, dimension(nGEOoutvar):: nt, varid
-  integer, dimension(nBIOoutvar):: Bnt, Bvarid
-  integer:: fnum(nGEOoutvar),Bfnum(nBIOoutvar)
+  integer:: fnum(nGEOoutvar)
   integer :: nl, rnl, ierr, ntime, tfid, tvarid
   double precision:: vector(1)
 
@@ -55,10 +54,6 @@ use constante, only: PI_n_CO2_atm
   open (28,file=trim(output_path)//'speciation_c13'//run_name,status='REPLACE')
   open (29,file=trim(output_path)//'forcing'//run_name,status='REPLACE')
   open (205,file=trim(output_path)//'lithium'//run_name,status='REPLACE')
-  if (coupling_ecogeo) then
-    print *, 'ECOGEO module not available'
-    stop
-  end if
 
 
 
@@ -93,22 +88,6 @@ use constante, only: PI_n_CO2_atm
       call nf90check(ierr,'get ID of variable '//GEO_varout_name(k))
     end if
   end do
-
-
-
-
-  ! open biodiv netcdf output:
-  !---------------------------
-
-  if (coupling_ecogeo) then
-    print *, 'ECOGEO module not available'
-    stop
-  end if
-
-
-
-
-
 
 
 
@@ -315,14 +294,6 @@ use constante, only: PI_n_CO2_atm
       if (fnum(i)>0)  ierr = nf90_get_var(  GEO_ofile_num(i), varid(i),  vector               , start=(/k/), count=(/1/)           )
                                                                total_cont_POC_export = vector(1)
 
-    ! read biodiv netcdf output:
-    !----------------------------
-
-    if (coupling_ecogeo) then
-      print *, 'ECOGEO module not available'
-      stop
-    end if
-
 
 
     ! write ascii output:
@@ -367,11 +338,6 @@ use constante, only: PI_n_CO2_atm
     write(29,17)t/1e6,var(12,nbasin)/PI_n_CO2_atm,temp_box(1),temp_box(3), &
                   temp_box(6),temp_box(8),salin(3),salin(4),salin(6),dco3(3)*1d3,dco3(6)*1d3
 
-    if (coupling_ecogeo) then
-      print *, 'ECOGEO module not available'
-      stop
-    end if
-
 
    9    format(1f15.5,1x,2(f15.6,1x),20(es15.6e3,1x))
    11   format(21(es15.6e3,1x))
@@ -400,11 +366,6 @@ use constante, only: PI_n_CO2_atm
     end if
   end do
 
-  if (coupling_ecogeo) then
-    print *, 'ECOGEO module not available'
-    stop
-  end if
-
 
 
   ! close ascii output:
@@ -431,10 +392,6 @@ use constante, only: PI_n_CO2_atm
   close(28)
   close(29)
   close(205)
-  if (coupling_ecogeo) then
-    print *, 'ECOGEO module not available'
-    stop
-  end if
 
 
 

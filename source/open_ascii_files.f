@@ -18,25 +18,7 @@ subroutine open_ascii_files(ID)
     read(unit=ID,fmt=*) dummychar, filename
     call add_path(filename)
     open (2  ,status='old',file=filename)
-    
-    !SPECIES_INIT_FILE:
-    call read_comment(ID)
-    if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-    else
-        read(ID,*)
-    end if
-    
-    !BIODIV_VAR_INIT_FILE:
-    call read_comment(ID)
-    if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-    else
-        read(ID,*)
-    end if
-    
+
     
     !--------!
     
@@ -267,21 +249,7 @@ subroutine open_ascii_files(ID)
     call read_comment(ID)
     read(unit=ID,fmt=*) dummychar, filename
     open (10 ,status='REPLACE',file=trim(output_path)//trim(filename)//run_name)
-    
-    
-    
-    if (coupling_ecogeo) then
-        print *, 'ECOGEO module not available'
-        stop
-    else
-    
-        do i = 1,12
-            call read_comment(ID)
-            read(ID,*)
-        end do
-    
-    end if
-    
+
     
     
     

@@ -172,7 +172,7 @@ read(unit=1, fmt=*) dummy, run_name
 ! Read variables name and output file:
 
 ! * time
-do k=1,58; call read_comment(1); read(unit=1, fmt=*); end do
+do k=1,44; call read_comment(1); read(unit=1, fmt=*); end do
 read(unit=1, fmt=*) dummy, dummy, time_varname
 !
 ! * DIC

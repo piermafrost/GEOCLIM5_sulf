@@ -1,8 +1,7 @@
-subroutine printf(t,icompteur,y,ybio)
-!*************************************
+subroutine printf(t,icompteur,y)
+!*******************************
     use geoclim_write_output_mod, only: geoclim_write_output
     use geographic_write_output_mod, only: geographic_write_output
-    use biodiv_write_output_mod,  only: biodiv_write_output
     use dynsoil_write_output_mod, only: dynsoil_write_output
     use dynsoil_offline_computation_mod, only: dynsoil_offline_computation
     use dynsoil_create_restart_mod, only: dynsoil_create_restart
@@ -17,13 +16,6 @@ subroutine printf(t,icompteur,y,ybio)
 
         !!!!! write geoclim outputs !!!!!
         call geoclim_write_output(t)
-
-        !!!!! write biodiv outputs !!!!!
-        if (coupling_ecogeo) then
-            print *, 'ECOGEO module not available'
-            stop
-        end if
-
       
         !!!!! check for killing_signal !!!!!
         call read_deathnote(t)
@@ -38,7 +30,6 @@ subroutine printf(t,icompteur,y,ybio)
         call geographic_write_output( GEOG_ofile_num, GEOG_ofile_name, GEOG_varout_name,  nlon, nlat, t, &
                                       Tclim, runclim, wth_allsil, wth_litho_wgh, wth_litho, fker, POC_export_rate, fp )
     end if
-
 
     !!!!! write dynsoil outputs (and create dynsoil offline variables): !!!!!
     if (coupling_dynsoil) then
@@ -73,11 +64,6 @@ subroutine printf(t,icompteur,y,ybio)
         do j = 1+19*nbasin,nvar
             write(10,*) y(j)/vol(j)
         end do
-        ! ecological module restart
-        if (coupling_ecogeo) then
-            print *, 'ECOGEO module not available'
-            stop
-        end if
         ! DYNSOIL restart files:
         if (coupling_dynsoil)  then 
             call dynsoil_create_restart(output_path, run_name, DS_restart_name,                                                 &
