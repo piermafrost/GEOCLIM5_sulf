@@ -1,15 +1,16 @@
 ## Example of use:
 ##
-## write_oceanic_temp(co2=[560, 840, 1120, 1210, 1305, 1400, 1680, 1960, 2240, 4480, 8960],
-##                    input_files=['560ppm.nc', '840ppm.nc', '1120ppm.nc', '1210ppm.nc', '1305ppm.nc',
-##                                 '1400ppm.nc', '1680ppm.nc', '1960ppm.nc', '2240ppm.nc', '4480ppm.nc', '8960ppm.nc'],
-##                    root='/home/piermafrost/Downloads/150Ma/merg150_VegDef_AdjCSol_EccN_ocean_',
+## write_oceanic_temp(co2=[560, 840, 1120],
+##                    input_files=['560ppm.nc', '840ppm.nc', '1120ppm.nc'],
+##                    root='150Ma/merg150_VegDef_AdjCSol_EccN_ocean_',
 ##                    latitude='lat', z='lev', temperature='TEMP',
 ##                    y_weight='lw', z_weight='thickness')
 
 import netCDF4 as nc
 import numpy as np
-from units import temperature_units, length_units, latitude_units
+from units import temperature_units, length_units, area_units, volume_units, latitude_units, velocity_units, flux_units, UnknownUnitError
+from itertools import cycle
+import os
 
 
 
@@ -19,62 +20,82 @@ from units import temperature_units, length_units, latitude_units
 ###############################
 
 # Oceanic basin definition
+# ------------------------
 NBASIN = 9 # not counting atmosphere box
-H_EPICONT = 200  # (m) maximum ocean floor depth of the epicontinental box
+H_EPICONT = 200  # (m) maximum ocean floor depth (bathymetry) of the epicontinental box
 H_SURF    = 100  # (m) depth of surface boxes (ie, starting depth of thermocline or epicont deep box)
 H_THERMO  = 1000 # (m) depth of thermocline boxes (ie, starting depth of deep box)
 MIDLAT_RANGE = [-60, 60] # (degrees N): latitudinal range of inner ocean (ie, excluding high-latitude oceans)
 
-# Arbitrary parameters
-ATM_VOL = 1.
-ATM_SURF = 0.363e15
-ATM_SEDI_SURF = 0.357e15
+# Modern total ocean volume and areas
+# -----------------------------------
+MODERN_VOLUME = 1.335e18 # m3
+MODERN_AREA   = 3.619e14 # m2
 
-# Technical parameters (MUST BE KEPT UNMODIFIED)
-SURF_CONVERSION_FACTOR = 1e-12 # surface expressed in 1e9km2
-VOLUME_CONVERSION_FACTOR = 1e-15 # volume expressed in 1e6km3
+# Arbitrary and and technical GEOCLIM parameters (must not be modified)
+# ---------------------------------------------------------------------
+ATM_VOL = 1.
+ATM_AREA = 0.363e15
+ATM_SEDI_AREA = 0.357e15
+DEFAULT_VOLUME = 1. # pseudo-volume for non-concentration variables
+AREA_CONVERSION_FACTOR   = 1e-15 # areas expressed in 1e9 km2
+VOLUME_CONVERSION_FACTOR = 1e-15 # volume expressed in 1e6 km3
+FLUX_CONVERSION_FACTOR   = 1e-6  # water fluxes expressed in Sv (1e6 m3/s)
+
+# List and nature of GEOCLIM variables
+# ------------------------------------
+NVAR = 20
+CONCVAR_MASK = np.ones(NVAR, dtype=bool)
+CONCVAR_MASK[12:19] = False
+ISOTVAR_MASK = ~CONCVAR_MASK
 
 
 ##########################
 # MASK OF GEOCLIM BASINS #
 ##########################
 
-def geoclim_basin_mask(nav_lat, nav_z, nav_depth):
+def geoclim_basin_mask(nav_lat, nav_z, nav_bathy):
     '''
     Create a mask telling if points are in (T) or outside (F) each of the 9 GEOCLIM
     basins, for a given latitude array "nav_lat", local depth array "nav_z",
-    and ocean floor depth array "nav_depth".
+    and ocean floor depth (bathymetry) array "nav_bathy".
     the returned mask will rank-4, the 1st dimension being GEOCLIM basins, the last
-    3 being the dimensions of the 3-D input fields (i.e., latitude, z and depth)
+    3 being the dimensions of the 3-D input fields (i.e., latitude, z and bathymetry)
 
-    nav_lat, nav_z and nav_depth MUST BE RANK-3, even if they are not defined on
-    all dimensions (e.g., latitude and floor depth should be defined on horizontal,
+    nav_lat, nav_z and nav_bathy MUST BE RANK-3, even if they are not defined on
+    all dimensions (e.g., latitude and bathymetry should be defined on horizontal,
     dimensions, whereas z should be defined on the vertical dimension). Use
     degenerated (size-1) dimensions for those "extra" dimensions.
     The 3 dimensions must obviously correspond (ie, be in the same order) to the
     dimensions of 3D oceanic variables (e.g., temperature).
 
     The GEOCLIM basin definition must be the following:
-      0. N high-lat, surface
-      1. N high-lat, deep (incl. thermo)
+      0. N high-lat, surface (incl. thermo)
+      1. N high-lat, deep
       2. inner oce, surface
       3. inner oce, thermocline
       4. inner oce, deep
       5. epicont, surface
       6. epicont, deep
-      7. S high-lat, surface
-      8. S high-lat, deep (incl. thermo)
+      7. S high-lat, surface (incl. thermo)
+      8. S high-lat, deep
     '''
 
+    i_surfbox = (0, 2, 5, 7)
 
-    shp = np.maximum(np.maximum(nav_lat.shape, nav_z.shape), nav_depth.shape)
+    shp = np.maximum(np.maximum(nav_lat.shape, nav_z.shape), nav_bathy.shape)
 
     mask = np.ones(np.concatenate(([NBASIN], shp)), dtype=bool)
 
 
-    epicont_mask = (nav_depth <= H_EPICONT)
-    north_mask   = (nav_lat > MIDLAT_RANGE[1])
-    south_mask   = (nav_lat < MIDLAT_RANGE[0])
+    epicont_mask    = (nav_bathy <= H_EPICONT)
+    surf_mask       = (nav_z <= H_SURF)
+    surfthermo_mask = (nav_z <= H_THERMO)
+    thermo_mask     = (nav_z > H_SURF)
+    deep_mask       = (nav_z > H_THERMO)
+    bottom_mask     = (nav_z <= nav_bathy)
+    north_mask      = (nav_lat > MIDLAT_RANGE[1])
+    south_mask      = (nav_lat < MIDLAT_RANGE[0])
 
     # Northern high-lat basins
     for i in [0,1]:
@@ -96,108 +117,103 @@ def geoclim_basin_mask(nav_lat, nav_z, nav_depth):
     for i in [0,1,2,3,4,7,8]:
         mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], ~epicont_mask)
 
-    # Surface basins
-    for i in [0,2,5,7]:
-        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], nav_z<=H_SURF)
+    # Surface basins (excluding high latitude)
+    for i in [2,5]:
+        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], surf_mask)
 
-    # Thermocline, high-lat deep and epicontinental deep basins
-    for i in [1,3,6,8]:
-        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], nav_z>H_SURF)
+    # Surface basins (high latitude)
+    for i in [0,7]:
+        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], surfthermo_mask)
+
+    # Thermocline, and epicontinental deep basins
+    for i in [3,6]:
+        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], thermo_mask)
 
     # Thermocline basin
     for i in [3]:
-        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], nav_z<=H_THERMO)
+        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], surfthermo_mask)
 
-    # Inner ocean deep basin
-    for i in [4]:
-        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], nav_z>H_THERMO)
+    # Other ocean deep basin
+    for i in [1,4,8]:
+        mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], deep_mask)
+
+    ## + epicontinental (remove points below seafloor)
+    #for i in [1,4,5,6,8]:
+    #    mask[i,:,:,:] = np.logical_and(mask[i,:,:,:], bottom_mask)
+
+    return mask, i_surfbox
 
 
-    return mask
+##########################################
+# FUNCTIONS SPECIFIC TO PARTICULAR GRIDS #
+##########################################
+
+def remove_orca_north_fold(x):
+    '''
+    Put 0 in points outside the irregular inner domain mask
+    at North fold boundary of ORCA grid
+    '''
+    ihalf = x.shape[-1]//2
+    if x.ndim == 2:
+        x[-1, :] = 0
+        x[-2, :ihalf+1] = 0
+    elif x.ndim == 3:
+        x[:, -1, :] = 0
+        x[:, -2, :ihalf+1] = 0
 
 
 #######################
 # AUXILIARY FUNCTIONS #
 #######################
 
-def find_depth(var_mask, z, dim=None):
+def find_bathy(var_mask: np.ndarray, z: np.ndarray):
     '''
-    Return a 2D (horizontal) array giving the seafloor depth of each point.
-    The seafloor depth is determined as follows:
+    Return a 2D (horizontal) array giving the seafloor depth (bathymetry) of each point,
+    and the 2D array of vertical indices at which the seafloor is reached.
+    The bathymetry is determined as follows:
       1. Find the index the last 'False' of 3D boolean array "var_mask" in the vertical
          (z) dimension (yield a 2D "horizontal" index array `idx`).
-      2. Pick the value of "z" (1D "vertical" array) for each "bottom index"
-         (i.e., return `z[idx]`). If all the value of var_mask in one column are 'True',
-         the depth of that point will be '0'
-    "var_mask" must be a rank-3 boolean array. "z" must be a rank-1 array, or a rank-3
-    array with 2 degenerated (size-1) dimensions.
-    use optional argument "dim" to specified which of "var_mask" dimensions is the
-    vertical one.
-    If the vertical (z) dimension is not specified, the algorithm will:
-      1- consider the only non-degenerated dimension of "z", if it is rank-3
-      2- consider the only dimension of "var_mask" that have the same length
-         than "z"
-    If the procedure yield a unique consistent possibility, the user will be notified,
-    of the automatic decision. If not (for instance, if several dimensions of "var_mask"
-    have the same length than "z", an error will be raised).
+      2. Pick the value of "z" for each "bottom index", ie, `z[i,j,idx[i,j]]` for all i,j
+         If all the value of var_mask in one column are 'True', the depth of that point
+         will be '0'
+    "var_mask" must be a rank-3 boolean array. "z" must be a rank-3 array, and can have
+    degenerated (size-1) dimensions. The vertical dimension must be the 1st one (C-indexing)
+    and must be positive downward.
     '''
 
-    if var_mask.ndim != 3:
-        raise ValueError('"var_mask" must be rank-3')
-
-    # find vertical dimension
-    if z.ndim == 3:
-        if dim is None:
-            dim = np.argwhere(np.array(z.shape)>1)
-            if dim.size > 1:
-                raise ValueError('"z" argument must have only 1 non-degenerated dimension')
-            else:
-                dim = dim[0,0]
-    elif z.ndim == 1:
-        if dim is None:
-            dim = np.argwhere(np.array(var_mask.shape) == z.size)
-            if dim.size > 1:
-                raise ValueError('Cannot identify vertical dimension')
-            else:
-                dim = dim[0,0]
-                print('Note: dimension {:} considered as vertical, based on shape comparison'.format(dim))
-    else:
-        raise ValueError('"z" argument must be rank-1 or rank-3')
+    if var_mask.ndim != 3 or z.ndim != 3:
+        raise ValueError('"var_mask" and "z" must be rank-3')
 
     # Check vertical compatibility and determine horizontal shape
-    nz = z.size
-    if var_mask.shape[dim] != nz:
+    if not (z.shape[0]==var_mask.shape[0] and \
+            np.logical_or(np.array(z.shape)==1, np.array(var_mask.shape)==np.array(z.shape)).all()):
         raise ValueError('vertical dimension of "var_mask" and "z" incompatible')
 
-    horiz_shp = list(var_mask.shape)
-    del(horiz_shp[dim])
+    nz = z.shape[0]
+    horiz_shp = var_mask.shape[1:]
 
     # Initialization
-    bottom_idx = -1*np.ones(horiz_shp, dtype=int)
-    idx = [slice(None), slice(None), slice(None)]
-
-    # check z orientation
-    if z[-1] < z[0]:
-        zrange = range(nz-1, -1, -1)
-    else:
-        zrange = range(1, nz)
+    bottom_idx = nz*np.ones(horiz_shp, dtype='int16')
 
     # Loop on vertical dimension of "var_mask"
-    for i in zrange:
-        idx[dim] = i
-        bottom_idx[~var_mask[tuple(idx)]] = i
+    for i in range(nz):
+        bottom_idx[~var_mask[i,:,:]] = i
 
     # Trick: add an extra element "0" and the end of z, so that if
-    # bottom_idx==-1 (all elements are True) => z[bottom_idx] = 0
-    z = z.reshape((nz,))
-    z = np.concatenate((z, [0]))
+    # bottom_idx==nz (all elements are True) => z[bottom_idx] = 0
+    z = np.concatenate((z, np.zeros((1,)+z.shape[1:], z.dtype)), axis=0)
 
-    #<><><><><><><><><><>#
-    depth = z[bottom_idx]
-    #<><><><><><><><><><>#
+    #<><><><><><><><><><><><><><><>#
+    ii, jj = np.indices(z.shape[1:])
+    bathy = z[bottom_idx, ii, jj]
+    #<><><><><><><><><><><><><><><>#
 
-    return depth
+    # Replace "nz" values by "-1"
+    bottom_idx[bottom_idx==nz] = -1
 
+    return bathy, bottom_idx
+
+# ========== #
 
 def get_var(*args, varname=None, raise_error=False):
     '''
@@ -224,6 +240,166 @@ def get_var(*args, varname=None, raise_error=False):
     if raise_error:
         raise IndexError('Variable "'+str(varname)+'" cannot be found in any of the input datasets')
 
+# ========== #
+
+def get_axis_weighting(axis: str, wghvar, ref_dims, ref_shp, axis_bnds_var=None, axis_var=None, t_dim=None):
+    '''
+    Get the weighting of one axis (x, y or z), check that the dimensions and size
+    match the 3D reference shape.
+    input argument:
+      - "axis": name of the axis (string)
+      - "wghvar": netCDF4 variable (in netCDF4 Dataset) of the weighting.
+        > if wghvar is None: create uniform weighting 
+      - "ref_dims": tuple of dimensions of the reference 3D variable
+      - "ref_shp": shape (tuple) of the reference 3D variable arrays
+    optional input arguments:
+      - "axis_bnds_var": netCDF4 variable (in netCDF4 Dataset) giving the axis 
+          bounds (must be 2D, with 2nd dimension, size-2, being "bounds").
+          Get axis weighting as the difference (np.diff) of axis bounds in case
+          "wghvar" is None.
+      - "axis_var": netCDF4 variable (in netCDF4 Dataset) giving the axis
+          coordinates. Used to get "axis_bnds_var" units in case "axis_bnds_var"
+          doesn't have a "units" attribute. 
+      - "t_dim": potential time dimension in case the "wghvar" is 4D, and will
+          be averaged on the time dimension.
+    returns:
+      - 3D array (with shape "ref_shp") of the axis weighting
+      - boolean, indicated whether axis weighting has units (expect "meter")
+    '''
+
+    if wghvar is not None:
+
+        shp = list(ref_shp)
+
+        if wghvar.ndim == 3:
+            wgh = wghvar[:,:,:]
+
+        elif wghvar.ndim == 2:
+            if wghvar.dimensions[0]==ref_dims[1] and wghvar.dimensions[1]==ref_dims[2]: # weighting dimensions are {x,y}
+                shp[0] = 1 # remove z dimension
+            elif wghvar.dimensions[0]==ref_dims[0] and wghvar.dimensions[1]==ref_dims[2]: # weighting dimensions are {x,z}
+                shp[1] = 1 # remove y dimension
+            elif wghvar.dimensions[0]==ref_dims[0] and wghvar.dimensions[1]==ref_dims[1]: # weighting dimensions are {y,z}
+                shp[2] = 1 # remove x dimension
+            else:
+                raise ValueError('Cannot identify dimensions of "'+axis+'_weight" variable (do not match "temperature" variable)')
+
+            wgh = wghvar[:,:].reshape(shp)
+
+        elif wghvar.ndim == 1:
+            if wghvar.dimensions[0]==ref_dims[2]: # weighting dimension is {x}
+                shp[0] = 1 # remove z dimension
+                shp[1] = 1 # remove y dimension
+            elif wghvar.dimensions[0]==ref_dims[1]: # weighting dimension is {y}
+                shp[0] = 1 # remove z dimension
+                shp[2] = 1 # remove x dimension
+            elif wghvar.dimensions[0]==ref_dims[0]: # weighting dimension is {z}
+                shp[1] = 1 # remove y dimension
+                shp[2] = 1 # remove x dimension
+            else:
+                raise ValueError('Cannot identify dimensions of "'+axis+'_weight" variable (do not match "temperature" variable)')
+
+            wgh = wghvar[:].reshape(shp)
+
+        else:
+            if wghvar.ndim == 4 and t_dim is not None:
+                wgh = wghvar[:,:,:,:].mean(t_dim)
+            else:
+                raise ValueError('Illegal number of dimensions for variable "'+axis+'_weight"')
+
+        try:
+            wgh = length_units.convert(wgh, wghvar.units)
+            has_units = True
+        except (AttributeError, UnknownUnitError):
+            has_units = False
+
+    elif axis_bnds_var is not None:
+        if axis_bnds_var.ndim != 2:
+            raise ValueError('Cannot handle "'+axis+'_bounds" variable that is not 2D')
+        elif axis_bnds_var.shape[1] != 2:
+            raise ValueError('2nd dimension of '+axis+' bounds variable (argument "'+axis+'_bounds") must be size-2')
+        else:
+            wgh = np.abs(np.diff(axis_bnds_var[:], axis=1))
+            try:
+                wgh = length_units.convert(wgh, axis_bnds_var.units)
+                has_units = True
+            except AttributeError:
+                if axis_var is None:
+                    has_units = False
+                else:
+                    try:
+                        wgh = length_units.convert(wgh, axis_var.units)
+                        has_units = True
+                        print('WARNING: units of '+axis+' bounds variable not found. ASSUME SAME UNIT AS '+axis+' VARIABLE.')
+                    except UnknownUnitError:
+                        has_units = False
+
+            except UnknownUnitError:
+                has_units = False
+
+            shp = list(ref_shpe)
+            if axis_bnds_var.dimensions[0]==ref_dims[2]: # weighting dimension is {x}
+                shp[0] = 1 # remove z dimension
+                shp[1] = 1 # remove y dimension
+            elif axis_bnds_var.dimensions[0]==ref_dims[1]: # weighting dimension is {y}
+                shp[0] = 1 # remove z dimension
+                shp[2] = 1 # remove x dimension
+            elif axis_bnds_var.dimensions[0]==ref_dims[0]: # weighting dimension is {z}
+                shp[1] = 1 # remove y dimension
+                shp[2] = 1 # remove x dimension
+            else:
+                raise ValueError('Cannot identify dimensions of "'+axis+'_bounds" variable (do not match "temperature" variable)')
+
+            wgh = wgh.reshape(shp)
+
+    else:
+        wgh = 1
+        print('WARNING: uniform weighting assumed in '+axis+' dimension')
+        has_units = False
+
+    return wgh*np.ones(ref_shp), has_units
+
+# ========== #
+
+def average(*args):
+    '''
+    Return the unweighted average of all input arguments (that must be
+    numpy.ma.core.MaskedArray of shame shape), removing masked value from
+    the average. Where all arrays are masked, the average is 0.
+    '''
+    ave = np.zeros(args[0].shape, dtype=float)
+    cnt = np.zeros(args[0].shape, dtype='int8')
+    msk = np.zeros(args[0].shape, dtype=bool)
+    for x in args:
+        #x = np.ma.array(x)
+        ave[~x.mask] += x.data[~x.mask]
+        cnt[~x.mask] += 1
+        msk[~x.mask] = True
+
+    ave[msk] /= cnt[msk]
+    return ave
+
+# ========== #
+
+def minimum(*args):
+    '''
+    Return the point-by-point minimum of all input arguments (that must be
+    numpy.ma.core.MaskedArray of shame shape), removing masked value from
+    the list to compute the miminum.
+    Where all arrays are masked, the minimum is 0.
+    '''
+    mini = np.zeros(args[0].shape, dtype=float)
+    msk  = np.zeros(args[0].shape, dtype=bool)
+    for x in args:
+        #x = np.ma.array(x)
+        msk1 = np.logical_and(~x.mask, ~msk)
+        msk2 = np.logical_and(~x.mask, msk)
+        mini[msk1] = x.data[msk1]
+        mini[msk2] = np.minimum(mini[msk2], x.data[msk2])
+        msk[msk1] = True
+
+    return mini
+
 
 
 #################################################################
@@ -232,12 +408,17 @@ def get_var(*args, varname=None, raise_error=False):
 
 
 def write_oceanic_input(co2, input_files, latitude, z, temperature,
-                        depth=None, time_dim=None, root=None, grid_file=None,
-                        x_weight=None, y_weight=None, z_weight=None, horiz_weight=None, weight=None,
+                        bathy=None, time_dim=None, root='', grid_file=None,
+                        x_weight=None, y_weight=None, z_weight=None, z_bounds=None, horiz_weight=None, weight=None,
+                        input_u_files=None, input_v_files=None, input_w_files=None,              # !!
+                        u=None, v=None, w=None, u_flx=None, v_flx=None, w_flx=None,              # !!
+                        inverted_w=False, periodic_x=True, x_overlap=0, special_wrap=None,       # !! NEW ARGUMENTS
+                        outdir='./',                                                             # !!
                         temp_outfile='GCM_oceanic_temp.dat',
                         surf_outfile='oce_surf.dat',
                         sedsurf_outfile='surf_sedi.dat',
-                        vol_outfile='oce_vol.dat'):
+                        vol_outfile='oce_vol.dat',
+                        watflux_outfile='exchange_2.dat'):
     '''
     This function read the oceanic output and grid definition of a GCM,
     compute the volumes, surfaces and basin-average temperature of GEOCLIM
@@ -269,7 +450,7 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
 
     Optional input arguments:
 
-        depth: string. Name the variable giving, at each "horizontal"
+        bathy: string. Name the variable giving, at each "horizontal"
                grid point, the depth of ocean floor. That variable
                should be either in the main input files, or in the
                (optional) grid file (see argument "grid_file"). It
@@ -283,7 +464,7 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
         root: string. Root directory where to the input files are (or
               more generally, common part to all file paths)
         grid_file: string. Path of an alternative file to get the grid
-                   variables (latitude, z, depth and weightings)
+                   variables (latitude, z, bathy and weightings)
         x_weight: string. Name of the variable giving the weighting of
                   the grid in the x direction (ie, width). Must be 1D
                   or 2D.
@@ -293,6 +474,10 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
         z_weight: string. Name of the variable giving the weighting of
                   the grid in the z direction (ie, thickness). Must be
                   1D.
+        z_bounds: string. Alternative to "z_weight", name of the variable
+                  giving the upper and lower bounds of the vertical levels.
+                  z-weighting will then be computed as diff(z_bounds).
+                  Must be 2D, the 2nd dimension being the bounds (size-2).
         horiz_weight: string. Name of the variable giving the weighting of
                   the grid in the horizontal directions (x and y. ie, area).
                   Must be 2D.
@@ -307,21 +492,87 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
                 INPUT/COMBINE/, whereas temperature file is placed in
                 INPUT/YOUR_GCM_NAME/ (because it is CO2-dependent).
 
-        Note, the priority order of the variables for the grid cell
-        weighting (in case of conflict) is the following:
+        Notes:
+
+        the priority order of the variables for the grid cell weighting
+        (in case of conflict) is the following:
           weight > z_weight,horiz_weight > x_weight,y_weight
         In case of missing information for the weighting in one or several
         dimensions, A UNIFORM WEIGHTING WILL BE APPLIED.
+
+        The volume output file is designed for the GEOCLIM version with
+        20 variables, in the following order:
+        12 concentrations,
+        7 isotopic (ie, don't need volume)
+        1 concentration.
+        A additional box is added for the atmosphere, with volume 1e-15,
+        after all the oceanic boxes, for each variable.
+        Output volume unit is Mkm3 (1e15 m3)
+
+        Output area unit is Gkm2 (1e15 m2)
+
+        Example:
+
+        write_oceanic_temp(co2=[560, 840, 1120],
+                           input_files=['560ppm.nc', '840ppm.nc', '1120ppm.nc'],
+                           root='150Ma/merg150_VegDef_AdjCSol_EccN_ocean_',
+                           latitude='lat', z='lev', temperature='TEMP',
+                           y_weight='lw', z_weight='thickness')
     '''
 
 
-    root = '' if root is None else root
+    # Output directory
+    if outdir[-1]!='/':
+        outdir = outdir+'/'
+
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
+        print('Created directory "'+outdir+'"')
 
 
-    # CO2 is supposed to be in decreasing order:
-    if co2[-1] > co2[0]:
-        co2 = co2[::-1]
-        input_files = input_files[::-1]
+    # CO2 array (for GEOCLIM without climatic parameters)
+    # ---------------------------------------------------
+
+    if co2 is None:
+
+        nclim = len(intput_files)
+        co2 = cycle([-1e36])
+
+    else:
+
+        nclim = len(co2)
+
+        # CO2 is supposed to be in decreasing order:
+        if co2[-1] > co2[0]:
+            co2 = co2[::-1]
+            input_files   = input_files[::-1]
+            input_u_files = input_u_files[::-1]
+            input_v_files = input_v_files[::-1]
+            input_w_files = input_w_files[::-1]
+
+
+    # Number of input files
+    # ---------------------
+
+    if len(input_files) != nclim:
+        raise ValueError('Number of input files inconsistent with CO2 axis')
+
+    if input_u_files is None:
+        input_u_files = cycle(None)
+    elif len(input_u_files) != nclim:
+        raise ValueError('Number of input "u" files inconsistent with number of input "Temp" files')
+
+    if input_v_files is None:
+        input_v_files = cycle(None)
+    elif len(input_v_files) != nclim:
+        raise ValueError('Number of input "v" files inconsistent with number of input "Temp" files')
+
+    if input_w_files is None:
+        input_w_files = cycle(None)
+    elif len(input_w_files) != nclim:
+        raise ValueError('Number of input "w" files inconsistent with number of input "Temp" files')
+
+    all_inputs = (input_files, input_u_files, input_v_files, input_w_files)
 
 
     # Grid information:
@@ -334,13 +585,14 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
     xwg = get_var(fgrid, fgrid2, varname=x_weight)
     ywg = get_var(fgrid, fgrid2, varname=y_weight)
     zwg = get_var(fgrid, fgrid2, varname=z_weight)
+    zbd = get_var(fgrid, fgrid2, varname=z_bounds)
     hwg = get_var(fgrid, fgrid2, varname=horiz_weight)
     wgh = get_var(fgrid, fgrid2, varname=weight)
 
     # Main variables (try the main file before grid file)
     lati = get_var(fgrid2, fgrid, varname=latitude, raise_error=True)
     zvar = get_var(fgrid2, fgrid, varname=z, raise_error=True)
-    dpth = get_var(fgrid2, fgrid, varname=depth)
+    baty = get_var(fgrid2, fgrid, varname=bathy)
 
     # temperature of the 1st main file (to check existence, shape and dimensions)
     temp = fgrid2[temperature]
@@ -375,62 +627,112 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
     else:
         raise ValueError('temperature variable (argument "temperature") must be rank-3, or rank-4 if time-dependent.')
 
-    if zvar.ndim != 1:
-        raise ValueError('z variable (argument "z") must be rank-1')
 
-    # Identify horizontal and vertical dimensions
-    try:
-        idx_z = temp_dims.index(zvar.dimensions[0])
-    except ValueError:
-        raise ValueError('Temperature not defined on the same dimension than z')
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+    #@ Expected dimensions (time excluded): @#
+    #@  0: z                                @#
+    #@  1: y                                @#
+    #@  2: x                                @#
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 
-    if zvar.dimensions[0] in lati.dimensions:
-        raise ValueError('latitude variable cannot be defined on z dimension')
 
-    idx_xy = []
-    for i in range(lati.ndim):
-        try:
-            idx_xy.append(temp_dims.index(lati.dimensions[i]))
-        except ValueError:
-            print('WARNING: temperature dimensions names do no match latitude ones')
+    # Special grid boundary conditions (x-overlapping, ...)
+    # -----------------------------------------------------
 
-    # create "nav_z" and "nav_lat"
-    shp = [1,1,1]
-    shp[idx_z] = zvar.shape[0]
-    nav_z = length_units.convert(zvar[:], zvar.units).reshape(shp)
+    if special_wrap == 'ORCA':
+        ix0 = 1
+        ix1 = temp_shape[2]-1
+        x_overlap = 2
+
+    else:
+        ix0 = 0
+        ix1 = temp_shape[2] - x_overlap
+        if special_wrap is not None:
+            print('WARNING: unknown special wrapping case "'+str(special_wrap)+'".')
+            print('         Will be ignored.')
+
+
+    horiz_shp = temp_shape[1:]
+
+
+    # create "nav_z"
+    # --------------
+    shp = list(temp_shape)
+    if zvar.ndim == 3:
+        nav_z = zvar[:,:,:]
+
+    elif zvar.ndim == 2:
+        if zvar.dimensions[1] == temp_dims[2]: # "z" dimensions are {x,z}
+            shp[1] = 1 # remove y dimension
+        elif zvar.dimensions[1] == temp_dims[1]: # "z" dimensions are {y,z}
+            shp[2] = 1 # remove x dimension
+        else:
+            raise ValueError('Cannot identify dimensions of "z" variable (do not match "temperature" variable)')
+
+        nav_z = zvar[:,:].reshape(shp)
+
+    elif zvar.ndim == 1:
+        shp[1] = 1 # remove y dimension
+        shp[2] = 1 # remove x dimension
+        nav_z = zvar[:].reshape(shp)
+
+    else:
+        raise ValueError('Illegal number of dimensions for variable "z"')
 
     # z must be positive
     if (nav_z<=0).all():
         nav_z = -nav_z
+        reverse_z = True
+    else:
+        reverse_z = False
 
-    shp = [1,1,1]
-    for i0,i in enumerate(idx_xy):
-        shp[i] = lati.shape[i0]
+    isurf = -1 if reverse_z else 0
+
+    # Units conversion
+    nav_z = length_units.convert(nav_z, zvar.units)
+
+    # create "nav_lat"
+    # ----------------
+    shp = list(temp_shape)
+    if lati.ndim == 3:
+        raise ValueError('Cannot handle 3-dimensionnal latitude field. Must be 1D or 2D')
+    elif lati.ndim == 2:
+        shp[0] = 1 # no z dimension
+    elif lati.ndim == 1:
+        shp[0] = 1 # no z
+        shp[2] = 1 # nor x dimension
+    else:
+        raise ValueError('Illegal number of dimensions for variable "latitude"')
 
     nav_lat = latitude_units.convert(lati[:], lati.units).reshape(shp)
 
-    # Get depth and create "nav_depth"
-    if depth is None:
-        print('Note: "depth" field automatically computed as the z-value of last valid point of temperature field on each vertical column')
-        dpth = find_depth(temp[:].mean(idx_t).mask, nav_z)
+    # Get depth and create "nav_bathy"
+    # --------------------------------
+    if bathy is None:
+        baty, bottom_idx = find_bathy(temp[:].mean(idx_t).mask, nav_z)
+        print('NOTE: "bathy" field (bathymetry) automatically computed as the z-value of')
+        print('      the last valid point of temperature field on each vertical column')
     else:
-        if dpth.ndim != 2:
-            raise ValueError('seafloor depth variable (argument "depth") must be rank-2')
+        _, bottom_idx = find_bathy(temp[:].mean(idx_t).mask, nav_z)
+        if baty.ndim != 2:
+            raise ValueError('seafloor depth variable (argument "bathy") must be rank-2')
         else:
             for d in lati.dimensions:
-                if d not in dpth.dimensions:
+                if d not in baty.dimensions:
                     print('WARNING: latitude and seafloor depth variables dimensions does not have the same names')
             
-            dpth = length_units.convert(dpth[:], dpth.units)
+            baty = length_units.convert(baty[:], baty.units)
 
     shp = list(temp_shape)
-    shp[idx_z] = 1
-    nav_depth = dpth.reshape(shp)
+    shp[0] = 1 # no z dimension
+    nav_bathy = baty.reshape(shp)
 
 
-    # Compute 3-D grid weighting
-    # --------------------------
+    # Volumetric (3-D) and/or area (horizontal) grid weighting
+    # --------------------------------------------------------
 
+    # Volumetric
+    # ----------
     if wgh is not None:
         if wgh.ndim != 3:
             raise ValueError('weight variable (argument "weight") must be rank-3')
@@ -441,151 +743,132 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
                 if temp_dims != wgh.dimensions: 
                     print('WARNING: temperature and weight variables dimensions does not have the same names')
 
-                # + + + + + + #
-                w = wgh[:,:,:]
-                # + + + + + + #
-
+                w_vol = wgh[:,:,:]
+                try:
+                    w_vol = volume_units.convert(w_vol, wgh.units)
+                    volunits = True
+                except (AttributeError, UnknownUnitError):
+                    volunits = False
 
     else:
+        w_vol = None
 
-
-        if hwg is not None:
-            if hwg.ndim != 2:
-                raise ValueError('horizontal weight variable (argument "horiz_weight") must be rank-2')
-            else:
-                for d in lati.dimensions:
-                    if d not in hgh.dimensions:
-                        print('WARNING: latitude and horizontal-weight variables dimensions does not have the same names')
-
-                w_horiz = hwg[:,:]
-                shp = list(temp_shape)
-                shp[idx_z] = 1
-                w_horiz = w_horiz.reshape(shp)
-
+    # Area
+    # ----
+    if hwg is None:
+        w_horiz = None
+    else:
+        if hwg.ndim != 2:
+            raise ValueError('horizontal weight variable (argument "horiz_weight") must be rank-2')
         else:
+            for d in lati.dimensions:
+                if d not in hwg.dimensions:
+                    print('WARNING: latitude and horizontal-weight variables dimensions does not have the same names')
 
-            if xwg is None and ywg is None:
-                shp = list(temp_shape)
-                shp[idx_z] = 1
-                w_horiz = np.ones(shp, dtype=int)
-                print('NOTE: uniform weighting assumed in horizontal dimensions (x and y)')
+            w_horiz = hwg[:,:]
+            try:
+                w_horiz = area_units.convert(w_horiz, hwg.units)
+                xyunits = True
+            except (AttributeError, UnknownUnitError):
+                xyunits = False
+
+
+    # x, y and z axis weighting
+    # -------------------------
+
+    if xwg is None and ywg is None:
+        if w_horiz is None:
+            w_horiz = np.ones(horiz_shp)
+            xyunits = False
+            if w_vol is None:
+                print('WARNING: uniform weighting assumed in horizontal dimensions (x and y)')
+
+    # x weighting
+    w_x, xunits = get_axis_weighting('x', xwg, temp_dims, temp_shape, t_dim=idx_t)
+
+    # y weighting
+    w_y, yunits = get_axis_weighting('y', ywg, temp_dims, temp_shape, t_dim=idx_t)
+
+    # x weighting
+    w_z, zunits = get_axis_weighting('z', zwg, temp_dims, temp_shape, axis_bnds_var=zbd, axis_var=zvar, t_dim=idx_t)
+
+
+    # Compute areal (horizontal) weighting if it wasn't loaded
+    if w_horiz is None:
+        if xwg is None and ywg is None:
+            xyunits = False
+            if w_vol is None:
+                print('WARNING: uniform weighting assumed in horizontal dimensions (x and y)')
             else:
+                # consider first "surface" volumetric weighting
+                w_horiz = w_vol[isurf,:,:]
+                
+        else:
+            w_horiz = w_x[isurf,:,:] * w_y[isurf,:,:]
+            xyunits = (xunits and yunits)
 
-                idx_x = None
-                idx_y = None
-
-                if xwg is not None:
-                    if xwg.ndim != 1:
-                        raise ValueError('x weight variable (argument "x_weight") must be rank-1')
-                    else:
-                        try:
-                            idx_x = temp_dims.index(xwg.dimensions[0])
-                        except ValueError:
-                            print('WARNING: x-weight variable dimension name does not correspond to temperature ones')
-
-                        w_x = xwg[:]
-                else:
-                    w_x = np.ones(1, dtype=int)
-                    print('NOTE: uniform weighting assumed in x dimension')
-
-                if ywg is not None:
-                    if ywg.ndim != 1:
-                        raise ValueError('y weight variable (argument "u_weight") must be rank-1')
-                    else:
-                        try:
-                            idx_y = temp_dims.index(ywg.dimensions[0])
-                        except ValueError:
-                            print('WARNING: y-weight variable dimension name does not correspond to temperature ones')
-
-                        w_y = ywg[:]
-                else:
-                    w_y = np.ones(1, dtype=int)
-                    print('NOTE: uniform weighting assumed in y dimension')
-
-                # Check dimension order
-
-                if idx_x is None:
-                    idx_x = 0
-                    while idx_x==idx_z or idx_x==idx_y:
-                        idx_x += 1
-
-                if idx_y is None:
-                    idx_y = 0
-                    while idx_y==idx_z or idx_y==idx_x:
-                        idx_y += 1
-
-                # Check eventual transposition
-                if (w_x.size != 1 and w_x.size != temp_shape[idx_x] and w_x.size == temp_shape[idx_y]) or (w_y.size != 1 and w_y.size != temp_shape[idx_y] and w_y.size == temp_shape[idx_x]):
-                    print('WARNING: transposition of x and y dimension assumed for computing horizontal weight')
-                    idx_x,idx_y = idx_y,idx_x
-
-                shp = [1,1,1]
-                shp[idx_x] = temp_shape[idx_x]
-                if w_x.size == 1:
-                    w_x = np.ones(shp)
-                else:
-                    w_x = w_x.reshape(shp)
-
-                shp = [1,1,1]
-                shp[idx_y] = temp_shape[idx_y]
-                if w_y.size == 1:
-                    w_y = np.ones(shp)
-                else:
-                    w_y = w_y.reshape(shp)
-
-                w_horiz = w_x * w_y
+        if not xyunits:
+            print('WARNING: x and y units not understood. Areas will be computed as a fraction of modern oceanic areas')
 
 
-            if zwg is not None:
-                if zwg.ndim != 1:
-                    raise ValueError('z weight variable (argument "z_weight") must be rank-1')
-                else:
-                    if zwg.dimensions != zvar.dimensions:
-                        print('WARNING: z-weight variable dimension name differs from z dimension name')
-
-                    w_z = zwg[:]
-            else:
-                w_z = np.ones(zvar.shape, dtype=int)
-                print('NOTE: uniform weighting assumed in z dimension')
+    # Compute volumetric weighting if it wasn't loaded
+    if w_vol is None:
+        w_vol = w_horiz.reshape((1,)+horiz_shp) * w_z
+        volunits = (xyunits and zunits)
+        if not volunits:
+            print('WARNING: horizontal or vertical units not understood. Volume will be computed as a fraction of modern oceanic areas')
 
 
-            shp = [1,1,1]
-            shp[idx_z] = w_z.size
-            w_z = w_z.reshape(shp)
-
-            # + + + + + + + #
-            w = w_horiz * w_z
-            # + + + + + + + #
-
-
+    # Special domain definition
+    # + + + + + + + + + + + + +
+    if special_wrap == 'ORCA':
+        # => irregular inner domain mask at North fold boundary in ORCA grid
+        remove_orca_north_fold(w_horiz)
+        remove_orca_north_fold(w_vol)
+        remove_orca_north_fold(w_x)
+        remove_orca_north_fold(w_y)
+        remove_orca_north_fold(w_z)
 
 
     # Compute and export temperature average per basin -- loop on input files
     # -----------------------------------------------------------------------
 
     # Get mask of each basin of GEOCLIM
-    Gmask = geoclim_basin_mask(nav_lat, nav_z, nav_depth)
+    Gmask, i_surfbox = geoclim_basin_mask(nav_lat, nav_z, nav_bathy)
 
     # Initialization
-    nCO2 = len(co2)
-    geoclim_input = np.zeros((nCO2,NBASIN+1), dtype=float)
+    geoclim_input = np.zeros((nclim,NBASIN+1), dtype=float)
     # Note: the first column of each row in GEOCLIM input file must be CO2 levels.
     #       the others columns are basin temperatures (in GEOCLIM order)
 
     ## Check: draw maps of masks
-    ## from matplotlib import pyplot as plt
-    ## temp = fgrid2[temperature]
-    ## for i in range(NBASIN):
-    ##     tempvar = temp[:].mean(idx_t)
-    ##     print('Basin #{0:}, volume fraction: {1:f}'.format(i, w[np.logical_and(Gmask[i,:,:,:], ~tempvar.mask)].sum() / 
-    ##                                                           w[~tempvar.mask].sum()))
-    ##     plt.pcolormesh(np.logical_and(Gmask[i,:,:,:], ~(temp[:].mean(idx_t).mask)).any(idx_z))
-    ##     plt.show()
+    ## <+++++++++++++++++++++++++++++++++++++++> #
+    #from matplotlib import pyplot as plt
+    #for k in range(NBASIN):
+    #    print('Basin #{0:}, volume fraction: {1:f}'.format(k, w_vol[Gmask[k,:,:,:]].sum()/w_vol.sum()))
+    #    fig, ax = plt.subplots(nrows=3, figsize=(6,8))
+    #    pid = ax[0].pcolormesh(np.count_nonzero(Gmask[k,:,:,:], axis=0))
+    #    ax[0].set_xlabel('x')
+    #    ax[0].set_ylabel('y')
+    #    plt.colorbar(pid)
+    #    pid = ax[1].pcolormesh(np.count_nonzero(Gmask[k,:,:,:], axis=2))
+    #    ax[1].set_xlabel('y')
+    #    ax[1].set_ylabel('z')
+    #    plt.colorbar(pid)
+    #    pid = ax[2].pcolormesh(np.count_nonzero(Gmask[k,:,:,:], axis=1))
+    #    ax[2].set_xlabel('x')
+    #    ax[2].set_ylabel('z')
+    #    plt.colorbar(pid)
+    #    fig.suptitle('Basin #{0:}'.format(k))
+    #    if not reverse_z:
+    #        ax[1].invert_yaxis()
+    #        ax[2].invert_yaxis()
+    #plt.show()
+    ## <+++++++++++++++++++++++++++++++++++++++> #
 
-    for k in range(nCO2):
+    for k,(inputfile,c) in enumerate(zip(input_files, co2)):
 
-        c = co2[k]
-        fname = root+input_files[k]
+        fname = root+inputfile
 
         fin = nc.Dataset(fname)
 
@@ -598,31 +881,329 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
         # basin-average temperature
         for i in range(NBASIN):
             tempvar = temp[:].mean(idx_t)
-            geoclim_input[k,i+1] = (tempvar[Gmask[i,:,:,:]] * w[Gmask[i,:,:,:]]).sum() / w[np.logical_and(Gmask[i,:,:,:], ~tempvar.mask)].sum()
+            geoclim_input[k,i+1] = (tempvar[:,:,ix0:ix1][Gmask[i,:,:,ix0:ix1]] * w_vol[:,:,ix0:ix1][Gmask[i,:,:,ix0:ix1]]).sum() / \
+                                   w_vol[:,:,ix0:ix1][np.logical_and(Gmask[i,:,:,ix0:ix1], ~tempvar.mask[:,:,ix0:ix1])].sum()
 
         geoclim_input[k,1:] = temperature_units.convert(geoclim_input[k,1:], temp.units)
 
         fin.close()
-        #print(geoclim_input[k,:])
 
 
     # Write in file
-    np.savetxt(temp_outfile, geoclim_input, fmt='%10.5f')
+    np.savetxt(outdir+temp_outfile, geoclim_input, fmt='%10.5f')
+
+
+    # Compute and export water fluxes
+    # -------------------------------
+
+
+    if ((u is None and u_flx is None) or (v is None and v_flx is None) or (w is None and w_flx is None)):
+        print('Missing "u", "u_flx", "v", "v_flx", "w" or "w_flx" fields. Exchange fluxes not computed.')
+
+    elif ((u_flx is None and not (yunits and xunits)) or \
+          (v_flx is None and not (xunits and zunits)) or \
+          (w_flx is None and not (xunits and yunits))):
+        print('Warning: cannot compute water fluxes: missing units for x, y or z axis weigthing')
+
+    else:
+        fout = open(outdir+watflux_outfile, mode='w')
+
+        # Finite volume approach:
+        # compute areas of the surfaces between cells (in the perpendiular direction)
+        #    -> "y-z" area between cell x=i and cell x=i+1 is ("y-z" area[cell i]  +  "y-z" area[cell i+1])/2
+        # except that for vertical dimension, the minimum "thickness" between cell i and cell i+1 is considered:
+        #    vertical cell thickness is expected to be uniform along x and y dimension, except for bottom cells, that intercept
+        #    sea-floor with different depths. -> take the minimum thickness between 2 adjacent cell as the exchange surface
+
+        if u_flx is None: # average/minimum in the x direction
+            w_yz = average(w_y[:,:,ix0:ix1-1], w_y[:,:,ix0+1:ix1]) * minimum(w_z[:,:,ix0:ix1-1], w_z[:,:,ix0+1:ix1])
+            if periodic_x:
+                w_yz_edge = average(w_y[:,:,ix1-1], w_y[:,:,ix0]) * minimum(w_z[:,:,ix1-1], w_z[:,:,ix0])
+
+        if v_flx is None: # average/minimum in the y direction
+            w_xz = average(w_x[:,:-1,ix0:ix1], w_x[:,1:,ix0:ix1]) * minimum(w_z[:,:-1,ix0:ix1], w_z[:,1:,ix0:ix1])
+
+        if w_flx is None: # average in the z direction
+            w_xy = average(w_x[:-1,:,ix0:ix1], w_x[1:,:,ix0:ix1]) * average(w_y[:-1,:,ix0:ix1], w_y[1:,:,ix0:ix1])
+
+        units = lambda flx: velocity_units if flx is None else flux_units
+
+
+        from matplotlib import pyplot as plt
+        # Loop on all u,v,w input files => compute exchange matrix for all climate states
+        # -------------------------------------------------------------------------------
+        for allfiles in zip(*all_inputs):
+
+            allf = [None if fname is None else nc.Dataset(root+fname) for fname in allfiles]
+
+            u_var = get_var(*allf, varname=(u if u_flx is None else u_flx), raise_error=True)
+            v_var = get_var(*allf, varname=(v if v_flx is None else v_flx), raise_error=True)
+            w_var = get_var(*allf, varname=(w if w_flx is None else w_flx), raise_error=True)
+
+            u_field = units(u_flx).convert(u_var[:].mean(idx_t), u_var.units)
+            v_field = units(v_flx).convert(v_var[:].mean(idx_t), v_var.units)
+            w_field = units(w_flx).convert(w_var[:].mean(idx_t), w_var.units)
+
+            if special_wrap == 'ORCA':
+                if u_flx is not None:
+                    remove_orca_north_fold(u_field)
+
+                if v_flx is not None:
+                    remove_orca_north_fold(v_field)
+
+                if w_flx is not None:
+                    remove_orca_north_fold(w_field)
+
+
+            # + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
+            # Matrix of fluxes: X_mat[i,j] = flux FROM box i TO box j #
+            # + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
+            X_mat = np.zeros((NBASIN,NBASIN), dtype=float)
+
+            for i in range(NBASIN):
+                for j in list(range(i))+list(range(i+1,NBASIN)):
+
+                    uij, vij, wij = (), (), ()
+
+                    # u-fluxes
+                    if periodic_x:
+                        msk_uij = np.logical_and(Gmask[i,:,:,ix1-1], Gmask[j,:,:,ix0])
+                        msk_uij = np.logical_and(msk_uij, ~u_field[:,:,ix1-1].mask)
+                        if msk_uij.any():
+                            uij = u_field[:,:,ix1-1][msk_uij].data
+                            if u_flx is None:
+                                uij *= w_yz_edge[msk_uij]
+
+                            pos = (uij >= 0)
+                            X_mat[i,j] += uij[pos].sum()
+                            X_mat[j,i] -= uij[~pos].sum()
+
+                    msk_uij = np.logical_and(Gmask[i,:,:,ix0:ix1-1], Gmask[j,:,:,ix0+1:ix1])
+                    msk_uij = np.logical_and(msk_uij, ~u_field[:,:,ix0:ix1-1].mask)
+                    if msk_uij.any():
+                        uij = u_field[:,:,ix0:ix1-1][msk_uij].data
+                        if u_flx is None:
+                            uij *= w_yz[msk_uij]
+
+                        pos = (uij >= 0)
+                        X_mat[i,j] += uij[pos].sum()
+                        X_mat[j,i] -= uij[~pos].sum()
+
+                    # v-fluxes
+                    msk_vij = np.logical_and(Gmask[i,:,:-1,ix0:ix1], Gmask[j,:,1:,ix0:ix1])
+                    msk_vij = np.logical_and(msk_vij, ~v_field[:,:-1,ix0:ix1].mask)
+                    if msk_vij.any():
+                        vij = v_field[:,:-1,ix0:ix1][msk_vij].data
+                        if v_flx is None:
+                            vij *= w_xz[msk_vij]
+
+                        pos = (vij > 0)
+                        X_mat[i,j] += vij[pos].sum()
+                        X_mat[j,i] -= vij[~pos].sum()
+
+                    # w-fluxes
+                    if inverted_w:
+                        msk_wij = np.logical_and(Gmask[i,1:,:,ix0:ix1], Gmask[j,:-1,:,ix0:ix1])
+                        msk_wij = np.logical_and(msk_wij, ~w_field[1:,:,ix0:ix1].mask)
+                    else:
+                        msk_wij = np.logical_and(Gmask[i,:-1,:,:], Gmask[j,1:,:,ix0:ix1])
+                        msk_wij = np.logical_and(msk_wij, ~w_field[:-1,:,ix0:ix1].mask)
+
+                    if msk_wij.any():
+
+                        if inverted_w:
+                            wij = w_field[1:,:,ix0:ix1][msk_wij].data
+                        else:
+                            wij = w_field[:-1,:,ix0:ix1][msk_wij].data
+
+                        if w_flx is None:
+                            wij *= w_xy[msk_wij]
+
+                        pos = (wij >= 0)
+                        X_mat[i,j] += wij[pos].sum()
+                        X_mat[j,i] -= wij[~pos].sum()
+
+                    ## <++++++++++++++++++++++++++++++++++++++++++++++++++++++> #
+                    #if msk_uij.any() or msk_vij.any() or msk_wij.any():
+                    #    fig, ax = plt.subplots(3, 3, figsize=(15,8))
+                    #    for k,(uvw,msk,txt) in enumerate(zip([uij, vij, wij], [msk_uij, msk_vij, msk_wij], 'UVW')):
+                    #        x = np.zeros(msk.shape)
+                    #        x[msk] = np.abs(uvw)
+                    #        #pid = ax[0,k].pcolormesh(np.count_nonzero(msk, axis=0))
+                    #        pid = ax[0,k].pcolormesh(np.ma.masked_values(x.max(axis=0), 0))
+                    #        ax[0,k].set_xlabel('x')
+                    #        ax[0,k].set_ylabel('y')
+                    #        plt.colorbar(pid)
+                    #        #pid = ax[1,k].pcolormesh(np.count_nonzero(msk, axis=2))
+                    #        pid = ax[1,k].pcolormesh(np.ma.masked_values(x.max(axis=2), 0))
+                    #        ax[1,k].set_xlabel('y')
+                    #        ax[1,k].set_ylabel('z')
+                    #        plt.colorbar(pid)
+                    #        #pid = ax[2,k].pcolormesh(np.count_nonzero(msk, axis=1))
+                    #        pid = ax[2,k].pcolormesh(np.ma.masked_values(x.max(axis=1), 0))
+                    #        ax[2,k].set_xlabel('x')
+                    #        ax[2,k].set_ylabel('z')
+                    #        plt.colorbar(pid)
+                    #        if not reverse_z:
+                    #            ax[1,k].invert_yaxis()
+                    #            ax[2,k].invert_yaxis()
+                    #        ax[0,k].set_title(txt)
+                    #    fig.suptitle('Basin {0:} => Basin {1:}'.format(i,j))
+                    #    plt.show()
+                    ## <++++++++++++++++++++++++++++++++++++++++++++++++++++++> #
+
+            np.savetxt(fout, FLUX_CONVERSION_FACTOR*X_mat, fmt='%.2f', delimiter='\t') # '%.7e'
+            fout.write('\n')
+
+        fout.close()
 
 
     if fgrid is not None:
         fgrid.close()
 
 
+    # >                                                                                < #
+    # > Following input files depend only on oceanic basins definition, not on climate < #
+    # > ============================================================================== < #
+
+
+    # Update basin mask to remove missing points of last loaded temperature
+    for k in range(NBASIN):
+        Gmask[k,:,:,:][tempvar.mask] = False
+
+
+    # Compute and export box areas
+    # ----------------------------
+
+    area_top = np.zeros((NBASIN+1,), dtype=w_horiz.dtype)
+    area_sed = np.zeros((NBASIN+1,), dtype=w_horiz.dtype)
+
+    # "area_top" is the horizontal area at the top of boxes
+    for k in range(NBASIN):
+        area_top[k] = w_horiz[:,ix0:ix1][Gmask[k,:,:,ix0:ix1].any(0)].sum()
+
+    # "area_sed" is the area where boxes intercep seafloor
+    jj, ii = np.indices(np.array(horiz_shp) - np.array([0,x_overlap]))
+    for k in range(NBASIN):
+        area_sed[k] = w_horiz[:,ix0:ix1][Gmask[k,:,:,ix0:ix1][bottom_idx[:,ix0:ix1], jj, ii]].sum()
+
+    if not xyunits:
+        # normalize areas and scale them to modern total ocean volume
+        print('areas scaled to modern ocean area')
+        area_top *= MODERN_AREA/area_top[i_surfbox].sum()
+        area_sed *= MODERN_AREA/area_sed.sum()
+
+    # atmosphere box
+    area_top[-1] = ATM_AREA
+    area_sed[-1] = ATM_SEDI_AREA
+
+    # Conversion to GEOCLIM units
+    area_top *= AREA_CONVERSION_FACTOR
+    area_sed *= AREA_CONVERSION_FACTOR
+
+    # Write in file
+    np.savetxt(outdir+surf_outfile,    area_top, fmt='%.12e', delimiter='\n')
+    np.savetxt(outdir+sedsurf_outfile, area_sed, fmt='%.12e', delimiter='\n')
+
+
+    # Compute and export box volumes
+    # ------------------------------
+
+    box_vol = np.zeros((NVAR, NBASIN+1), dtype=w_vol.dtype)
+
+    # concentration variables
+    totvol = 0.
+    for k in range(NBASIN):
+        vol = w_vol[:,:,ix0:ix1][Gmask[k,:,:,ix0:ix1]].sum()
+        totvol += vol
+        box_vol[CONCVAR_MASK, k] = vol
+
+    if not volunits:
+        # normalize volume and scale it to modern total ocean volume
+        print('volumes scaled to modern ocean volume')
+        box_vol *= MODERN_VOLUME/totvol
+
+    # non-concentration (isotopic) variables
+    box_vol[ISOTVAR_MASK, :NBASIN] = DEFAULT_VOLUME
+
+    # atmosphere box
+    box_vol[:,-1] = ATM_VOL
+
+    # Conversion to GEOCLIM units and ravelling (box axis changing fastest)
+    box_vol = VOLUME_CONVERSION_FACTOR*box_vol.ravel(order='C')
+
+    # Write in file
+    np.savetxt(outdir+vol_outfile, box_vol, fmt='%.12e', delimiter='\n')
+
+
+
+
 
 ###################################################################################################
 
 
+## ----------------- ##
+## Example for FOAM: ##
+## ----------------- ##
+#write_oceanic_input(co2=[560, 840, 1120, 1210, 1305, 1400, 1680, 1960, 2240, 4480, 8960],
+#                    input_files=['560ppm.nc', '840ppm.nc', '1120ppm.nc', '1210ppm.nc', '1305ppm.nc',
+#                                 '1400ppm.nc', '1680ppm.nc', '1960ppm.nc', '2240ppm.nc', '4480ppm.nc', '8960ppm.nc'],
+#                    root='/home/piermafrost/Downloads/150Ma/merg150_VegDef_AdjCSol_EccN_ocean_',
+#                    latitude='lat', z='lev', temperature='TEMP',
+#                    y_weight='lw', z_weight='thickness')
 
-write_oceanic_input(co2=[560, 840, 1120, 1210, 1305, 1400, 1680, 1960, 2240, 4480, 8960],
-                    input_files=['560ppm.nc', '840ppm.nc', '1120ppm.nc', '1210ppm.nc', '1305ppm.nc',
-                                 '1400ppm.nc', '1680ppm.nc', '1960ppm.nc', '2240ppm.nc', '4480ppm.nc', '8960ppm.nc'],
-                    root='/home/piermafrost/Downloads/150Ma/merg150_VegDef_AdjCSol_EccN_ocean_',
-                    latitude='lat', z='lev', temperature='TEMP',
-                    y_weight='lw', z_weight='thickness')
+## ------------------ ##
+## Examples for IPSL: ##
+## ------------------ ##
+#
+#write_oceanic_input(co2=[284.7],
+#                    input_files=['CTRL-CM5A2_ANNCLIMO_oce.nc'], grid_file='coordinates.nc',
+#                    root='./',
+#                    latitude='nav_lat', z='deptht', temperature='thetao',
+#                    horiz_weight='area', z_bounds='deptht_bounds')
+#
+#write_oceanic_input(co2=[1138.8],
+#                    input_files=['4X/CPL-90Ma-ORB7a-TopoCorr_SE_8555_8654_1Y_grid_T.nc'],
+#                    grid_file='PALEORCA2.90MaCorrected_grid.nc',
+#                    temp_outfile='oceanic_temp_IPSL_90Ma_4PAL.dat',
+#                    vol_outfile='oce_vol_IPSL-90Ma.dat',
+#                    surf_outfile='oce_surf_IPSL-90Ma.dat',
+#                    sedsurf_outfile='surf_sedi_IPSL-90Ma.dat',
+#                    root='./',
+#                    latitude='nav_lat', z='deptht', temperature='thetao',
+#                    x_weight='e1t', y_weight='e2t', z_bounds='deptht_bounds')
+
+
+
+# ========== #
+
+
+# IPSL CTRL:
+write_oceanic_input(co2=[284.7],
+                    input_files=['piControl_SE_2750_2849_1Y_grid_T.nc'],
+                    input_u_files=['piControl_SE_2750_2849_1Y_grid_U.nc'],
+                    input_v_files=['piControl_SE_2750_2849_1Y_grid_V.nc'],
+                    input_w_files=['piControl_SE_2750_2849_1Y_grid_W.nc'],
+                    grid_file='coordinates.nc',
+                    root='./',
+                    outdir='IPSL-CM5A2_CTRL/',
+                    latitude='nav_lat', z='deptht', temperature='thetao',
+                    #u_flx='uocetr_eff', v_flx='vocetr_eff', w='wo', inverted_w=True,
+                    u='uo', v='vo', w='wo', inverted_w=True,
+                    horiz_weight='cell_area',
+                    x_weight='e1t', y_weight='e2t', z_weight='e3t',
+                    special_wrap='ORCA')
+
+
+# IPSL 90Ma -- single climate:
+#write_oceanic_input(co2=[4*284.7],
+#                    input_files=['90Ma_oce_out/4X/CPL-90Ma-ORB7a-TopoCorr_SE_8555_8654_1Y_grid_T.nc'],
+#                    grid_file='PALEORCA2.90MaCorrected_grid.nc',
+#                    temp_outfile='oceanic_temp_90Ma_laugie_TopoCorr_4X_obl24.6_ecc0.015_pre0.dat',
+#                    vol_outfile='oce_vol_IPSL-90Ma.dat',
+#                    surf_outfile='oce_surf_IPSL-90Ma.dat',
+#                    sedsurf_outfile='surf_sedi_IPSL-90Ma.dat',
+#                    root='./',
+#                    latitude='nav_lat', z='deptht', temperature='thetao',
+#                    horiz_weight='srft', z_bounds='deptht_bnds')
 
