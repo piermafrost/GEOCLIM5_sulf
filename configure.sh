@@ -17,5 +17,4 @@ cp -f templates/GCM_input_conditions.$1 GCM_input_conditions
 cd ../source/
 cp -f templates/constante.f90.$1 constante.f90
 cp -f templates/shape.inc.$1 shape.inc
-cp -f templates/coupler.inc.$1 coupler.inc
 
