@@ -379,8 +379,8 @@ then
     COMBINE_RESTARTDIR="${file%\/*}/"
     COMBINE_INIT_LINENUM=$nline
 
-    # line #34 > COMBINE restart "root" name
-    while [ $nuncomment -lt 34 ]
+    # line #32 > COMBINE restart "root" name
+    while [ $nuncomment -lt 32 ]
     do
         nline=$((nline + 1))
         line=`read_lines ../$GEOCLIM_IO_FILE $nline`
@@ -388,8 +388,8 @@ then
     done
     COMBINE_RESTART=`get_second_arg $line`
 
-    # line #47 > DynSoil restart "root" name
-    while [ $nuncomment -lt 47 ]
+    # line #33 > DynSoil restart "root" name
+    while [ $nuncomment -lt 33 ]
     do
         nline=$((nline + 1))
         line=`read_lines ../$GEOCLIM_IO_FILE $nline`
@@ -397,8 +397,8 @@ then
     done
     DYNSOIL_RESTART=`get_second_arg $line`
 
-    # line #48 > DynSoil restart mode
-    while [ $nuncomment -lt 48 ]
+    # line #34 > DynSoil restart mode
+    while [ $nuncomment -lt 34 ]
     do
         nline=$((nline + 1))
         line=`read_lines ../$GEOCLIM_IO_FILE $nline`
@@ -406,8 +406,8 @@ then
     done
     DYNSOIL_RESTART_MODE_LINENUM=$nline
 
-    # line #49 > current DynSoil restart
-    while [ $nuncomment -lt 49 ]
+    # line #35 > current DynSoil restart
+    while [ $nuncomment -lt 35 ]
     do
         nline=$((nline + 1))
         line=`read_lines ../$GEOCLIM_IO_FILE $nline`
@@ -586,17 +586,17 @@ then
     # -----------------------------------------------------------
 
     rm -f toto
-    read_lines $CONFIG_FILE 1 19  >  toto
-    test -z $dt             && read_lines $CONFIG_FILE 20 >> toto || echo $dt             >> toto
+    read_lines $CONFIG_FILE 1 14  >  toto
+    test -z $dt             && read_lines $CONFIG_FILE 15 >> toto || echo $dt             >> toto
     echo 0d0                      >> toto
-    test -z $tend           && read_lines $CONFIG_FILE 22 >> toto || echo $tend           >> toto
-    test -z $tprint         && read_lines $CONFIG_FILE 23 >> toto || echo $tprint         >> toto
-    test -z $tprint_geog    && read_lines $CONFIG_FILE 24 >> toto || echo $tprint_geog    >> toto
+    test -z $tend           && read_lines $CONFIG_FILE 17 >> toto || echo $tend           >> toto
+    test -z $tprint         && read_lines $CONFIG_FILE 18 >> toto || echo $tprint         >> toto
+    test -z $tprint_geog    && read_lines $CONFIG_FILE 19 >> toto || echo $tprint_geog    >> toto
     echo -1.                      >> toto
-    read_lines $CONFIG_FILE 26 28 >> toto
-    test -z $dt_contwth     && read_lines $CONFIG_FILE 29 >> toto || echo $dt_contwth     >> toto
-    test -z $dt_dynsoil     && read_lines $CONFIG_FILE 30 >> toto || echo $dt_dynsoil     >> toto
-    test -z $tprint_dynsoil && read_lines $CONFIG_FILE 31 >> toto || echo $tprint_dynsoil >> toto
+    read_lines $CONFIG_FILE 21 23 >> toto
+    test -z $dt_contwth     && read_lines $CONFIG_FILE 24 >> toto || echo $dt_contwth     >> toto
+    test -z $dt_dynsoil     && read_lines $CONFIG_FILE 25 >> toto || echo $dt_dynsoil     >> toto
+    test -z $tprint_dynsoil && read_lines $CONFIG_FILE 26 >> toto || echo $tprint_dynsoil >> toto
     tail -n 3 $CONFIG_FILE        >> toto
     #=====================#
     mv -f toto $CONFIG_FILE
@@ -801,17 +801,17 @@ else
 	# -----------------------------------------------------------
 
 	rm -f toto
-	read_lines $CONFIG_FILE 1 19  >  toto
-	test -z $dt             && read_lines $CONFIG_FILE 20 >> toto || echo $dt             >> toto
-	test -z $tstart         && read_lines $CONFIG_FILE 22 >> toto || echo $tstart         >> toto
-	test -z $tend           && read_lines $CONFIG_FILE 22 >> toto || echo $tend           >> toto
-	test -z $tprint         && read_lines $CONFIG_FILE 23 >> toto || echo $tprint         >> toto
-	test -z $tprint_geog    && read_lines $CONFIG_FILE 24 >> toto || echo $tprint_geog    >> toto
+	read_lines $CONFIG_FILE 1 14  >  toto
+	test -z $dt             && read_lines $CONFIG_FILE 15 >> toto || echo $dt             >> toto
+	echo 0d0                      >> toto
+	test -z $tend           && read_lines $CONFIG_FILE 17 >> toto || echo $tend           >> toto
+	test -z $tprint         && read_lines $CONFIG_FILE 18 >> toto || echo $tprint         >> toto
+	test -z $tprint_geog    && read_lines $CONFIG_FILE 19 >> toto || echo $tprint_geog    >> toto
 	echo -1.                      >> toto
-	read_lines $CONFIG_FILE 26 28 >> toto
-	test -z $dt_contwth     && read_lines $CONFIG_FILE 29 >> toto || echo $dt_contwth     >> toto
-	test -z $dt_dynsoil     && read_lines $CONFIG_FILE 30 >> toto || echo $dt_dynsoil     >> toto
-	test -z $tprint_dynsoil && read_lines $CONFIG_FILE 31 >> toto || echo $tprint_dynsoil >> toto
+	read_lines $CONFIG_FILE 21 23 >> toto
+	test -z $dt_contwth     && read_lines $CONFIG_FILE 24 >> toto || echo $dt_contwth     >> toto
+	test -z $dt_dynsoil     && read_lines $CONFIG_FILE 25 >> toto || echo $dt_dynsoil     >> toto
+	test -z $tprint_dynsoil && read_lines $CONFIG_FILE 26 >> toto || echo $tprint_dynsoil >> toto
 	tail -n 3 $CONFIG_FILE        >> toto
 	#=====================#
 	mv -f toto $CONFIG_FILE
