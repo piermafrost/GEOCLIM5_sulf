@@ -1,8 +1,17 @@
-﻿# GEOCLIM5.2 - sulf
+﻿# GEOCLIM5.2.1
 
 
 
-## Updates from GEOCLIM5:
+## Updates
+
+### Last update
+This version (5.2.1) is almost similar to the version 5.2 (published with the article Maffre et al., 2021, 10.1029/2021GL094589).
+The only difference is that all former files, Fortran variables and configuration lines corresponding to the desactivated "ECOGEO" module were definitively removed.
+The submission scripts (in "job/" repertory) were also updated to account for deleted lines in configuration files.
+The code is therefore entirely compatible with previous release (5.2) and Maffre et al. (2021)'s experiments.
+
+### Former updates
+#### from GEOCLIM5:
 * Possibility to read area, temperature and runoff inputs directly from GCM annual climatology files,
   with some automatic unit conversions.
 * Possibility to automatically create DynSoil initial conditions (null regolith, or at equilibrium with initial pCO2).
