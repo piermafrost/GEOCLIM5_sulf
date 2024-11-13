@@ -3,185 +3,140 @@ implicit none
 
 contains
 
-subroutine dynsoil_write_output( filenum,filename,varname, nx,ny, t,temp,runoff,hsoil,xsurf,tausurf,z,tau, &
-                                 reg_prod,reg_eros,reg_P_diss,reg_P_eros,xsurf_eros,x_mean,reg_mean_age,    &
-                                 Li_Friv, Li_Fsp, Li_driv                                            )
-  use netcdf_io_module, only: open_file, close_file, inquire_var, inquire_dim, &
-                              put_var_real1D, put_var_real2D, put_var_real3D, put_var_real4D
+subroutine dynsoil_write_output(ofile_name, time_dimname, DYNS_outvar_info, t, temp, runoff, hsoil, xsurf, tausurf, z, tau,        &
+                             reg_prod, reg_eros, reg_P_diss, reg_P_eros, xsurf_eros, x_mean, reg_mean_age, Li_Friv, Li_Fsp, Li_driv)
+                                 
+  use io_module, only: netcdf_output_var
+  use netcdf_io_module, only: open_file, close_file, inquire_var, inquire_dim, put_var
   use netcdf
-  integer, parameter:: nvar = 25
-  integer, dimension(nvar), intent(in):: filenum
-  character(len=*), dimension(nvar), intent(in):: filename, varname
-  integer, intent(in):: nx, ny
+  include 'shape.inc' ! => nlon, nlat, nlitho, nDSlev
+  include 'output_size.inc' ! => nDYNSoutvar
+  character(len=*):: ofile_name, time_dimname
+  type(netcdf_output_var), dimension(nDYNSoutvar), intent(in):: DYNS_outvar_info
   double precision, intent(in):: t
-  double precision, dimension(:), intent(in):: temp,runoff
-  double precision, dimension(:,:), intent(in):: hsoil,xsurf,tausurf,reg_prod,reg_eros,&
-                                                 reg_P_diss,reg_P_eros,xsurf_eros,x_mean,reg_mean_age,&
-                                                 Li_Friv,Li_Fsp,Li_driv
-  double precision, dimension(:,:,:), intent(in):: z,tau
-  integer, dimension(nvar):: nt, fileid, varid
-  integer:: i,j,k,nlit,nlev,ierr,timevarid(1),dimid(1)
-
-  !===================================== OUTPUT VARIABLES LIST: ======================================!
-  !  OUTPUT: X, Y, litho, xlevs, t, area, litho_frac, slope, temp, runoff, h_soil, x_surf, tau_surf,  !
-  !  var #:  1  2  3      4      5  6     7           8      9     10      11      12      13         !
-  !          z, tau, Reg_prod, Reg_eros, reg_P_diss, reg_P_eros, x_surf_eros, x_P_mean, reg_mean_age, !
-  !          14 15   16        17        18          19          20           21        22            !
-  !          Li_Friv,  Li_Fsp,   Li_driv                                                              !
-  !          23        24        25                                                                   !
-  !===================================================================================================!
-
-
-  ! get xlevels dimension length
-  nlev = size(z,1)
-  nlit = size(z,2)
+  double precision, dimension(:), intent(in):: temp, runoff
+  double precision, dimension(:,:), intent(in):: hsoil, xsurf, tausurf, reg_prod, reg_eros, &
+                                                 reg_P_diss, reg_P_eros, xsurf_eros, x_mean, reg_mean_age, &
+                                                 Li_Friv, Li_Fsp, Li_driv
+  double precision, dimension(:,:,:), intent(in):: z, tau
+  integer:: i, ierr, nt, fid, timevarid, dimid
 
 
 !=================================================================================================!
 !------------------------------------- OPENNING AND WRITING: -------------------------------------!
 !=================================================================================================!
 
-    ! open file(s) and write time variable:
+
+    ! Open file, get size of time dimension, and put current time
+    ! -----------------------------------------------------------
+    call open_file(ofile_name, fid, mode=NF90_WRITE)
+    call inquire_dim(fid, time_dimname, dimid)
+    ierr = nf90_inquire_dimension(fid, dimid, len=nt)
+    nt = nt + 1
+    call inquire_var(fid, time_dimname, timevarid)
+    call put_var(fid, timevarid, var_real0D=real(t), stt=(/nt/), cnt=(/1/))
+
+
+
+    !<><><><><><><><><><><><><><><><><>!
+    !<> %%%%%%%%%%%%%%%%%%%%%%%%%%%% <>!
+    !<> %  write output variables  % <>!
+    !<> %%%%%%%%%%%%%%%%%%%%%%%%%%%% <>!
+    !<><><><><><><><><><><><><><><><><>!
+
+    ! Note: the following list of blocks needs to be updated if one wants to add new output variables
+    ! ***********************************************************************************************
+
+    i = 4  ! TEMPERATURE
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real2D=real(reshape(temp, shape=(/nlon,nlat/))), &
+                   stt=(/1,1,nt/), cnt=(/nlon,nlat,1/))
     !
-    k = 0
+    i = 5 ! RUNOFF
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real2D=real(reshape(runoff, shape=(/nlon,nlat/))), &
+                   stt=(/1,1,nt/), cnt=(/nlon,nlat,1/))
     !
-    do i = 7,8 ! open potential litho_frac and slope files
-      if (filenum(i) > 0) then
-        if ( filenum(i) > k ) then
-          call open_file( filename(i) , j , mode=NF90_WRITE )
-          fileid(i) = j
-          call inquire_dim( fileid(i) , varname(5:5) , dimid )
-          ierr = nf90_inquire_dimension( fileid(i) , dimid(1) , len=nt(i) )
-          nt(i) = nt(i) + 1
-          call inquire_var( fileid(i) , varname(5:5) , timevarid )
-          call put_var_real1D( fileid(i), timevarid(1), (/real(t)/) , nt(i:i) , (/1/) )
-          k = filenum(i)
-        else
-          fileid(i) = fileid(filenum(i))
-          nt(i) = nt(filenum(i))
-        end if
-      end if
-    end do
+    i = 6 ! HSOIL
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(hsoil, shape=(/nlon,nlat,nlitho/), &
+                                                       order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
     !
-    do i = 9,nvar ! loop on all variables but litho_frac slope
-      if (filenum(i) > 0) then
-        if ( filenum(i) > k ) then
-          call open_file( filename(i) , j , mode=NF90_WRITE )
-          fileid(i) = j
-          call inquire_dim( fileid(i) , varname(5:5) , dimid )
-          ierr = nf90_inquire_dimension( fileid(i) , dimid(1) , len=nt(i) )
-          nt(i) = nt(i) + 1
-          call inquire_var( fileid(i) , varname(5:5) , timevarid )
-          call put_var_real1D( fileid(i), timevarid(1), (/real(t)/) , nt(i:i) , (/1/) )
-          k = filenum(i)
-        else
-          fileid(i) = fileid(filenum(i))
-          nt(i) = nt(filenum(i))
-        end if
-        call inquire_var( fileid(i) , varname(i:i) , varid(i:i) )
-      end if
-    end do
+    i = 7 ! XSURF
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(xsurf, shape=(/nlon,nlat,nlitho/), &
+                                                       order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 8 ! TAUSURF
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(tausurf, shape=(/nlon,nlat,nlitho/), &
+                                                         order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 9 ! Z
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(z, shape=(/nlon,nlat,nlitho,nDSlev/), &
+                                               order=(/4,3,1,2/))), stt=(/1,1,1,1,nt/), cnt=(/nlon,nlat,nlitho,nDSlev,1/))
+    !
+    i = 10 ! TAU
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(tau, shape=(/nlon,nlat,nlitho,nDSlev/), &
+                                                 order=(/4,3,1,2/))), stt=(/1,1,1,1,nt/), cnt=(/nlon,nlat,nlitho,nDSlev,1/))
+    !
+    i = 11 ! REG_PROD
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(reg_prod, shape=(/nlon,nlat,nlitho/), &
+                                                          order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 12 ! REG_EROS
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(reg_eros, shape=(/nlon,nlat,nlitho/), &
+                                                          order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 13 ! REG_P_DISS
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(reg_P_diss, shape=(/nlon,nlat,nlitho/), &
+                                                            order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 14 ! REG_P_EROS
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(reg_P_eros, shape=(/nlon,nlat,nlitho/), &
+                                                            order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 15 ! XSURF_EROS
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(xsurf_eros, shape=(/nlon,nlat,nlitho/), &
+                                                            order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 16 ! X_MEAN
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(x_mean, shape=(/nlon,nlat,nlitho/), &
+                                                        order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 17 ! REG_MEAN_AGE
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(reg_mean_age, shape=(/nlon,nlat,nlitho/), &
+                                                              order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 18 ! LI_FRIV
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(Li_Friv, shape=(/nlon,nlat,nlitho/), &
+                                                         order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 19 ! LI_FSP
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(Li_Fsp, shape=(/nlon,nlat,nlitho/), &
+                                                        order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
+    !
+    i = 20 ! LI_DRIV
+    if (DYNS_outvar_info(i)%writevar) &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real3D=real(reshape(Li_driv, shape=(/nlon,nlat,nlitho/), &
+                                                         order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/))
 
 
-    !!!!!!!!!!!!!!!!!!!!
-    ! write variables: !
-    !!!!!!!!!!!!!!!!!!!!
+    ! Close output file
+    ! -----------------
 
-    i = 9  ! TEMPERATURE
-    if (filenum(i)>0) then
-      call put_var_real2D( fileid(i) , varid(i) ,          real(reshape(temp, shape=(/nx,ny/))),  (/1,1,nt(i)/) , (/nx,ny,1/) )
-    end if
-    i = 10 ! RUNOFF
-    if (filenum(i)>0) then
-      call put_var_real2D( fileid(i) , varid(i) ,        real(reshape(runoff, shape=(/nx,ny/))),  (/1,1,nt(i)/) , (/nx,ny,1/) )
-    end if
-    i = 11 ! HSOIL
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,         real(reshape(hsoil, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 12 ! XSURF
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,         real(reshape(xsurf, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 13 ! TAUSURF
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,       real(reshape(tausurf, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 14 ! Z
-    if (filenum(i)>0) then
-      call put_var_real4D( fileid(i) , varid(i) ,             real(reshape(z, shape=(/nx,ny,nlev,nlit/), order=(/4,3,1,2/))) , &
-                                                                                     (/1,1,1,1,nt(i)/) , (/nx,ny,nlit,nlev,1/) )
-    end if
-    i = 15 ! TAU
-    if (filenum(i)>0) then
-      call put_var_real4D( fileid(i) , varid(i) ,           real(reshape(tau, shape=(/nx,ny,nlev,nlit/), order=(/4,3,1,2/))) , &
-                                                                                     (/1,1,1,1,nt(i)/) , (/nx,ny,nlit,nlev,1/) )
-    end if
-    i = 16 ! REG_PROD
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,      real(reshape(reg_prod, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 17 ! REG_EROS
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,     real(reshape(reg_eros, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 18 ! REG_P_DISS
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,    real(reshape(reg_P_diss, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 19 ! REG_P_EROS
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,    real(reshape(reg_P_eros, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 20 ! XSURF_EROS
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,    real(reshape(xsurf_eros, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 21 ! X_MEAN
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,        real(reshape(x_mean, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 22 ! REG_MEAN_AGE
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,  real(reshape(reg_mean_age, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 23 ! LI_FRIV
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,       real(reshape(Li_Friv, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 24 ! LI_FSP
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,        real(reshape(Li_Fsp, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-    i = 25 ! LI_DRIV
-    if (filenum(i)>0) then
-      call put_var_real3D( fileid(i) , varid(i) ,       real(reshape(Li_driv, shape=(/nx,ny,nlit/), order=(/3,1,2/))) , &
-                                                                                     (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-    end if
-
-  !======================!
-  ! Output file closing: !
-  !======================!
-
-  k = 0
-  do i = 7,nvar
-    if ( filenum(i) > k ) then
-      call close_file(fileid(i))
-      k = filenum(i)
-    end if
-  end do
+    call close_file(fid)
 
 
 

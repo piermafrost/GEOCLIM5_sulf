@@ -93,8 +93,8 @@ module constante
     !    thickness of sulfate-reduction layer (m)
     double precision, parameter :: hsr=0.5
     !    Kinetics constants
-    double precision, parameter :: betahml=0.064602 ! for org C oxidation in bioturbated layer 
-    double precision, parameter :: gammahsr=1.6292d-5 ! for sulfate-reduction
+    double precision, parameter :: betahml=0.06462 ! for org C oxidation in bioturbated layer 
+    double precision, parameter :: gammahsr=1.629d-5 ! for sulfate-reduction
     !!    parameterized [SO4^2-] influence on sulfate-reduction => OBSOLETE used in GEOCLIM version without sulfur cycle
     !!double precision, parameter :: fSO4cste=29.
     !    Fraction of organic matter NOT lost in form of methan (that will be re-oxidized)
@@ -148,11 +148,11 @@ module constante
     integer, parameter:: BASALT_LITHO_NUM = 4
     !
     !    * Amount of Ca and Mg (moles per m3 of bedrock, = [m(Ca)/kg_of_rock/M(Ca)+ m(Mg)/kg_of_rock/M(Mg)] * rock density)
-    double precision, parameter, dimension(*) :: CaMg_rock = (/ 2500, 1521, 4759, 10317, 2000, 0 /)
+    double precision, parameter, dimension(6) :: CaMg_rock = (/ 2500, 1521, 4759, 10317, 2000, 0 /)
     !      Note: Metamorphic & Sediment derived from parameter optimization, others from www.earthchem.org/portal
     !
     !    * Organic carbon content of rocks (mol/m3):
-    double precision, parameter, dimension(*):: OC_rock = (TSS_density*1d3/12)*(/0., 0., 0., 0., 0.0123, 0.0024/)
+    double precision, parameter, dimension(6):: OC_rock = (TSS_density*1d3/12)*(/0., 0., 0., 0., 0.0123, 0.0024/)
     !                                                                  ^^^ ^^    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !                                        g/kg conversion __________|   |     |
     !                                        molar mass of Carbon (g/mol) _|     |
@@ -160,9 +160,9 @@ module constante
     !      Note: Carbonate mass fraction from Gehman, GCA, 1962, Sediment mass fraction tuned to reach a carbon flux of 5 Tmol/yr
     !
     !    * Phosphorus content of rocks (mol/m3, = m(P)/kg_of_rock/M(P) * rock density)
-    !double precision, parameter, dimension(*):: P_rock = (/63.76, 49.60, 168.2, 121.3, 41.97, 38.08/)
+    !double precision, parameter, dimension(6):: P_rock = (/63.76, 49.60, 168.2, 121.3, 41.97, 38.08/)
     !      (derived from Hartmann et al., Chem Geol, 2014, averaged with outcrop area fraction from Hartmann & Moodsorf, G3, 2012)
-    double precision, parameter, dimension(*):: P_rock = (/63.76, 49.60, 168.2, 121.3, 4., 38.08/)
+    double precision, parameter, dimension(6):: P_rock = (/63.76, 49.60, 168.2, 121.3, 4., 38.08/)
     !      (same, with lowered sediment P content, to reduced P weathering flux)
     !    * Phosphorus:Carbon molar ratio
     !double precision, parameter:: P2C_ker  = 0.004 ! in kerogen
@@ -173,15 +173,15 @@ module constante
     !                                                    molar mass of CaCO3 (g/mol) _|
     !
     !    * Strontium isotopic ratio (87/86) in rock types:
-    !double precision, parameter, dimension(*) :: rsw_litho = (/ 0.720, 0.712, 0.705, 0.705, 0.715, 0.708 /)
-    double precision, parameter, dimension(*) :: rsw_litho = (/ 0.720, 0.718, 0.710, 0.705, 0.718, 0.708 /)
+    !double precision, parameter, dimension(6) :: rsw_litho = (/ 0.720, 0.712, 0.705, 0.705, 0.715, 0.708 /)
+    double precision, parameter, dimension(6) :: rsw_litho = (/ 0.720, 0.718, 0.710, 0.705, 0.718, 0.708 /)
     !                                                         => adjust values to fit modern oceanic ratio
     double precision, parameter :: rbas = rsw_litho(BASALT_LITHO_NUM) ! basalt Sr ratio
     double precision, parameter :: rcw = rsw_litho(size(rsw_litho)) ! carbonates Sr ratio (=> last lithology!)
     !        Note: Sr content in silicates defined earlier in the file
     !
     !    * Sulfide content of rocks (mole of Sulfides, - 1/2 FeS2, per m3 of rocks)
-    double precision, parameter, dimension(*):: Sulf_rock = 0.130147*OC_rock
+    double precision, parameter, dimension(6):: Sulf_rock = 0.130147*OC_rock
     !                                             S:C ratio ^^^^^^^^
 
 

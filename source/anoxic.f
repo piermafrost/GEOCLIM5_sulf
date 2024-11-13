@@ -1,4 +1,4 @@
-    subroutine anoxic(t)
+    subroutine anoxic
 !   ********************
     use constante, only: cp_oxic, cp_anoxic
 !   C/P molar ratio: cp_oxic = 200 , cp_anoxic = 4000 (traditionnaly)

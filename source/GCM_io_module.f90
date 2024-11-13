@@ -14,102 +14,181 @@ module GCM_io_module
     subroutine load_climatology(fID)
 
         use netcdf
+        use io_module, only: UNDEFINED_VALUE_CHAR
+        use read_oceanic_temperature_mod, only: read_oceanic_temperature
 
         include 'combine_foam.inc'
 
+        integer, parameter:: paramspace_size = nclimber*len_p1*len_p2*len_p3*len_p4*len_p5
+
         integer, intent(in):: fID
         character(len=fmaxlen), dimension(2):: area_file
-        character(len=fmaxlen), dimension(nclimber):: climo_file, gmst_climo_file
+        character(len=fmaxlen), dimension(paramspace_size):: climo_file, gmst_climo_file
         character(len=vmaxlen), dimension(2):: area_x_varname, area_y_varname, area_varname
         character(len=vmaxlen):: x_varname, y_varname, temp_varname, runf_varname, var_units, vname
         character(len=vmaxlen):: gmst_x_varname, gmst_y_varname, glob_temp_varname
         double precision:: fillvalue
 
-        double precision, dimension(2+2*nclimber, nlon):: all_x
-        double precision, dimension(2+2*nclimber, nlat):: all_y
-        double precision, dimension(nlon, nlat):: totarea2D, landarea2D
-        double precision, dimension(nclimber, nlon, nlat):: temperature2D, runoff2D, glob_temperature
-        integer:: ierr, nax
+        integer, dimension(paramspace_size, 6):: paramspace_filling_order
+
+        double precision, dimension(2+2*paramspace_size, nlon):: all_x
+        double precision, dimension(2+2*paramspace_size, nlat):: all_y
+        double precision, dimension(npixel, nclimber, len_p1, len_p2, len_p3, len_p4, len_p5):: glob_temperature
+        integer:: ierr, nax, i1, i2, i3, i4, i5, red_pspace_size
 
 
         print *
         print *
-        print *, 'Read GCM conditions file and load land inputs from GCM climatology files'
-        print *, '------------------------------------------------------------------------'
+        print *, 'Read GCM conditions file and load land inputs from GCM climatology files + oceanic temperature from ascii file'
+        print *, '--------------------------------------------------------------------------------------------------------------'
 
         ! get netCDF file info
+        ! --------------------
         call read_GCM_condition(fID, &
-        !                       <><><><><>
-                                co2climber, &
-        !                       <><><><><>
-                                area_file, area_x_varname, area_y_varname, area_varname, &
+        !                       <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+                                co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5, &
+                                red_pspace_size, paramspace_filling_order, &
+        !                       <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+                                area_file(1), area_x_varname(1), area_y_varname(1), area_varname(1), &
+                                area_file(2), area_x_varname(2), area_y_varname(2), area_varname(2), &
                                 climo_file, x_varname, y_varname, temp_varname, runf_varname, &
                                 gmst_climo_file, gmst_x_varname, gmst_y_varname, glob_temp_varname)
 
+        ! Units conversion: CO2: ppmv -> PAL
+        co2climber = co2climber/280.
+
 
         ! get total area
+        ! --------------
         call load_variable('area', area_varname(1), area_x_varname(1), area_y_varname(1), &
-                           single_input_file=area_file(1), varout2D=totarea2D, x=all_x(1,:), y=all_y(1,:), &
+                           !                                        ,,,,,,,,,
+                           single_input_file=area_file(1), varout1D=areaEarth, x=all_x(1,:), y=all_y(1,:), &
+                           !                                        ^^^^^^^^^
                            fill_missing=.true.)
 
         ! get land fraction/area
+        ! ----------------------
         call load_variable('landarea', area_varname(2), area_x_varname(2), area_y_varname(2), &
-                           single_input_file=area_file(2), varout2D=landarea2D, x=all_x(2,:), y=all_y(2,:), &
-                           totarea=totarea2D, fill_missing=.true.)
+                           !                                        ,,,,,,,,,,,
+                           single_input_file=area_file(2), varout1D=areaclimber, x=all_x(2,:), y=all_y(2,:), &
+                           !                                        ^^^^^^^^^^^
+                           totarea=areaEarth, fill_missing=.true.)
 
         ! get temperature
+        ! ---------------
         call load_variable('temperature', temp_varname, x_varname, y_varname, &
-                           multiple_input_file=climo_file, varout3D=temperature2D, &
-                           xvec=all_x(3:2+nclimber,:), yvec=all_y(3:2+nclimber,:), &
-                           landarea=landarea2D, fill_missing=.false., fillval_handling_option=ERROR_HANDLING_OPTION(2))
+                           !                                                           ,,,,,,,,,,,
+                           multiple_input_file=climo_file(1:red_pspace_size), varout7D=Tairclimber, &
+                           !                                                           ^^^^^^^^^^^
+                           xvec=all_x(3:2+red_pspace_size,:), yvec=all_y(3:2+red_pspace_size,:), &
+                           landarea=areaclimber, paramspace_filling_order=paramspace_filling_order, &
+                           fill_missing=.false., fillval_handling_option=ERROR_HANDLING_OPTION(2))
         ! note: ERROR_HANDLING_OPTION(2) tells the code what to do if it found missing-value where area > 0
 
         ! get runoff
+        ! ----------
         call load_variable('runoff', runf_varname, x_varname, y_varname, &
-                           multiple_input_file=climo_file, varout3D=runoff2D, &
-                           landarea=landarea2D, fill_missing=.false., fillval_handling_option=ERROR_HANDLING_OPTION(2))
+                           !                                                           ,,,,,,,,,,
+                           multiple_input_file=climo_file(1:red_pspace_size), varout7D=Runclimber, &
+                           !                                                           ^^^^^^^^^^
+                           landarea=areaclimber, paramspace_filling_order=paramspace_filling_order, &
+                           fill_missing=.false., fillval_handling_option=ERROR_HANDLING_OPTION(2))
 
         ! get optional global temperature
-        if (glob_temp_varname /= '-') then
+        ! -------------------------------
+        if (glob_temp_varname /= UNDEFINED_VALUE_CHAR) then
             call load_variable('temperature', glob_temp_varname, gmst_x_varname, gmst_y_varname, &
-                            multiple_input_file=gmst_climo_file, varout3D=glob_temperature, &
-                            xvec=all_x(3+nclimber:2+2*nclimber, :), yvec=all_y(3+nclimber:2+2*nclimber, :), &
-                            fill_missing=.true.)
+                               multiple_input_file=gmst_climo_file(1:red_pspace_size), varout7D=glob_temperature, &
+                               xvec=all_x(3+red_pspace_size:2+2*red_pspace_size, :), &
+                               yvec=all_y(3+red_pspace_size:2+2*red_pspace_size, :), &
+                               fill_missing=.true., paramspace_filling_order=paramspace_filling_order)
             ! number of axis to check
-            nax = 2+2*nclimber
+            nax = 2+2*red_pspace_size
         else
             ! number of axis to check
-            nax = 2+nclimber
+            nax = 2+red_pspace_size
         end if
 
-
+        ! Check that all axis are the same
+        ! --------------------------------
         call check_axis(all_x(1:nax,:), all_y(1:nax,:), ERROR_HANDLING_OPTION(1))
         ! note: ERROR_HANDLING_OPTION(1) tells the code what to do if it find axis mismatch
 
 
+        ! Get oceanic temperature (from ascii file #32)
+        ! ---------------------------------------------
+        !                                 ,,,,,,,,,,,
+        call read_oceanic_temperature(32, Toceclimber, co2_axis=co2climber, order=paramspace_filling_order, ndata=red_pspace_size)
+        !                                 ^^^^^^^^^^^
 
-        !<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>!
-        !       Put the loaded variables in GEOCLIM global variables       !
-        !
+
+        ! Reference axis (GEOCLIM global variables)
+        ! =========================================
+
         ref_x_axis = all_x(1,:)
         ref_y_axis = all_y(1,:)
-        ! unravel 2D-arrays in 1D-array, the first dimension (x) begin the most rapidly varying => "natural" order
-        areaEarth   = reshape(totarea2D,  shape=(/npixel/))
-        areaclimber = reshape(landarea2D, shape=(/npixel/))
-        !    Transpose CO2 axis, from 1st dimension to last dimension --vvvvvvvvvvvvv
-        Tairclimber = reshape(temperature2D, shape=(/npixel,nclimber/), order=(/2,1/))
-        Runclimber  = reshape(runoff2D,      shape=(/npixel,nclimber/), order=(/2,1/))
-        ! Optional: Compute GMST
-        if (glob_temp_varname /= '-') then
-            totarea = sum(totarea2D)
-            do k=1,nclimber
-                GMSTclimber(k) = sum(glob_temperature(k,:,:)*totarea2D) / totarea
-            end do
-        else
-            GMSTclimber = -1d99 ! "internal" missing-value -> will be replaced by "output" missing-value
+
+
+        ! Fill last hyperslabs of climate arrays for climatic parameters with periodic ranges
+        ! ===================================================================================
+
+        if (p1_period /= 0d0) then
+            Tairclimber(:,:,len_p1,:,:,:,:) = Tairclimber(:,:,1,:,:,:,:)
+            Runclimber( :,:,len_p1,:,:,:,:) = Runclimber( :,:,1,:,:,:,:)
+            Toceclimber(:,:,len_p1,:,:,:,:) = Toceclimber(:,:,1,:,:,:,:)
+            if (glob_temp_varname/=UNDEFINED_VALUE_CHAR) glob_temperature(:,:,len_p1,:,:,:,:) = glob_temperature(:,:,1,:,:,:,:)
         end if
-        !                                                                  !
-        !<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>!
+        if (p2_period /= 0d0) then
+            Tairclimber(:,:,:,len_p2,:,:,:) = Tairclimber(:,:,:,1,:,:,:)
+            Runclimber( :,:,:,len_p2,:,:,:) = Runclimber( :,:,:,1,:,:,:)
+            Toceclimber(:,:,:,len_p2,:,:,:) = Toceclimber(:,:,:,1,:,:,:)
+            if (glob_temp_varname/=UNDEFINED_VALUE_CHAR) glob_temperature(:,:,:,len_p2,:,:,:) = glob_temperature(:,:,:,1,:,:,:)
+        end if
+        if (p3_period /= 0d0) then
+            Tairclimber(:,:,:,:,len_p3,:,:) = Tairclimber(:,:,:,:,1,:,:)
+            Runclimber( :,:,:,:,len_p3,:,:) = Runclimber( :,:,:,:,1,:,:)
+            Toceclimber(:,:,:,:,len_p3,:,:) = Toceclimber(:,:,:,:,1,:,:)
+            if (glob_temp_varname/=UNDEFINED_VALUE_CHAR) glob_temperature(:,:,:,:,len_p3,:,:) = glob_temperature(:,:,:,:,1,:,:)
+        end if
+        if (p4_period /= 0d0) then
+            Tairclimber(:,:,:,:,:,len_p4,:) = Tairclimber(:,:,:,:,:,1,:)
+            Runclimber( :,:,:,:,:,len_p4,:) = Runclimber( :,:,:,:,:,1,:)
+            Toceclimber(:,:,:,:,:,len_p4,:) = Toceclimber(:,:,:,:,:,1,:)
+            if (glob_temp_varname/=UNDEFINED_VALUE_CHAR) glob_temperature(:,:,:,:,:,len_p4,:) = glob_temperature(:,:,:,:,:,1,:)
+        end if
+        if (p5_period /= 0d0) then
+            Tairclimber(:,:,:,:,:,:,len_p5) = Tairclimber(:,:,:,:,:,:,1)
+            Runclimber( :,:,:,:,:,:,len_p5) = Runclimber( :,:,:,:,:,:,1)
+            Toceclimber(:,:,:,:,:,:,len_p5) = Toceclimber(:,:,:,:,:,:,1)
+            if (glob_temp_varname/=UNDEFINED_VALUE_CHAR) glob_temperature(:,:,:,:,:,:,len_p5) = glob_temperature(:,:,:,:,:,:,1)
+        end if
+
+
+        ! Compute GMST (GEOCLIM global variable)
+        ! ======================================
+
+        if (glob_temp_varname == UNDEFINED_VALUE_CHAR) then
+            !,,,,,,,,,,
+            GMSTclimber = -1d99 ! "internal" missing-value -> will be replaced by "output" missing-value
+            !^^^^^^^^^^
+        else
+            totarea = sum(areaEarth)
+            do i5 = 1,len_p5
+                do i4 = 1,len_p4
+                    do i3 = 1,len_p3
+                        do i2 = 1,len_p2
+                            do i1 = 1,len_p1
+                                do k=1,nclimber
+                                    !,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+                                    GMSTclimber(k,i1,i2,i3,i4,i5) = sum(glob_temperature(:,k,i1,i2,i3,i4,i5)*areaEarth) / totarea
+                                    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                end do
+                            end do
+                        end do
+                    end do
+                end do
+            end do
+        end if
 
 
     end subroutine
@@ -119,116 +198,181 @@ module GCM_io_module
 
 
     subroutine read_GCM_condition(fID, &
-                                  CO2_levels, &
-                                  area_file, area_x_varname, area_y_varname, area_varname, &
-                                  climo_file, x_varname, y_varname, temp_varname, runf_varname, &
-                                  gmst_climo_file, gmst_x_varname, gmst_y_varname, glob_temp_varname)
+                                  CO2_levels, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5, &
+                                  red_pspace_size, paramspace_filling_order, &
+                                  area_file, area_x_dim_name, area_y_dim_name, area_var_name, &
+                                  landarea_file, landarea_x_dim_name, landarea_y_dim_name, landarea_var_name, &
+                                  land_list_file, land_x_dim_name, land_y_dim_name, land_temp_var_name, runoff_var_name, &
+                                  glob_list_file, glob_x_dim_name, glob_y_dim_name, glob_temp_var_name)
 
-        use utils, only: add_path, read_comment
+        use io_module, only: check_namelist_def, UNDEFINED_VALUE_CHAR, UNDEFINED_VALUE_DBLE
+        use climatic_parameters, only: retrieve_clim_param_space
+        use utils, only: add_path
+
+        include 'shape.inc'
+        integer, parameter:: paramspace_size = nclimber*len_p1*len_p2*len_p3*len_p4*len_p5
 
         integer, intent(in):: fID
-        double precision, dimension(:), intent(out):: CO2_levels
-        character(len=fmaxlen), dimension(2), intent(out):: area_file
-        character(len=vmaxlen), dimension(2), intent(out):: area_x_varname, area_y_varname, area_varname
-        character(len=fmaxlen), dimension(:), intent(out):: climo_file, gmst_climo_file
-        character(len=vmaxlen), intent(out):: x_varname, y_varname, temp_varname, runf_varname
-        character(len=vmaxlen), intent(out):: gmst_x_varname, gmst_y_varname, glob_temp_varname
-        character(len=50):: tag
+        double precision, intent(out):: CO2_levels(nclimber), clim_param_1(len_p1), clim_param_2(len_p2), clim_param_3(len_p3), &
+                                        clim_param_4(len_p4), clim_param_5(len_p5)
+        integer, intent(out):: red_pspace_size
+        integer, dimension(paramspace_size, 6), intent(out):: paramspace_filling_order
+        character(len=fmaxlen), intent(out):: area_file, landarea_file
+        character(len=vmaxlen), intent(out):: area_x_dim_name, area_y_dim_name, area_var_name, &
+                                              landarea_x_dim_name, landarea_y_dim_name, landarea_var_name
+        character(len=fmaxlen), dimension(paramspace_size), intent(out):: land_list_file, glob_list_file
+        character(len=vmaxlen), intent(out):: land_x_dim_name, land_y_dim_name, land_temp_var_name, runoff_var_name
+        character(len=vmaxlen), intent(out):: glob_x_dim_name, glob_y_dim_name, glob_temp_var_name
+        double precision, dimension(paramspace_size,6):: all_climparam
+        logical, dimension(nclimber,len_p1,len_p2,len_p3,len_p4,len_p5):: filled_space
+        integer:: k, n_undef, n_def, alenp1, alenp2, alenp3, alenp4, alenp5
 
-        integer:: nlevels
-        integer:: k
+        ! Namelist declaration
+        namelist /CLIM_PARAMS/    all_climparam
+        namelist /AREA_INFO/      area_file, area_x_dim_name, area_y_dim_name, area_var_name
+        namelist /LAND_AREA_INFO/ landarea_file, landarea_x_dim_name, landarea_y_dim_name, landarea_var_name
+        namelist /LAND_CLIM_INFO/ land_x_dim_name, land_y_dim_name, land_temp_var_name, runoff_var_name, land_list_file
+        namelist /GLOB_CLIM_INFO/ glob_x_dim_name, glob_y_dim_name, glob_temp_var_name, glob_list_file
 
-        nlevels = size(CO2_levels)
+        ! Default values of namelist variables
+        all_climparam       = UNDEFINED_VALUE_DBLE
+        area_file           = UNDEFINED_VALUE_CHAR
+        area_x_dim_name     = UNDEFINED_VALUE_CHAR
+        area_y_dim_name     = UNDEFINED_VALUE_CHAR
+        area_var_name       = UNDEFINED_VALUE_CHAR
+        landarea_file       = UNDEFINED_VALUE_CHAR
+        landarea_x_dim_name = UNDEFINED_VALUE_CHAR
+        landarea_y_dim_name = UNDEFINED_VALUE_CHAR
+        landarea_var_name   = UNDEFINED_VALUE_CHAR
+        land_x_dim_name     = UNDEFINED_VALUE_CHAR
+        land_y_dim_name     = UNDEFINED_VALUE_CHAR
+        land_temp_var_name  = UNDEFINED_VALUE_CHAR
+        runoff_var_name     = UNDEFINED_VALUE_CHAR
+        land_list_file      = UNDEFINED_VALUE_CHAR
+        glob_x_dim_name     = UNDEFINED_VALUE_CHAR
+        glob_y_dim_name     = UNDEFINED_VALUE_CHAR
+        glob_temp_var_name  = UNDEFINED_VALUE_CHAR
+        glob_list_file      = UNDEFINED_VALUE_CHAR
 
-        ! Get CO2 values
-        call read_comment(fID)
-        read(unit=fID, fmt=*) CO2_levels
 
-        ! Get area and landfrac info
-        do k = 1,2
-            call read_comment(fID)
-            read(unit=fID, fmt=*) area_file(k), area_x_varname(k), area_y_varname(k), area_varname(k)
-            call add_path(area_file(k))
-        end do
+        ! CO2 and climatic parameters
+        ! ---------------------------
 
-        ! Get climatology variables names
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') x_varname 
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') y_varname 
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') temp_varname 
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') runf_varname 
+        ! Read CO2 and climatic parameters values
+        !<><><><><><><><><><><><><><><>!
+        read(unit=fID, nml=CLIM_PARAMS)
+        !<><><><><><><><><><><><><><><>!
 
-        ! Get climatology file paths
-        call read_comment(fID)
-        read(unit=fID, fmt=*) tag
-        if (tag /= '<<--START-->>') then
+        ! Get individual vectors of CO2 and climatic parameter, and the order in which the whole parameter space if filled 
+        call retrieve_clim_param_space(all_climparam, &
+                                       CO2_levels, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5, &
+                                       alenp1, alenp2, alenp3, alenp4, alenp5, &
+                                       paramspace_filling_order, is_paramspace_filled=filled_space)
+        ! "actual" parameter space size (removing 1 value for all periodic ranges)
+        red_pspace_size = nclimber*alenp1*alenp2*alenp3*alenp4*alenp5
+
+        ! Check that enough parameter combinations were read (<=> no undefined values in "all_climparam" array)
+        n_undef = count(all_climparam(1:red_pspace_size, 1:1+nclimparam) == UNDEFINED_VALUE_DBLE)
+        if (n_undef > 0) then
             print *
-            print *, 'Error: Expected "START" tag not found while reading GCM output file names'
+            print *, 'Error: not enough values of CO2 and climatic parameters were given in namelist "CLIM_PARAMS"'
+            print *, 'in GCM configuration file'
+            print *, n_undef, ' entries of CO2/climatic parameters are missing out of ', red_pspace_size
             stop
         end if
-        !
-        do k = 1,nlevels
-            call read_comment(fID)
-            read(unit=fID, fmt=*) climo_file(k)
-            call add_path(climo_file(k))
-        end do
-        !
-        call read_comment(fID)
-        read(unit=fID, fmt=*) tag
-        if (tag /= '<<--STOP-->>') then
+
+        ! Check that parameter space is filled
+        n_def = count(filled_space(1:nclimber, 1:alenp1, 1:alenp2, 1:alenp3, 1:alenp4, 1:alenp5))
+        if (n_def /= red_pspace_size) then
             print *
-            print *, 'Error: Expected "STOP" tag not found while reading GCM output file names'
-            print *, '       => number of input GCM files greater than size of CO2 axis'
+            print *, 'ERROR: underfilled parameter space (ie, CO2 and climatic parameters)'
+            print *, 'The expected number of parameter combinations was loaded, which means there are duplicated combinations'
+            print *, 'Filled parameter combinations: ', n_def, '/', red_pspace_size
             stop
         end if
 
-        ! Get global temperature climatology variables names
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') gmst_x_varname 
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') gmst_y_varname 
-        call read_comment(fID)
-        read(unit=fID, fmt='(A)') glob_temp_varname 
 
-        if (glob_temp_varname /= '-') then
+        ! Area / land area / land climatology / global temperature
+        ! --------------------------------------------------------
 
-            ! Get global temperature climatology file paths
-            call read_comment(fID)
-            read(unit=fID, fmt=*) tag
-            if (tag /= '<<--START-->>') then
-                print *
-                print *, 'Error: Expected "START" tag not found while reading GCM output file names for GMST'
-                stop
-            end if
-            call read_comment(fID)
-            read(unit=fID, fmt=*) tag
-            if (tag == '<<--STOP-->>') then ! No file specified => keep same as "main" climatology
-                gmst_x_varname = x_varname
-                gmst_y_varname = y_varname
-                gmst_climo_file = climo_file
+        !<><><><><><><><><><><><><><>!
+        read(unit=fID, nml=AREA_INFO)
+        !<><><><><><><><><><><><><><>!
+        call check_namelist_def('Error: "area_file" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=area_file)
+        call check_namelist_def('Error: "area_x_dim_name" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=area_x_dim_name)
+        call check_namelist_def('Error: "area_y_dim_name" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=area_y_dim_name)
+        call check_namelist_def('Error: "area_var_name" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=area_var_name)
+        call add_path(area_file)
+
+        !<><><><><><><><><><><><><><><><>!
+        read(unit=fID, nml=LAND_AREA_INFO)
+        !<><><><><><><><><><><><><><><><>!
+        call check_namelist_def('Error: "landarea_file" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=landarea_file)
+        call check_namelist_def('Error: "landarea_x_dim_name" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=landarea_x_dim_name)
+        call check_namelist_def('Error: "landarea_y_dim_name" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=landarea_y_dim_name)
+        call check_namelist_def('Error: "landarea_var_name" not defined in "AREA_INFO" namelist of GCM input config file', &
+                                char_var=landarea_var_name)
+        call add_path(landarea_file)
+
+        !<><><><><><><><><><><><><><><><>!
+        read(unit=fID, nml=LAND_CLIM_INFO)
+        !<><><><><><><><><><><><><><><><>!
+        call check_namelist_def('Error: "land_x_dim_name" not defined in "LAND_CLIM_INFO" namelist of GCM input config file', &
+                                char_var=land_x_dim_name)
+        call check_namelist_def('Error: "land_y_dim_name" not defined in "LAND_CLIM_INFO" namelist of GCM input config file', &
+                                char_var=land_y_dim_name)
+        call check_namelist_def('Error: "land_temp_var_name" not defined in "LAND_CLIM_INFO" namelist of GCM input config file', &
+                                char_var=land_temp_var_name)
+        call check_namelist_def('Error: "runoff_var_name" not defined in "LAND_CLIM_INFO" namelist of GCM input config file', &
+                                char_var=runoff_var_name)
+        n_undef = count(land_list_file(1:red_pspace_size) == UNDEFINED_VALUE_CHAR)
+        if (n_undef > 0) then
+            print *
+            print *, 'Error: not enough file names were given in "LAND_CLIM_INFO" namelist (variable "land_list_file") of GCM'// &
+                     'input config file'
+            print *, n_undef, ' entries missing out of ', red_pspace_size
+            stop
+        end if
+        do k = 1, red_pspace_size
+            call add_path(land_list_file(k))
+        end do
+
+        !<><><><><><><><><><><><><><><><>!
+        read(unit=fID, nml=GLOB_CLIM_INFO)
+        !<><><><><><><><><><><><><><><><>!
+        if (glob_temp_var_name == '') then
+            glob_temp_var_name = UNDEFINED_VALUE_CHAR
+        elseif (glob_temp_var_name /= UNDEFINED_VALUE_CHAR) then
+            if (glob_list_file(1) == '' .or. glob_list_file(1) == UNDEFINED_VALUE_CHAR) then
+                glob_x_dim_name = land_x_dim_name
+                glob_y_dim_name = land_y_dim_name
+                glob_list_file  = land_list_file
             else
-                backspace(unit=fID)
-                !
-                do k = 1,nlevels
-                    call read_comment(fID)
-                    read(unit=fID, fmt=*) gmst_climo_file(k)
-                    call add_path(gmst_climo_file(k))
-                end do
-                !
-                call read_comment(fID)
-                read(unit=fID, fmt=*) tag
-                if (tag /= '<<--STOP-->>') then
+                call check_namelist_def('Error: "glob_x_dim_name" not defined in "GLOB_CLIM_INFO" namelist of GCM input file', &
+                                        char_var=glob_x_dim_name)
+                call check_namelist_def('Error: "glob_y_dim_name" not defined in "GLOB_CLIM_INFO" namelist of GCM input file', &
+                                        char_var=glob_y_dim_name)
+                n_undef = count(glob_list_file(1:red_pspace_size) == UNDEFINED_VALUE_CHAR)
+                if (n_undef > 0) then
                     print *
-                    print *, 'Error: Expected "STOP" tag not found while reading GCM output file names for GMST'
-                    print *, '       => number of input GCM files greater than size of CO2 axis'
+                    print *, 'Error: not enough file names were given in "GLOB_CLIM_INFO" namelist (variable "GLOB_list_file")'// &
+                             ' of GCM input config file'
+                    print *, n_undef, ' entries missing out of ', red_pspace_size
                     stop
                 end if
+                do k = 1,red_pspace_size
+                    call add_path(glob_list_file(k))
+                end do
             end if
-
         end if
+
 
     end subroutine
 
@@ -236,33 +380,38 @@ module GCM_io_module
     !======================================================================!
 
 
-    subroutine load_variable(internal_varname, varname, x_varname, y_varname,         &
-                             single_input_file, multiple_input_file,                  &
-                             varout2D, varout3D, x, y, xvec, yvec, landarea, totarea, &
-                             fill_missing, fillval_handling_option                    )
+    subroutine load_variable(internal_varname, varname, x_varname, y_varname,               &
+                             single_input_file, multiple_input_file,                        &
+                             varout1D, varout7D, x, y, xvec, yvec, landarea, totarea,       &
+                             paramspace_filling_order, fill_missing, fillval_handling_option)
         use netcdf
         include 'shape.inc'
+        integer, parameter:: npixel = nlon*nlat
+        integer, parameter:: paramspace_size = nclimber*len_p1*len_p2*len_p3*len_p4*len_p5
 
         character(len=*), intent(in):: internal_varname
         character(len=vmaxlen), intent(in):: varname, x_varname, y_varname
         character(len=fmaxlen), intent(in), optional:: single_input_file
-        character(len=fmaxlen), dimension(nclimber), intent(in), optional:: multiple_input_file
-        double precision, dimension(nlon,nlat), intent(inout), optional:: landarea
-        double precision, dimension(nlon,nlat), intent(in), optional:: totarea
-        double precision, dimension(nlon,nlat), intent(out), optional:: varout2D
-        double precision, dimension(nclimber, nlon,nlat), intent(out), optional:: varout3D
-        double precision, intent(out), optional:: x(nlon), y(nlat), xvec(nclimber,nlon), yvec(nclimber,nlat)
+        character(len=fmaxlen), dimension(:), intent(in), optional:: multiple_input_file
+        double precision, dimension(npixel), intent(inout), optional:: landarea
+        double precision, dimension(npixel), intent(in), optional:: totarea
+        double precision, dimension(npixel), intent(out), optional:: varout1D
+        double precision, dimension(npixel, nclimber, len_p1, len_p2, len_p3, len_p4, len_p5), intent(out), optional:: varout7D
+        double precision, intent(out), optional:: x(nlon), y(nlat), xvec(:,:), yvec(:,:)
+        integer, dimension(paramspace_size, 6), intent(in), optional:: paramspace_filling_order
         integer, intent(in), optional:: fillval_handling_option
         logical, intent(in), optional:: fill_missing
 
-        double precision, dimension(nlon,nlat):: dummyvar2D
-        double precision, dimension(nclimber,nlon,nlat):: dummyvar3D
+        character(len=fmaxlen):: loc_input_file
+        character(len=8):: load_status
+        double precision, dimension(npixel):: dummyvar, dummyvarout
+        double precision:: loc_x(nlon), loc_y(nlat)
         double precision:: fillvalue
         character(len=vmaxlen):: var_units, vname
         character(len=1):: oper
-        logical:: loc_fill_missing
-        integer:: ierr, check, loc_fillval_handling_option
-        integer:: k, n, noperations
+        logical:: loc_fill_missing, axis_is_present
+        integer:: ierr, loc_fillval_handling_option
+        integer:: i1, i2, i3, i4, i5, i6, k, n, noperations, n_input
 
 
         ! How to handle missing-value
@@ -280,22 +429,50 @@ module GCM_io_module
         end if
 
 
-        ! Check consistency between 2D variable or 3D (ie, multiple CO2 levels) variable
+        ! Check consistency between 1D variable or 7D (ie, multiple CO2 levels/climatic parameters) variable
         ! => the right "input_file" and "var" arguments must be given.
-        check = -11
-        if (present(varout2D)) then
-            check = check + 1
-        end if
-        if (present(single_input_file)) then
-            check = check + 10
-        end if
-        if (present(varout3D)) then
-            check = check + 2
-        end if
-        if (present(multiple_input_file)) then
-            check = check + 9
-        end if
-        if (check /= 0) then
+        !
+        if (present(varout1D) .and. present(single_input_file) .and. (.not. present(varout7D)) .and. &
+            (.not. present(multiple_input_file)) .and. (.not. present(paramspace_filling_order))) then
+            load_status = 'single  '
+            n_input = 1
+            axis_is_present = (present(x) .and. present(y))
+        !
+        elseif (present(varout7D) .and. present(multiple_input_file) .and. present(paramspace_filling_order) .and. &
+               (.not. present(varout1D)) .and. (.not. present(single_input_file))) then
+            load_status = 'multiple'
+            n_input = size(multiple_input_file)
+            if (present(xvec) .and. present(yvec)) then
+                axis_is_present = .true.
+                if (size(xvec,1) /= n_input) then
+                    print *
+                    print *, 'INTERNAL ERROR: size of "xvec" variable passed to subroutine "load_variable" in module'
+                    print *, '"GMC_io_module" is inconsistent with number of input file ("multiple_input_file")'
+                    stop
+                end if
+                if (size(yvec,1) /= n_input) then
+                    print *
+                    print *, 'INTERNAL ERROR: size of "yvec" variable passed to subroutine "load_variable" in module'
+                    print *, '"GMC_io_module" is inconsistent with number of input file ("multiple_input_file")'
+                    stop
+                end if
+                if (size(xvec,2) /= nlon) then
+                    print *
+                    print *, 'INTERNAL ERROR: length of 2nd dimension of "xvec" variable passed to subroutine "load_variable"'
+                    print *, 'in module "GMC_io_module" inconsistent with length of x axis'
+                    stop
+                end if
+                if (size(yvec,2) /= nlat) then
+                    print *
+                    print *, 'INTERNAL ERROR: length of 2nd dimension of "yvec" variable passed to subroutine "load_variable"'
+                    print *, 'in module "GMC_io_module" inconsistent with length of y axis'
+                    stop
+                end if
+            else
+                axis_is_present = .false.
+            end if
+        !
+        else
             print *
             print *, 'INTERNAL ERROR: inconsistent set of optional variable passed to the subroutine'
             print *, '"load_variable", in module "GCM_io_module"'
@@ -311,132 +488,130 @@ module GCM_io_module
         !        unit=335: list of mathematics operators (+ or -)
 
 
-        if (present(varout2D)) then
+        ! Loop on (potential) input files (1 per CO2/climatic parameters combination(
+        do k = 1,n_input
+
+            if (load_status == 'single  ') then
+                loc_input_file = single_input_file
+            else ! (load_status == multiple')
+                loc_input_file = multiple_input_file(k)
+            end if
+
 
             ! Initialization
-            varout2D = 0d0
+            dummyvarout = 0d0
 
             ! Loop to get variables and perform arithmetic operations:
             do n = 1,noperations
 
-                ! load current variable
+                ! load current variable name (expect one name per operation (addition, subtraction))
                 read(unit=334, fmt=*) vname
+
                 if (loc_fill_missing) then
                     ! load variable
-                    if (present(x) .and. present(y)) then
-                        call load_netcdf_dble2D(single_input_file, x_varname, y_varname, vname, dummyvar2D, &
-                                                x=x, y=y, varunits=var_units, fillval=fillvalue, fillval_iostat=ierr)
+                    if (axis_is_present) then
+                        call load_netcdf_dble_horiz(loc_input_file, x_varname, y_varname, vname, dummyvar, &
+                                                    x=loc_x, y=loc_y, varunits=var_units, fillval=fillvalue, fillval_iostat=ierr)
                     else
-                        call load_netcdf_dble2D(single_input_file, x_varname, y_varname, vname, dummyvar2D, &
-                                                varunits=var_units, fillval=fillvalue, fillval_iostat=ierr)
+                        call load_netcdf_dble_horiz(loc_input_file, x_varname, y_varname, vname, dummyvar, &
+                                                    varunits=var_units, fillval=fillvalue, fillval_iostat=ierr)
                     end if
+                    !
                     ! set var=0 on "missing" cells
-                    if (ierr==NF90_NOERR) where (dummyvar2D==fillvalue) dummyvar2D = 0d0
+                    if (ierr==NF90_NOERR) where (dummyvar==fillvalue) dummyvar = 0d0
+                    !
                     ! check variable units
                     if (present(totarea)) then
-                        call check_units(internal_varname, vname, dummyvar2D, var_units, totarea=totarea)
+                        call check_units(internal_varname, vname, dummyvar, var_units, totarea=totarea)
                     else
-                        call check_units(internal_varname, vname, dummyvar2D, var_units)
+                        call check_units(internal_varname, vname, dummyvar, var_units)
                     end if
+                    !
                 else
                     ! load variable
-                    if (present(x) .and. present(y)) then
-                        call load_netcdf_dble2D(single_input_file, x_varname, y_varname, vname, dummyvar2D, &
-                                                x=x, y=y, varunits=var_units, fillval=fillvalue)
+                    if (axis_is_present) then
+                        call load_netcdf_dble_horiz(loc_input_file, x_varname, y_varname, vname, dummyvar, &
+                                                    x=loc_x, y=loc_y, varunits=var_units, fillval=fillvalue)
                     else
-                        call load_netcdf_dble2D(single_input_file, x_varname, y_varname, vname, dummyvar2D, &
-                                                varunits=var_units, fillval=fillvalue)
+                        call load_netcdf_dble_horiz(loc_input_file, x_varname, y_varname, vname, dummyvar, &
+                                                    varunits=var_units, fillval=fillvalue)
                     end if
+                    !
                     ! check missingpoint
                     if (present(landarea)) then
-                        call check_missingpoints(vname, single_input_file, dummyvar2D, fillvalue, landarea, &
+                        call check_missingpoints(vname, loc_input_file, dummyvar, fillvalue, landarea, &
                                                  loc_fillval_handling_option)
                     end if
+                    !
                     ! check variable units
                     if (present(totarea)) then
-                        call check_units(internal_varname, vname, dummyvar2D, var_units, fillvalue=fillvalue, totarea=totarea)
+                        call check_units(internal_varname, vname, dummyvar, var_units, fillvalue=fillvalue, totarea=totarea)
                     else
-                        call check_units(internal_varname, vname, dummyvar2D, var_units, fillvalue=fillvalue)
+                        call check_units(internal_varname, vname, dummyvar, var_units, fillvalue=fillvalue)
                     end if
                 end if
 
                 ! perform arithmetic operation
                 read(unit=335, fmt=*) oper
                 select case (oper)
+                !
                     case ("+")
-                        varout2D = varout2D + dummyvar2D
-                    case ("-")
-                        varout2D = varout2D - dummyvar2D
-                end select
-
-            end do
-
-
-        else ! varout3D case => load var for each CO2 level
-
-            ! Initialization
-            varout3D = 0d0
-
-            ! Loop to get variables and perform arithmetic operations:
-            do n = 1,noperations
-
-                ! load current variable
-                read(unit=334, fmt=*) vname
-                do k = 1,nclimber
-                    if (loc_fill_missing) then
-                        ! load variable
-                        if (present(xvec) .and. present(yvec)) then
-                            call load_netcdf_dble2D(multiple_input_file(k), x_varname, y_varname, vname, dummyvar3D(k,:,:), &
-                                               x=xvec(k,:), y=yvec(k,:), varunits=var_units, fillval=fillvalue, fillval_iostat=ierr)
-                        else
-                            call load_netcdf_dble2D(multiple_input_file(k), x_varname, y_varname, vname, dummyvar3D(k,:,:), &
-                                                    varunits=var_units, fillval=fillvalue, fillval_iostat=ierr)
-                        end if
-                        ! set var=0 on "missing" cells
-                        if (ierr==NF90_NOERR) where (dummyvar3D(k,:,:)==fillvalue) dummyvar3D(k,:,:) = 0d0
-                        ! check variable units
-                        if (present(totarea)) then
-                            call check_units(internal_varname, vname, dummyvar3D(k,:,:), var_units, totarea=totarea)
-                        else
-                            call check_units(internal_varname, vname, dummyvar3D(k,:,:), var_units)
-                        end if
-                    else
-                        ! load variable
-                        if (present(xvec) .and. present(yvec)) then
-                            call load_netcdf_dble2D(multiple_input_file(k), x_varname, y_varname, vname, dummyvar3D(k,:,:), &
-                                                    x=xvec(k,:), y=yvec(k,:), varunits=var_units, fillval=fillvalue)
-                        else
-                            call load_netcdf_dble2D(multiple_input_file(k), x_varname, y_varname, vname, dummyvar3D(k,:,:), &
-                                                    varunits=var_units, fillval=fillvalue)
-                        end if
-                        ! check missingpoint
                         if (present(landarea)) then
-                            call check_missingpoints(vname, multiple_input_file(k), dummyvar3D(k,:,:), fillvalue, landarea, &
-                                                     loc_fillval_handling_option)
-                        end if
-                        ! check variable units
-                        if (present(totarea)) then
-                            call check_units(internal_varname, vname, dummyvar3D(k,:,:), var_units, fillvalue=fillvalue, &
-                                             totarea=totarea)
+                            where (landarea>0) dummyvarout = dummyvarout + dummyvar
                         else
-                            call check_units(internal_varname, vname, dummyvar3D(k,:,:), var_units, fillvalue=fillvalue)
+                            dummyvarout = dummyvarout + dummyvar
                         end if
-                    end if
-                end do
-
-                ! perform arithmetic operation
-                read(unit=335, fmt=*) oper
-                select case (oper)
-                    case ("+")
-                        varout3D = varout3D + dummyvar3D
+                !
                     case ("-")
-                        varout3D = varout3D - dummyvar3D
+                        if (present(landarea)) then
+                            where (landarea>0) dummyvarout = dummyvarout - dummyvar
+                        else
+                            dummyvarout = dummyvarout - dummyvar
+                        end if
+                !
                 end select
 
             end do
 
 
-        end if
+            ! put currently loaded variables in subroutine's output variable !
+            ! -------------------------------------------------------------- !
+
+            if (load_status == 'single  ') then
+
+                varout1D = dummyvarout
+
+                if (axis_is_present) then
+                    x = loc_x
+                    y = loc_y
+                end if
+
+            else !(load_status == 'multiple')
+
+                i1 = paramspace_filling_order(k,1)
+                i2 = paramspace_filling_order(k,2)
+                i3 = paramspace_filling_order(k,3)
+                i4 = paramspace_filling_order(k,4)
+                i5 = paramspace_filling_order(k,5)
+                i6 = paramspace_filling_order(k,6)
+
+                varout7D(:, i1, i2, i3, i4, i5, i6) = dummyvarout
+
+                if (axis_is_present) then
+                    xvec(k,:) = loc_x
+                    yvec(k,:) = loc_y
+                end if
+                
+            end if
+
+            ! -------------------------------------------------------------- !
+
+
+            ! rewind scratch files (they need to be re-loaded for each climatic parameters combination)
+            rewind(unit=334)
+            rewind(unit=335)
+
+        end do
 
 
         ! close scratch files
@@ -481,25 +656,26 @@ module GCM_io_module
     !======================================================================!
 
 
-    subroutine load_netcdf_dble2D(fname, x_varname, y_varname, varname, var, x, y, varunits, fillval, fillval_iostat)
+    subroutine load_netcdf_dble_horiz(fname, x_varname, y_varname, varname, var, x, y, varunits, fillval, fillval_iostat)
 
         use netcdf
+        use netcdf_io_module, only: nf90_check
+        include 'shape.inc'
+        integer, parameter:: npixel = nlon*nlat
+        integer, parameter:: nmax = max(nlon, nlat)
 
         character(len=*), intent(in):: fname, x_varname, y_varname, varname
-        double precision, dimension(:,:), intent(out):: var
-        double precision, dimension(:), intent(out), optional:: x, y
+        double precision, dimension(npixel), intent(out):: var
+        double precision, intent(out), optional:: x(nlon), y(nlat)
         character(len=*), intent(out), optional:: varunits
         double precision, intent(out), optional:: fillval
         integer, intent(out), optional:: fillval_iostat
         integer:: nx, ny, ndim, k, n
         integer:: ierr, fid, varid, xdimid, ydimid, shp_ix, shp_iy
-        integer, dimension(:), allocatable:: dimids, shp
+        integer, parameter:: ndim_max = 30 ! note: assume no more than 30 dimensions for a given variable
+        integer, dimension(ndim_max):: dimids, shp
         logical:: transp
-        double precision, dimension(:,:), allocatable:: loc_var
-
-        nx = size(var, 1)
-        ny = size(var, 2)
-        ! must also match the size of "x" and "y"
+        double precision, dimension(nmax,nmax):: loc_var
 
         ! open netCDF file
         ierr = nf90_open(fname, NF90_NOWRITE, fid)
@@ -525,11 +701,14 @@ module GCM_io_module
         ierr = nf90_inquire_variable(fid, varid, ndims=ndim)
         call nf90_check(ierr, 'Error while inquiring number of dim. of variable "'//trim(varname)//'" in file "'//trim(fname)//'"')
 
-        allocate(dimids(ndim))
-        allocate(shp(ndim))
+        if (ndim > ndim_max) then
+            print *, 'ERROR: too may dimensions in variable "'//trim(varname)//'" of file "'//trim(fname)//'"'
+            print *, 'Maximum supported number of dimensions is: ', ndim_max
+            stop
+        end if
 
         ! Get variable dimension IDs
-        ierr = nf90_inquire_variable(fid, varid, dimids=dimids)
+        ierr = nf90_inquire_variable(fid, varid, dimids=dimids(1:ndim))
         call nf90_check(ierr, 'Error while inquiring dimensions IDs of variable "'//trim(varname)//'" in file "'//trim(fname)//'"')
 
         ! Get variable shape (inquire length of all dimensions)
@@ -539,7 +718,7 @@ module GCM_io_module
         end do
 
         ! Check variable shape (must have exactly 2 non degenerated dimensions)
-        if (count(shp > 1) /= 2) then
+        if (count(shp(1:ndim) > 1) /= 2) then
             print *
             print *, 'Error: variable "'//trim(varname)//'" of file "'//trim(fname)// &
                      '" must have exactly 2 non-degenerated (ie, size-1) dimensions'
@@ -550,20 +729,20 @@ module GCM_io_module
                 k = k + 1
             end do
             shp_ix = k
+            nx = shp(k)
             k = k + 1
             do while (shp(k)==1)
                 k = k + 1
             end do
             shp_iy = k
+            ny = shp(k)
         end if
 
         ! Check that variable is defined on the given dimensions
         if (dimids(shp_ix)==xdimid .and. dimids(shp_iy)==ydimid) then
             transp = .false.
-            allocate(loc_var(nx,ny))
         elseif (dimids(shp_ix)==ydimid .and. dimids(shp_iy)==xdimid) then
             transp = .true.
-            allocate(loc_var(ny,nx))
         else
             print *
             print *
@@ -578,15 +757,13 @@ module GCM_io_module
             print *,                 'Variable "'//trim(varname)//'" of file "'//trim(fname)//'"'
             write(*, fmt='(A,I2,A)') '    Ignore ', ndim-2, ' degenerated (size-1) dimension(s).'
         end if
-        ! + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + !
-        ierr = nf90_get_var(fid, varid, loc_var)
+        ! >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< !
+        ierr = nf90_get_var(fid, varid, loc_var(1:nx,1:ny))
         call nf90_check(ierr, 'Error while getting variable "'//trim(varname)//'" of file "'//trim(fname)//'"')
-        ! + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + !
-        if (transp) then
-            var = transpose(loc_var)
-        else
-            var = loc_var
-        end if
+        ! >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< !
+        ! >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< !
+        var = geographic_ravelling(loc_var(1:nx,1:ny), transp=transp)
+        ! >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< >< !
 
         ! Get variable units (if asked)
         if (present(varunits)) then
@@ -611,11 +788,28 @@ module GCM_io_module
         ierr = nf90_close(fid)
         call nf90_check(ierr, 'Error while closing file '//trim(fname), kill=.false.)
 
-        deallocate(dimids)
-        deallocate(shp)
-        deallocate(loc_var)
-
     end subroutine
+
+
+    !======================================================================!
+
+
+    function geographic_ravelling(varin2D, transp)
+        include 'shape.inc'
+        integer, parameter:: npixel = nlon*nlat
+        double precision, dimension(:,:), intent(in):: varin2D
+        logical, intent(in):: transp
+        !
+        double precision, dimension(npixel):: geographic_ravelling
+        !
+        ! unravel 2D-arrays in 1D-array, the first dimension (x) begin the most rapidly varying => "natural" order
+        if (transp) then
+            geographic_ravelling = reshape(transpose(varin2D), shape=(/npixel/))
+        else
+            geographic_ravelling = reshape(varin2D, shape=(/npixel/))
+        end if
+        !
+    end function
 
 
     !======================================================================!
@@ -623,6 +817,7 @@ module GCM_io_module
 
     subroutine load_axis(fname, fid, axname, axdimid, ax)
         use netcdf
+        use netcdf_io_module, only: nf90_check
         character(len=*), intent(in):: fname, axname
         integer, intent(in):: fid
         integer, intent(out):: axdimid
@@ -682,9 +877,12 @@ module GCM_io_module
 
         use physical_units, only: units, area_units, fraction_units, temperature_units, runoff_units
 
+        include 'shape.inc'
+        integer, parameter:: npixel = nlon*nlat
+
         character(len=*), intent(in):: which_variable, varname, varunits
-        double precision, dimension(:,:), intent(inout):: var
-        double precision, dimension(:,:), intent(in), optional:: totarea
+        double precision, dimension(npixel), intent(inout):: var
+        double precision, dimension(npixel), intent(in), optional:: totarea
         double precision, intent(in), optional:: fillvalue
         integer, intent(in), optional:: error_handling
         type(units):: known_units
@@ -812,22 +1010,20 @@ module GCM_io_module
 
     subroutine check_missingpoints(varname, filename, var, fillvalue, landarea, error_handling)
 
+        include 'shape.inc'
+        integer, parameter:: npixel = nlon*nlat
+        !
         character(len=*), intent(in):: varname, filename
-        double precision, dimension(:,:), intent(in):: var
+        double precision, dimension(npixel), intent(in):: var
         double precision, intent(in):: fillvalue
-        double precision, dimension(:,:), intent(inout):: landarea
+        double precision, dimension(npixel), intent(inout):: landarea
         integer, intent(in):: error_handling
-        logical, dimension(:,:), allocatable:: errormask
-        double precision:: area_err, tot_landarea
+        logical, dimension(npixel):: errormask
+        double precision:: area_err
         integer:: nerr, answer
         logical:: loop
 
-        tot_landarea = sum(landarea)
-
-        allocate(errormask(size(landarea,1), size(landarea,2)))
-
         errormask = (landarea>0 .and. var==fillvalue)
-
         nerr = count(errormask)
         area_err = sum(landarea, mask=errormask)
 
@@ -839,7 +1035,7 @@ module GCM_io_module
                                     //trim(varname)//'" of file "'//trim(filename)//'"'
             write(*,'(A,I0,A,I0)') '     Number of problematic continent cells:  ', nerr, ' / ', count(landarea>0)
             write(*,'(A,E14.7)')   '     Total area of those cells (km2):        ', 1d-6*area_err
-            write(*,'(A,E14.7)')   '     Which is a fraction of total land area: ', area_err/tot_landarea
+            write(*,'(A,E14.7)')   '     Which is a fraction of total land area: ', area_err/sum(landarea)
 
             ! Error handling:
             select case (error_handling)
@@ -880,67 +1076,14 @@ module GCM_io_module
 
         end if
 
-        deallocate(errormask)
-
     end subroutine
 
 
     !======================================================================!
 
-
-    subroutine raise_axis_error(which_axis, nerr, axis_len, max_mismatch, error_handling)
-        character(len=1), intent(in):: which_axis
-        integer, intent(in):: nerr, axis_len
-        double precision, intent(in):: max_mismatch
-        integer, intent(in):: error_handling
-        integer:: answer
-        logical:: loop
-
-        print *
-        write(*,'(A)')         ' WARNING: found mismatch of '//which_axis//' axis between GCM input files.'
-        write(*,'(A,I0,A,I0)') '     Number of points concerned / axis length:  ', nerr, ' / ', axis_len
-        write(*,'(A,E14.7)')   '     Maximum mismatch found (in axis units):    ', max_mismatch
-
-        ! Error handling:
-        select case (error_handling)
-            case (-1) ! ask user interactively
-                print *
-                loop = .true.
-                do while (loop)
-                    loop = .false.
-                    print *, 'Enter one of the following options:'
-                    print *, '    0: abort the program'
-                    print *, '    2: ignore the issue and continue the execution'
-                    read *, answer
-                    select case (answer)
-                        case (0); stop
-                        case (2) ! do nothing
-                        case default; loop=.true.
-                    end select
-                end do
-
-            case (0) ! abort the program
-                stop
-
-            case (1) ! asked for automatic correction
-                print *
-                print *, 'Bad error handling option "1": cannot remove points with axis mismatch.'
-                stop
-
-            case (2) ! do nothing
-
-            case default
-                print *
-                print *, 'INTERNAL ERROR: illegal error handling option:', error_handling
-                stop
-
-        end select
-
-    end subroutine
-
-    !======================================================================!
 
     subroutine check_axis(all_x, all_y, error_handling)
+        use io_module, only: raise_axis_error
         double precision, dimension(:,:), intent(in):: all_x, all_y ! dim #1: files (temp, runoff, ...), dim #2: axis
         integer, intent(in):: error_handling
         double precision:: daxis, max_mismatch
@@ -966,7 +1109,7 @@ module GCM_io_module
         end do
         nerr = count(errormask)
         if (nerr > 0) then
-            call raise_axis_error('x', nerr, axlen, max_mismatch, error_handling)
+            call raise_axis_error('x', nerr, axlen, max_mismatch, error_handling, ref_axis_message='between GCM input files')
         end if
 
         deallocate(errormask)
@@ -988,7 +1131,7 @@ module GCM_io_module
         end do
         nerr = count(errormask)
         if (nerr > 0) then
-            call raise_axis_error('y', nerr, axlen, max_mismatch, error_handling)
+            call raise_axis_error('y', nerr, axlen, max_mismatch, error_handling, ref_axis_message='between GCM input files')
         end if
 
         deallocate(errormask)
@@ -996,31 +1139,6 @@ module GCM_io_module
     end subroutine
 
 
-    !======================================================================!
-
-
-    subroutine nf90_check(ierr, message, kill)
-
-        use netcdf
-        integer, intent(in):: ierr
-        character(len=*), intent(in):: message
-        logical, optional, intent(in):: kill
-        logical:: loc_kill
-
-        if (present(kill)) then
-            loc_kill = kill
-        else
-            loc_kill = .true.
-        end if
-
-        if (ierr/=NF90_NOERR) then
-            print *
-            print *, message
-            print *, nf90_strerror(ierr)
-            if (loc_kill) stop
-        end if
-
-    end subroutine
-
 
 end module
+

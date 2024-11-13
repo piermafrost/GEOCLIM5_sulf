@@ -128,7 +128,7 @@ integer:: k, i, j0, j                                                           
 end subroutine
 
 
-subroutine steady_state_inner_regolith(x, h,xs,temp,runoff,E, z,tau,MPtot,ktop, zfillvalue,taufillvalue, veget_factor, &
+subroutine steady_state_inner_regolith(x, h,xs,temp,runoff,E, z,tau,MPtot,ktop, veget_factor, &
                                        missingpoints)
 use dynsoil_empirical_laws, only: dissolution_constant
 
@@ -139,7 +139,6 @@ integer, parameter:: npxl=nlon*nlat
 double precision, dimension(nDSlev),      intent(in):: x                        !!
 double precision, dimension(nlitho,npxl), intent(in):: h, xs, E                 !!
 double precision, dimension(npxl),        intent(in):: temp, runoff             !!
-double precision,                         intent(in):: zfillvalue, taufillvalue !!
 double precision, dimension(npxl),        intent(in):: veget_factor             !!
 logical,          dimension(npxl),        intent(in):: missingpoints            !!
 !                                                                               !!
@@ -198,10 +197,6 @@ integer:: k, j, j0, i                                                           
           end if
         end do
         MPtot(i,j) = MPtot(i,j)  +  (x(ktop(i,j)) - xs(i,j)) * (h(i,j) + z(ktop(i,j),i,j))/2   +   xs(i,j)*h(i,j)
-
-        ! Fillvalue for x points higher than regolith surface
-        z(ktop(i,j)+1:nDSlev, i, j)   = zfillvalue
-        tau(ktop(i,j)+1:nDSlev, i, j) = taufillvalue
 
       end do
     end if

@@ -3,7 +3,7 @@ subroutine read_veget
     include 'combine_foam.inc'
     integer:: i_error
 
-    if (coupling_veget==1) then
+    if (coupling_veget) then
 
         icount_veget = icount_veget + 1
 

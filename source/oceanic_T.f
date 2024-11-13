@@ -1,24 +1,15 @@
     subroutine oceanic_T(time)
 !   +++++++++++++++++++++++++++++++
     use constante, only: PI_n_CO2_atm
-    use co2_interpolation, only: find_co2_interval
+    use multidimensional_interpolation, only: climate_interpolation
     implicit none
     include 'combine_foam.inc'
-    double precision:: xi
 
     ! Note: temp_box(nbasin) is the GMST (Global Mean Surface Temperature)
 
-    if (nclimber==1) then ! fixed CO2 mode
+    p = var(12,nbasin)/PI_n_CO2_atm ! CO2 level in PAL
 
-        temp_box = Toceclimber(:,1)
-
-    else ! CO2 interpolation
-
-        p=var(12,nbasin)/PI_n_CO2_atm
-
-        call find_co2_interval(co2climber, p, k1, k2, xi)
-        temp_box  =  (1-xi) * Toceclimber(:,k1)  +  xi * Toceclimber(:,k2)
-
-    end if
+    call climate_interpolation(co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5, &
+                               p, cpvec, boxtemp_array=Toceclimber, interp_boxtemp=temp_box                      )
 
     end

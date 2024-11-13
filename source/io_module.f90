@@ -1,182 +1,37 @@
 module io_module
 implicit none
 
+
+! Structure-type to store information about netCDF output variables.
+! ------------------------------------------------------------------
+! <><><><><><><><><><> !
+type netcdf_output_var
+    integer :: id
+    character(len=30) :: vartype
+    character(len=100) :: vname, units
+    character(len=500) :: long_name
+    integer :: ndim_tot               ! -> Total number of dimension of the output file (not of the variable!)
+    logical, dimension(16) :: def_dim ! -> Indicate for each dimension if the variable is define on the dimension
+    double precision :: fillval       ! -> Type will be converted according to "vartype"
+    logical :: writevar
+end type
+! <><><><><><><><><><> !
+
+
+! Default values for undefined namelist variables (ie, values that are set before trying to read variable in namelists)
+character(len=17), parameter :: UNDEFINED_VALUE_CHAR = '!#\_UNDEFINED_/#!'
+integer, parameter ::           UNDEFINED_VALUE_INT  = -142857103
+real, parameter ::              UNDEFINED_VALUE_REAL = -0.142857e33
+double precision, parameter ::  UNDEFINED_VALUE_DBLE = -0.142857103693d99
+
+
+! Default values of netCDF-related variables
+character(len=*), parameter:: DEFAULT_FILLVAL_NAME = '_FillValue'
+double precision, parameter:: DEFAULT_FILLVAL = 9.96921e+36
+character(len=*), parameter:: DEFAULT_VAR_TYPE = 'real'
+
+
 contains
-
-
- subroutine read_io_condition(id, file_name, var_name, units, fillval_name, fillval, var_long_name)
-
- ! This routine read a line of the file IO_CONDITIONS:
- !
- ! The entire line must not be more than 1000 characters long, and must have the format:
- !
- ! 'skipped    file_path    [var_name    [var_units]    [var_fillval_name    [var_fillval    [var_long_name]]]]'
- !
- ! where 'skipped', 'file_path', 'var_name', 'var_units', 'var_fillval_name' and 'var_long_name' are STRINGS,
- ! readable with 'read(..., fmt=*)' (ie, they must not contain string separators, unless the whole string
- ! is between quotes); and 'var_fillval' is FLOAT (double precision, but single is accepted too).
- !
- ! An instance between brackets [] means that it is optional: it will only be read if the subroutine
- ! is asked to. However, if it is the case and the instance is not present, an error will be raised,
- ! with the only expection of 'var_long_name' (a blank string will be returned if the code is unable
- ! to read it, and a warning message will be displayed).
- !
- ! To get a "latter" optional instance (like 'var_fillval'), the previous ones MUST be present, with
- ! the excpetion of 'var_units'.
-
- use utils, only: read_comment
-
- integer, intent(in):: id
- character(len=*), intent(out):: file_name
- character(len=*), intent(out), optional:: var_name, units, fillval_name, var_long_name
- double precision, intent(out), optional:: fillval
- character(len=1000) :: line, dummy
- double precision:: dummyfloat
- integer:: ierr
-
-
- !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
- call read_comment(id)
- read(unit=id,fmt='(A)') line
- !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
-
-
- file_name = ''
-
- read(line,fmt=*,iostat=ierr) dummy, file_name
- !
- if (ierr/=0) then
-   print *
-   print *, 'error while reading file name in line:'
-   print *, trim(line)
-   read(line,fmt=*) dummy, file_name
- end if
-
-
- if (present(var_name)) then
-
-   var_name = ''
-
-   read(line,fmt=*,iostat=ierr) dummy, dummy, var_name
-   !
-   if (ierr/=0) then
-     print *
-     print *, 'error while reading variable name in line:'
-     print *, trim(line)
-     read(line,fmt=*) dummy, dummy, var_name
-   end if
-
- end if
-
-
- if (present(units)) then
-
-
-   units = ''
-   !
-   read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, units
-   !
-   if (ierr/=0) then
-     print *
-     print *, 'error while reading variable units in line:'
-     print *, trim(line)
-     read(line,fmt=*) dummy, dummy, dummy, units
-   end if
-
-   if (present(fillval_name)) then
-
-     fillval_name = ''
-     !
-     read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, dummy, fillval_name
-     !
-     if (ierr/=0) then
-       print *
-       print *, 'error while reading variable fillval name in line:'
-       print *, trim(line)
-       read(line,fmt=*) dummy, dummy, dummy, dummy, fillval_name
-     end if
-
-   end if
-
-   if (present(fillval)) then
-
-     read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, dummy, dummy, fillval
-     !
-     if (ierr/=0) then
-       print *
-       print *, 'error while reading variable fillvalue in line:'
-       print *, trim(line)
-       read(line,fmt=*) dummy, dummy, dummy, dummy, dummy, fillval
-     end if
-
-   end if
-
-   if (present(var_long_name)) then
-
-     read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, dummy, dummy, dummyfloat, var_long_name
-     !
-     if (ierr/=0) then
-       print *
-       print *, 'Warning: unable to read variable long name in line'
-       print *, trim(line)
-       print *, 'Ignore "long_name" attribute'
-       var_long_name = ''
-     end if
-
-   end if
-
-
- else ! if units not asked, skip it (ie, read one less instance):
-
-
-   if (present(fillval_name)) then
-
-     fillval_name = ''
-     !
-     read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, fillval_name
-     !
-     if (ierr/=0) then
-       print *
-       print *, 'error while reading variable fillval name in line:'
-       print *, trim(line)
-       read(line,fmt=*) dummy, dummy, dummy, fillval_name
-     end if
-
-   end if
-
-   if (present(fillval)) then
-
-     read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, dummy, fillval
-     !
-     if (ierr/=0) then
-       print *
-       print *, 'error while reading variable fillvalue in line:'
-       print *, trim(line)
-       read(line,fmt=*) dummy, dummy, dummy, dummy, fillval
-     end if
-
-   end if
-
-   if (present(var_long_name)) then
-
-     read(line,fmt=*,iostat=ierr) dummy, dummy, dummy, dummy, dummyfloat, var_long_name
-     !
-     if (ierr/=0) then
-       print *
-       print *, 'Warning: unable to read variable long name in line'
-       print *, trim(line)
-       print *, 'Ignore "long_name" attribute'
-       var_long_name = ''
-     end if
-
-   end if
-
-
- end if
-
-
-
- end subroutine
 
 
 
@@ -191,6 +46,7 @@ contains
  ! The 2D-variable is then unravelled in a 1D variable, the first dimension
  ! being the inner-loop unravelled one.
  use netcdf
+ use netcdf_io_module, only: nf90_check
 
   character(len=*), intent(in):: filename, varname
   double precision, intent(out), dimension(:):: VAR
@@ -215,7 +71,7 @@ contains
 !----------------!
 
   ierr = nf90_open(filename, NF90_NOWRITE, fileid)
-  call nf90check(ierr,'Error while openning input file '//filename)
+  call nf90_check(ierr,'Error while openning input file '//filename)
 
 
 !-------------------!
@@ -224,9 +80,9 @@ contains
 
   ! get variable ID and number of dimension:
   ierr = nf90_inq_varid( fileid, varname, varid )
-  call nf90check(ierr,'Error while getting identifiers of variable '//varname)
+  call nf90_check(ierr,'Error while getting identifiers of variable '//varname)
   ierr = nf90_inquire_variable( fileid, varid, ndims=n )
-  call nf90check(ierr,'Error while getting number of dimensions of variable '//varname)
+  call nf90_check(ierr,'Error while getting number of dimensions of variable '//varname)
 
   if (n<2) then
     print *
@@ -243,10 +99,10 @@ contains
 
   ! get variable shape:
   ierr = nf90_inquire_variable( fileid, varid, dimids=dimids )
-  call nf90check(ierr,'Error while getting dimensions identifiers of variable '//varname)
+  call nf90_check(ierr,'Error while getting dimensions identifiers of variable '//varname)
   do i = 1,n
     ierr = nf90_inquire_dimension( fileid, dimids(i), dimname(i), dimlen(i) )
-    call nf90check(ierr,'Error while getting dimensions lengths and names of variable '//varname)
+    call nf90_check(ierr,'Error while getting dimensions lengths and names of variable '//varname)
   end do
 
   ! print report:
@@ -281,7 +137,7 @@ contains
       stt(2) = i
       ierr = nf90_get_var( fileid, varid, VAR( 1+dimlen(1)*(i-1) : dimlen(1)*i ), start=stt, count=cnt )
       !         dimension unravelling ---------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    call nf90check(ierr,'Error while getting variable '//varname)
+    call nf90_check(ierr,'Error while getting variable '//varname)
     end do
   end if
 
@@ -292,7 +148,7 @@ contains
 
   if (present(units)) then
     ierr = nf90_get_att( fileid, varid, 'units', units)
-    call nf90check(ierr,'Error while getting variable '//varname//' attribute "units"')
+    call nf90_check(ierr,'Error while getting variable "'//trim(varname)//'" attribute "units"')
   end if
 
 
@@ -309,7 +165,7 @@ contains
       missval_n(1:l) = '_FillValue'
     end if
     ierr = nf90_get_att( fileid, varid, missval_n(1:l), missval)
-    call nf90check(ierr,'Error while getting variable '//varname//' attribute '//missval_n(1:l))
+    call nf90_check(ierr,'Error while getting variable "'//trim(varname)//'" attribute '//missval_n(1:l))
   end if
 
 
@@ -322,15 +178,15 @@ contains
       allocate(x(dimlen(1)))
       allocate(y(dimlen(2)))
       ierr = nf90_inq_varid(fileid, dimname(1), varid)
-      call nf90check(ierr,'Warning: unable to get identifier of variable '//trim(dimname(1)), kill=.false.)
+      call nf90_check(ierr,'Warning: unable to get identifier of variable '//dimname(1), kill=.false.)
       if (ierr==NF90_NOERR) then
           ierr = nf90_get_var(fileid, varid, x)
-          call nf90check(ierr,'Error while getting variable '//trim(dimname(1)))
+          call nf90_check(ierr,'Error while getting variable '//dimname(1))
           ierr = nf90_inq_varid(fileid, dimname(2), varid)
-          call nf90check(ierr,'Warning: unable to get identifier of variable '//trim(dimname(2)), kill=.false.)
+          call nf90_check(ierr,'Warning: unable to get identifier of variable '//dimname(2), kill=.false.)
           if (ierr==NF90_NOERR) then
               ierr = nf90_get_var(fileid, varid, y)
-              call nf90check(ierr,'Error while getting variable '//trim(dimname(2)))
+              call nf90_check(ierr,'Error while getting variable '//dimname(2))
               call check_axis('', x, y, x_axis_ref, y_axis_ref, ERROR_HANDLING_OPTION(1))
           else
               print *, 'Cannot check axis consistency'
@@ -348,7 +204,7 @@ contains
 !---------------!
 
   ierr = nf90_close(fileid)
-  call nf90check(ierr,'Error while closing input file '//filename)
+  call nf90_check(ierr,'Error while closing input file '//filename)
 
 
   ! print report:
@@ -376,6 +232,7 @@ contains
  ! The first dimension being the inner-loop unravelled one.
  ! Then, the order of the 2 remaining dimensions is reversed.
  use netcdf
+ use netcdf_io_module, only: nf90_check
 
   character(len=*), intent(in):: filename, varname
   double precision, intent(out), dimension(:,:):: VAR
@@ -395,7 +252,7 @@ contains
 !----------------!
 
   ierr = nf90_open(filename, NF90_NOWRITE, fileid)
-  call nf90check(ierr,'Error while openning input file '//filename)
+  call nf90_check(ierr,'Error while openning input file '//filename)
 
 
 !-------------------!
@@ -404,9 +261,9 @@ contains
 
   ! get variable ID and number of dimension:
   ierr = nf90_inq_varid( fileid, varname, varid )
-  call nf90check(ierr,'Error while getting identifiers of variable '//varname)
+  call nf90_check(ierr,'Error while getting identifiers of variable '//varname)
   ierr = nf90_inquire_variable( fileid, varid, ndims=n )
-  call nf90check(ierr,'Error while getting number of dimensions of variable '//varname)
+  call nf90_check(ierr,'Error while getting number of dimensions of variable '//varname)
 
   if (n<3) then
     print *
@@ -423,10 +280,10 @@ contains
 
   ! get variable shape:
   ierr = nf90_inquire_variable( fileid, varid, dimids=dimids )
-  call nf90check(ierr,'Error while getting dimensions identifiers of variable '//varname)
+  call nf90_check(ierr,'Error while getting dimensions identifiers of variable '//varname)
   do i = 1,n
     ierr = nf90_inquire_dimension( fileid, dimids(i), dimname(i), dimlen(i) )
-    call nf90check(ierr,'Error while getting dimensions lengths and names of variable '//varname)
+    call nf90_check(ierr,'Error while getting dimensions lengths and names of variable '//varname)
   end do
 
   ! print report:
@@ -464,7 +321,7 @@ contains
         !   3rd dimension becomes 1st dimension: v
         ierr = nf90_get_var( fileid, varid, VAR( j , 1+dimlen(1)*(i-1) : dimlen(1)*i ), start=stt, count=cnt )
         !     1st-2nd dimension unravelling ---------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        call nf90check(ierr,'Error while getting variable '//varname)
+        call nf90_check(ierr,'Error while getting variable '//varname)
       end do
     end do
   end if
@@ -476,7 +333,7 @@ contains
 
   if (present(units)) then
     ierr = nf90_get_att( fileid, varid, 'units', units)
-    call nf90check(ierr,'Error while getting variable '//varname//' attribute "units"')
+    call nf90_check(ierr,'Error while getting variable "'//trim(varname)//'" attribute "units"')
   end if
 
 
@@ -493,7 +350,7 @@ contains
       missval_n(1:l) = '_FillValue'
     end if
     ierr = nf90_get_att( fileid, varid, missval_n(1:l), missval)
-    call nf90check(ierr,'Error while getting variable '//varname//' attribute '//missval_n(1:l))
+    call nf90_check(ierr,'Error while getting variable "'//trim(varname)//'" attribute '//missval_n(1:l))
   end if
 
 
@@ -502,7 +359,7 @@ contains
 !---------------!
 
   ierr = nf90_close(fileid)
-  call nf90check(ierr,'Error while closing input file '//filename)
+  call nf90_check(ierr,'Error while closing input file '//filename)
 
 
   ! print report:
@@ -530,6 +387,7 @@ contains
  ! The first dimension being the inner-loop unravelled one.
  ! Then, the order of the 3 remaining dimensions is reversed.
  use netcdf
+ use netcdf_io_module, only: nf90_check
 
   character(len=*), intent(in):: filename, varname
   double precision, intent(out), dimension(:,:,:):: VAR
@@ -549,7 +407,7 @@ contains
 !----------------!
 
   ierr = nf90_open(filename, NF90_NOWRITE, fileid)
-  call nf90check(ierr,'Error while openning input file '//filename)
+  call nf90_check(ierr,'Error while openning input file '//filename)
 
 
 !-------------------!
@@ -558,9 +416,9 @@ contains
 
   ! get variable ID and number of dimension:
   ierr = nf90_inq_varid( fileid, varname, varid )
-  call nf90check(ierr,'Error while getting identifiers of variable '//varname)
+  call nf90_check(ierr,'Error while getting identifiers of variable '//varname)
   ierr = nf90_inquire_variable( fileid, varid, ndims=n )
-  call nf90check(ierr,'Error while getting number of dimensions of variable '//varname)
+  call nf90_check(ierr,'Error while getting number of dimensions of variable '//varname)
 
   if (n<4) then
     print *
@@ -577,10 +435,10 @@ contains
 
   ! get variable shape:
   ierr = nf90_inquire_variable( fileid, varid, dimids=dimids )
-  call nf90check(ierr,'Error while getting dimensions identifiers of variable '//varname)
+  call nf90_check(ierr,'Error while getting dimensions identifiers of variable '//varname)
   do i = 1,n
     ierr = nf90_inquire_dimension( fileid, dimids(i), dimname(i), dimlen(i) )
-    call nf90check(ierr,'Error while getting dimensions lengths and names of variable '//varname)
+    call nf90_check(ierr,'Error while getting dimensions lengths and names of variable '//varname)
   end do
 
   ! print report:
@@ -623,7 +481,7 @@ contains
           !   4th dimension becomes 1st dimension: v   v
           ierr = nf90_get_var( fileid, varid, VAR( k , j , 1+dimlen(1)*(i-1) : dimlen(1)*i ), start=stt, count=cnt )
           !         1st-2nd dimension unravelling ---------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          call nf90check(ierr,'Error while getting variable '//varname)
+          call nf90_check(ierr,'Error while getting variable '//varname)
         end do
       end do
     end do
@@ -636,7 +494,7 @@ contains
 
   if (present(units)) then
     ierr = nf90_get_att( fileid, varid, 'units', units)
-    call nf90check(ierr,'Error while getting variable '//varname//' attribute "units"')
+    call nf90_check(ierr,'Error while getting variable "'//trim(varname)//'" attribute "units"')
   end if
 
 
@@ -653,7 +511,7 @@ contains
       missval_n(1:l) = '_FillValue'
     end if
     ierr = nf90_get_att( fileid, varid, missval_n(1:l), missval)
-    call nf90check(ierr,'Error while getting variable '//varname//' attribute '//missval_n(1:l))
+    call nf90_check(ierr,'Error while getting variable "'//trim(varname)//'" attribute '//missval_n(1:l))
   end if
 
 
@@ -662,7 +520,7 @@ contains
 !---------------!
 
   ierr = nf90_close(fileid)
-  call nf90check(ierr,'Error while closing input file '//filename)
+  call nf90_check(ierr,'Error while closing input file '//filename)
 
 
   ! print report:
@@ -686,6 +544,7 @@ contains
  subroutine load_netcdf_dimvar(filename,varnameX,varnameY,varnameZ,varX,varY,varZ,unitsX,unitsY,unitsZ)
 
  use netcdf
+ use netcdf_io_module, only: nf90_check
 
   character(len=*), intent(in):: filename
   character(len=*), intent(in), optional:: varnameX, varnameY, varnameZ
@@ -697,7 +556,7 @@ contains
 ! File openning:
 
   ierr = nf90_open(filename, NF90_NOWRITE, fileid)
-  call nf90check(ierr,'Error while openning input file '//filename)
+  call nf90_check(ierr,'Error while openning input file '//filename)
 
 
 !-----------------------------------!
@@ -706,38 +565,38 @@ contains
 
   if (present(varnameX)) then
     ierr = nf90_inq_varid( fileid, varnameX, varid )
-    call nf90check(ierr,'Error while getting variable '//varnameX//' identifiant')
+    call nf90_check(ierr,'Error while getting variable "'//trim(varnameX)//'" identifiant')
     if (present(varX)) then
       ierr = nf90_get_var( fileid, varid, varX )
-      call nf90check(ierr,'Error while getting variable '//varnameX)
+      call nf90_check(ierr,'Error while getting variable '//varnameX)
     end if
     if (present(unitsX)) then
       ierr = nf90_get_att( fileid, varid, 'units', unitsX)
-      call nf90check(ierr,'Error while getting variable '//varnameX//' attribute "units"')
+      call nf90_check(ierr,'Error while getting variable "'//trim(varnameX)//'" attribute "units"')
     end if
   end if
   if (present(varnameY)) then
     ierr = nf90_inq_varid( fileid, varnameY, varid )
-    call nf90check(ierr,'Error while getting  variable '//varnameY//' identifiant')
+    call nf90_check(ierr,'Error while getting  variable "'//trim(varnameY)//'" identifiant')
     if (present(varY)) then
       ierr = nf90_get_var( fileid, varid, varY )
-      call nf90check(ierr,'Error while getting variable '//varnameY)
+      call nf90_check(ierr,'Error while getting variable '//varnameY)
     end if
     if (present(unitsY)) then
       ierr = nf90_get_att( fileid, varid, 'units', unitsY)
-      call nf90check(ierr,'Error while getting variable '//varnameY//' attribute "units"')
+      call nf90_check(ierr,'Error while getting variable "'//trim(varnameY)//'" attribute "units"')
     end if
   end if
   if (present(varnameZ)) then
     ierr = nf90_inq_varid( fileid, varnameZ, varid )
-    call nf90check(ierr,'Error while getting  variable '//varnameZ//' identifiant')
+    call nf90_check(ierr,'Error while getting  variable "'//trim(varnameZ)//'" identifiant')
     if (present(varZ)) then
       ierr = nf90_get_var( fileid, varid, varZ )
-      call nf90check(ierr,'Error while getting variable '//varnameZ)
+      call nf90_check(ierr,'Error while getting variable '//varnameZ)
     end if
     if (present(unitsZ)) then
       ierr = nf90_get_att( fileid, varid, 'units', unitsZ)
-      call nf90check(ierr,'Error while getting variable '//varnameZ//' attribute "units"')
+      call nf90_check(ierr,'Error while getting variable "'//trim(varnameZ)//'" attribute "units"')
     end if
   end if
 
@@ -747,7 +606,7 @@ contains
 !---------------!
 
   ierr = nf90_close(fileid)
-  call nf90check(ierr,'Error while closing input file '//filename)
+  call nf90_check(ierr,'Error while closing input file '//filename)
 
 
 
@@ -867,24 +726,27 @@ subroutine check_landcells(varname, fillval, landarea, error_handling, var1D, va
 end subroutine
 
 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine check_invalid(which_var, landarea, error_handling, var1D, var2D, axis)
+
+subroutine check_invalid(which_var, landarea, error_handling, var1D, var2D, var7D, axis)
 
     character(len=*), intent(in):: which_var
     double precision, dimension(:), intent(inout):: landarea
     integer, intent(in):: error_handling
     double precision, dimension(:), intent(inout), optional:: var1D
     double precision, dimension(:,:), intent(inout), optional:: var2D
+    double precision, dimension(:,:,:,:,:,:,:), intent(inout), optional:: var7D
     integer, intent(in), optional:: axis
     logical, dimension(:), allocatable:: errormask
     double precision:: area_err, tot_landarea, example_invalid, replacement_value
-    integer:: k, nerr, answer, loc_axis
+    integer:: k, i1, i2, i3, i4, i5, nerr, answer, loc_axis
     logical:: loop
 
-    if (.not. (present(var1D) .or. (present(var2D)))) then
+    if (.not. (present(var1D) .or. (present(var2D)) .or. (present(var7D)))) then
         print *
         print *, 'INTERNAL ERROR in subroutine "check_invalid" of module "io_module".'
         print *, 'No variable to check was given to the subroutine.'
@@ -908,9 +770,13 @@ subroutine check_invalid(which_var, landarea, error_handling, var1D, var2D, axis
             if (present(var1D)) then
                 errormask = (landarea>0 .and. var1D<0)
                 example_invalid = minval(var1D, mask=errormask)
-            else ! var2D
+            elseif (present(var2D)) then
                 errormask = (landarea>0 .and. any(var2D<0, dim=loc_axis))
                 example_invalid = minval(minval(var2D, dim=loc_axis), mask=errormask)
+            else ! => var7D. !!ASSUME GEOGRAPHIC AXIS IS #1!!
+                errormask = (landarea>0 .and. any(any(any(any(any(any(var7D<0, dim=2), dim=2), dim=2), dim=2), dim=2), dim=2))
+                example_invalid = minval(minval(minval(minval(minval(minval(minval(var7D,dim=2),dim=2),dim=2),dim=2),dim=2),dim=2),&
+                                         mask=errormask)
             end if
             replacement_value = 0d0
 
@@ -919,11 +785,11 @@ subroutine check_invalid(which_var, landarea, error_handling, var1D, var2D, axis
             if (present(var1D)) then
                 errormask = (landarea>0 .and. var1D<=0)
                 example_invalid = minval(var1D, mask=errormask)
-                replacement_value = minval(var1D, mask=(.not. errormask))
+                replacement_value = minval(var1D, mask=(landarea>0 .and. var1D>0))
             else ! var2D
                 errormask = (landarea>0 .and. any(var2D<=0, dim=loc_axis))
                 example_invalid = minval(minval(var2D, dim=loc_axis), mask=errormask)
-                replacement_value = minval(minval(var2D, dim=loc_axis), mask=(.not. errormask))
+                replacement_value = minval(minval(var2D, dim=loc_axis), mask=(landarea>0 .and. all(var2D>0, dim=loc_axis)))
             end if
 
         case ('lithology fraction')
@@ -1003,9 +869,24 @@ subroutine check_invalid(which_var, landarea, error_handling, var1D, var2D, axis
                             else
                                 if (present(var1D)) then
                                     where (errormask) var1D=replacement_value
-                                else ! var2D
-                                    do k = 1,size(var2D,2) ! Runclimber convention: 1st dimension is pixels, 2nd is CO2 levels
+                                ! note: Runclimber convention -> 1st dimension is pixels, 2nd is CO2 levels, others are climatic parameters
+                                elseif (present(var2D)) then
+                                    do k = 1,size(var2D,2)
                                         where (errormask) var2D(:,k)=replacement_value
+                                    end do
+                                else ! => var7D
+                                    do i5 = 1,size(var7D,7)
+                                        do i4 = 1,size(var7D,6)
+                                            do i3 = 1,size(var7D,5)
+                                                do i2 = 1,size(var7D,4)
+                                                    do i1 = 1,size(var7D,3)
+                                                        do k = 1,size(var7D,2) ! Runclimber convention: 1st dimension is pixels, 2nd is CO2 levels
+                                                            where (errormask) var7D(:,k,i1,i2,i3,i4,i5) = replacement_value
+                                                        end do
+                                                    end do
+                                                end do
+                                            end do
+                                        end do
                                     end do
                                 end if
                             end if
@@ -1064,18 +945,23 @@ end subroutine
 
 
 
-subroutine raise_axis_error(which_axis, nerr, axis_len, max_mismatch, error_handling)
+subroutine raise_axis_error(which_axis, nerr, axis_len, max_mismatch, error_handling, ref_axis_message)
     character(len=*), intent(in):: which_axis
     integer, intent(in):: nerr, axis_len
     double precision, intent(in):: max_mismatch
     integer, intent(in):: error_handling
+    character(len=*), intent(in), optional:: ref_axis_message
     integer:: answer
     logical:: loop
 
     print *
-    write(*,'(A)')         ' WARNING: found mismatch of '//which_axis//' axis with reference axis.'
-    write(*,'(A,I0,A,I0)') '     Number of points concerned / axis length:  ', nerr, ' / ', axis_len
-    write(*,'(A,E14.7)')   '     Maximum mismatch found (in axis units):    ', max_mismatch
+    if (present(ref_axis_message)) then
+        write(*,'(A)')         ' WARNING: found mismatch of '//which_axis//' axis with reference axis'
+    else
+        write(*,'(A)')         ' WARNING: found mismatch of '//which_axis//' axis '//trim(ref_axis_message)
+    end if
+        write(*,'(A,I0,A,I0)') '     Number of points concerned / axis length:  ', nerr, ' / ', axis_len
+        write(*,'(A,E14.7)')   '     Maximum mismatch found (in axis units):    ', max_mismatch
 
     ! Error handling:
     select case (error_handling)
@@ -1146,17 +1032,97 @@ end subroutine
 
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+! Functions and subroutines specific to output_var structures and namelists !
+! ========================================================================= !
+
+
+  subroutine set_default_nml_values(vname, units, defdim, writevar, long_name, fillval, vartype)
+    ! Set as "undefined value" the outvar info variables that will be read
+    ! in a namelist in the config file
+
+    character(len=30), intent(out), optional:: vartype 
+    character(len=100), intent(out), optional:: vname, units
+    character(len=500), intent(out), optional:: long_name
+    integer, dimension(:), intent(out), optional:: defdim
+    logical, intent(out), optional:: writevar
+    double precision, intent(out), optional:: fillval
+
+    if (present(vname))     vname     = UNDEFINED_VALUE_CHAR
+    if (present(units))     units     = UNDEFINED_VALUE_CHAR
+    if (present(defdim))    defdim    = UNDEFINED_VALUE_INT
+    if (present(writevar))  writevar  = .true.
+    if (present(long_name)) long_name = UNDEFINED_VALUE_CHAR
+    if (present(fillval))   fillval   = DEFAULT_FILLVAL
+    if (present(vartype))   vartype   = DEFAULT_VAR_TYPE
+
+  end subroutine
+
+
+  ! ---------- !
+
+
+  function set_outvar_info(vname, units, def_dim, writevar, long_name, fillval, vartype)
+    !
+    ! put the output variable information read in the namelist in the netCDF output var structure,
+
+    character(len=30), intent(in):: vartype 
+    character(len=100), intent(in):: vname, units
+    character(len=500), intent(in):: long_name
+    integer, dimension(:), intent(in):: def_dim
+    logical, intent(in):: writevar
+    double precision, intent(in):: fillval
+    !
+    type(netcdf_output_var):: set_outvar_info
+    !
+    integer:: ndim
+
+    set_outvar_info%writevar = writevar
+
+    set_outvar_info%vname = vname
+    set_outvar_info%units = units
+    ndim = size(def_dim)
+    set_outvar_info%ndim_tot = ndim
+    set_outvar_info%def_dim(1:ndim) = (def_dim == 1) ! convert "1|0" in ".true.|.false."
+
+    if (long_name/=UNDEFINED_VALUE_CHAR) then
+      set_outvar_info%long_name = long_name
+    else
+      set_outvar_info%long_name = ''
+    end if
+
+    if (vartype/=UNDEFINED_VALUE_CHAR) then
+      set_outvar_info%vartype = vartype
+    else
+      set_outvar_info%vartype = DEFAULT_VAR_TYPE
+    end if
+
+    if (fillval/=UNDEFINED_VALUE_DBLE) then
+      set_outvar_info%fillval = fillval
+    else
+      set_outvar_info%fillval = DEFAULT_FILLVAL
+    end if
+
+  end function
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
-  subroutine nf90check(ierr, message, kill)
+  subroutine check_namelist_def(message, char_var, int_var, real_var, dble_var, kill)
 
-    use netcdf
-    integer, intent(in):: ierr
     character(len=*), intent(in):: message
+    character(len=*), intent(in), optional:: char_var
+    integer, intent(in), optional::          int_var
+    real, intent(in), optional::             real_var
+    double precision, intent(in), optional:: dble_var
     logical, optional, intent(in):: kill
     logical:: loc_kill
 
@@ -1166,11 +1132,36 @@ end subroutine
       loc_kill = .true.
     end if
 
-    if (ierr/=NF90_NOERR) then
-      print *
-      print *, message
-      print *, nf90_strerror(ierr)
-      if (loc_kill) stop
+    if (present(char_var)) then
+      if (char_var == UNDEFINED_VALUE_CHAR) then
+        print *
+        print *, message
+        if (loc_kill) stop
+      end if
+    end if
+
+    if (present(int_var)) then
+      if (int_var == UNDEFINED_VALUE_INT) then
+        print *
+        print *, message
+        if (loc_kill) stop
+      end if
+    end if
+
+    if (present(real_var)) then
+      if (real_var == UNDEFINED_VALUE_REAL) then
+        print *
+        print *, message
+        if (loc_kill) stop
+      end if
+    end if
+
+    if (present(dble_var)) then
+      if (dble_var == UNDEFINED_VALUE_DBLE) then
+        print *
+        print *, message
+        if (loc_kill) stop
+      end if
     end if
 
   end subroutine

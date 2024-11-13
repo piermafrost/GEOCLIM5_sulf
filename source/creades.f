@@ -19,7 +19,7 @@
     call carb_dep(x)
     call dc13_speciation
     call bio_frac
-    call anoxic(x)
+    call anoxic
     ! asynchronous coupling:
     if (icount_cont_weath==ijump_cont_weath) then
         icount_cont_weath = 0
@@ -80,7 +80,7 @@
                +(gotoshelf*fsink(j)*(vol(j))*var(9,j)-fodc(j)) &
                *clo &
                +2.*fsilw+2.*fbasw+2.*fcarbw-freef(j) &
-               +fkerw + fCO2_crust(j)
+               +fkerw + fCO2_crust(j) + fcarbsulfw ! add Carbonate weathering by sulphuric acid
 
     end do
 
@@ -399,7 +399,7 @@
             R(i,nbasin)=R(i,nbasin)-fCO2atm_ocean(k)
         end do
         R(i,nbasin)=R(i,nbasin)-2.*fsilw+fvol-fcarbw-2.*fbasw+ftrap+fanthros &
-                    -total_cont_POC_export + fcarbsulfw ! add Carbonate weathering by sulphuric acid
+                    -total_cont_POC_export
     end if
 
 
@@ -449,7 +449,7 @@
                +2.*fsilw*(var(16,nbasin)-var(i,j)) &
                +2.*fbasw*(var(16,nbasin)-var(i,j)) &
                +fcarbw*(var(16,nbasin)-var(i,j)) &
-               +fcarbw*(dccarbw-var(i,j)) &
+               +(fcarbw+fcarbsulfw)*(dccarbw-var(i,j)) & ! add Carbonate weathering by sulphuric acid
                +fkerw*(dckerw-var(i,j)) &
                -freef(j)*(dco3(j)-var(i,j))) &
                /(var(1,j)*vol(j))
@@ -554,8 +554,7 @@
 
     R(i,nbasin)=R(i,nbasin)+(fvol*(dcvol-var(i,nbasin))+ &
                 ftrap*(dctrap-var(i,nbasin))- &
-                total_cont_POC_export*(-epsiCont) &
-                +fcarbsulfw*(dccarbw-var(i,nbasin))) & ! add Carbonate weathering by sulphuric acid
+                total_cont_POC_export*(-epsiCont)) &
                 /var(12,nbasin)
 
 
@@ -566,6 +565,7 @@
     i=17 ! 87Sr/86Sr
 !cccccccccccccccccccccccccccccccc
 !cccccccccccccccccccccccccccccccc
+
     do j0=1,nnoappcont
         j = jbox_noappcont(j0)
 
@@ -586,7 +586,7 @@
 
         R(i,j)=(fdissol_carb(j)*var(6,j)*vol(j)*(var(i+1,j)-var(i,j)) &
                /(9.43+var(i+1,j)) &
-               + gotoshelf*fsink_inorg(j)*(vol(j))*var(6,j) &
+               +gotoshelf*fsink_inorg(j)*(vol(j))*var(6,j) &
                *(var(i+1,j)-var(i,j))/(9.43+var(i+1,j)) &
                *(1.-closed) &
                +fsilw*rSrSil*(rsw-var(i,j))/(9.43+rsw) &

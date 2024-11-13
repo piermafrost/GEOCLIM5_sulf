@@ -150,6 +150,7 @@
     ! Total sedimentation area
     area_sediepicontsurf = 0d0
     area_sediepicontnosurf = 0d0
+    area_sedinoepicont = 0d0
     do j0 = 1,nsediepicontsurf
         j = jbox_sediepicontsurf(j0)
         area_sediepicontsurf = area_sediepicontsurf + surf_sedi(j) 

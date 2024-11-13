@@ -62,7 +62,7 @@ end subroutine
 
 
 subroutine regolith_time_integration( x, h,xs,taus,MPtot, ktop,z,tau, RP,E,FPdiss,FPeros,xs_eros, temp,runoff,slope, dt, &
-                                      zfillvalue,taufillvalue , veget_factor, veget_eros_factor, list_cont_pxl, ncontpxl )
+                                      veget_factor, veget_eros_factor, list_cont_pxl, ncontpxl )
 
 use dynsoil_empirical_laws, only: erosion, reg_prod_opt, soil_prod_func, eq_reg_thick, dissolution_constant
 use dynsoil_physical_parameters, only: nlon, nlat, nDSlev, nlitho, h0, sigma, epsl
@@ -76,7 +76,7 @@ double precision, dimension(nDSlev,nlitho,npxl), intent(inout) :: z, tau        
 !                                                                                                 !!
 double precision, dimension(nDSlev),             intent(in) ::    x                               !!
 double precision, dimension(npxl),               intent(in) ::    temp, runoff, slope             !!
-double precision,                                intent(in)::     dt, zfillvalue, taufillvalue    !!
+double precision,                                intent(in)::     dt                              !!
 !                                                                                                 !!
 double precision, dimension(nlitho,npxl),        intent(out) ::   RP, E, FPdiss, FPeros, xs_eros  !!
 ! vegetation:                                                                                     !!
@@ -201,7 +201,7 @@ integer:: k, i, j, j0                                                           
         !                                                                                                               !
         !           Solve the equations  ' dz/dt = RP + dissrate*dz/dx ' & ' dtau/dt = 1 + dissrate*dtau/dx '           !
         !           with dissrate = Kmain*x*tau^sigma (averaged between two x levels)                                   !
-        !           + surface condition, where h(suf) is fixed by reg prod/erosion, and x(surf) is computed             !
+        !           + surface condition, where h(surf) is determined by reg prod/erosion, and x(surf) is computed       !
         !                                                                                                               !
         !===============================================================================================================!
 
@@ -375,14 +375,6 @@ integer:: k, i, j, j0                                                           
           FPdiss(i,j)  = 0
 
         end if
-
-
-
-        ! Fillvalue for x points higher than regolith surface
-        !----------------------------------------------------
-        !
-        z2(ktop2+1:nDSlev)   = zfillvalue
-        tau2(ktop2+1:nDSlev) = taufillvalue
 
 
 

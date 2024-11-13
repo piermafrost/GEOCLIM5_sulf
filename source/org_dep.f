@@ -53,10 +53,6 @@
         fin(j) = (1-indice_surface(j)*(1-gotoshelf)) * fsink(j)*var(9,j)*vol(j)/surf_sedi(j)
 !       Corg at the basis of the bioturbated layer (mixed layer):
         Corg_hml(j) = fin(j)/(ws(j) + betahml*var(11,j)*hml)
-        !! reduced oxygen feedback:
-        !Corg_hml(j) = fin(j)/(ws(j) + betahml * sqrt(var(11,j)*0.234) * hml)
-        !! no oxygen feedback:
-        !Corg_hml(j) = fin(j)/(ws(j) + betahml*0.23406*hml)
 !       Corg at the basis of the sulfate reduction zone
         Corg_hsr(j) = (ws(j)*Corg_hml(j))/(ws(j) + gammahsr*var(20,j)*hsr) ! var(20,:) : [SO4^2-]
 

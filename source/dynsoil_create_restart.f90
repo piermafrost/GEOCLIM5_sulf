@@ -3,18 +3,18 @@ implicit none
 
 contains
 
-subroutine dynsoil_create_restart( output_path, run_name, restart_name, varname, varunits, varmissvalname, varmissval,   &
-                                   xlevs,longi,latit,reg_thick,reg_x_surf,reg_tau_surf,reg_z_prof,reg_tau_prof, t,tstart )
-use netcdf_io_module, only: create, close_file, def_dim, def_var, put_att_text, put_att_real, enddef, put_var_int1D, &
-                            put_var_real1D, put_var_real3D, put_var_real4D
+subroutine dynsoil_create_restart(output_path, run_name, restart_name, outvar_info, DYNS_restart_dim, DYNS_restart_var, &
+                                  xlevs, longi, latit, reg_thick, reg_x_surf, reg_tau_surf, reg_z_prof, reg_tau_prof, t, tstart)
 use netcdf
+use io_module, only: netcdf_output_var, DEFAULT_FILLVAL_NAME
+use netcdf_io_module, only: create, close_file, def_dim, def_var, put_att, enddef, put_var
 use dynsoil_physical_parameters, only: nlon, nlat, nlitho, nDSlev, scaling_factor
 
   include 'coupler.inc'
   integer, parameter:: npxl = nlon*nlat
   character(len=*), intent(in):: output_path, run_name, restart_name
-  character(len=*), intent(in), dimension(:):: varname, varunits, varmissvalname
-  double precision, intent(in), dimension(:):: varmissval
+  type(netcdf_output_var), dimension(:), intent(in):: outvar_info
+  character(len=*), intent(in):: DYNS_restart_dim(4), DYNS_restart_var(5)
   double precision, intent(in), dimension(nDSlev):: xlevs
   double precision, intent(in), dimension(nlon)::   longi
   double precision, intent(in), dimension(nlat)::   latit
@@ -24,55 +24,46 @@ use dynsoil_physical_parameters, only: nlon, nlat, nlitho, nDSlev, scaling_facto
   double precision, dimension(nlitho,npxl)::         loc_reg_thick, loc_reg_tau_surf
   double precision, dimension(nDSlev,nlitho,npxl):: loc_reg_z_prof, loc_reg_tau_prof
   character(len=200):: fname
-  integer:: dimid(4), varid(15)
+  integer:: dimid(4), varid(10)
   integer:: fid, i, j, k
 
-  !===================================== OUTPUT VARIABLES LIST: ======================================!
-  !  OUTPUT: X, Y, litho, xlevs, t, area, litho_frac, slope, temp, runoff, h_soil, x_surf, tau_surf,  !
-  !  var #:  1  2  3      4      5  6     7           8      9     10      11      12      13         !
-  !          z, tau, Reg_prod, Reg_eros, reg_P_diss, reg_P_eros, x_surf_eros, x_P_mean, reg_mean_age, !
-  !          14 15   16        17        18          19          20           21        22            !
-  !          Li_Friv,  Li_Fsp,   Li_driv                                                              !
-  !          23        24        25                                                                   !
-  !===================================================================================================!
-
   ! divide variables by scaling factor (backward transformation):
-  where (reg_thick/=varmissval(11))
+  where (reg_thick/=outvar_info(6)%fillval)
     loc_reg_thick    = reg_thick / scaling_factor
   else where
-    loc_reg_thick    = varmissval(11)
+    loc_reg_thick    = outvar_info(6)%fillval
   end where
-  where (reg_tau_surf/=varmissval(13))
+  where (reg_tau_surf/=outvar_info(8)%fillval)
     loc_reg_tau_surf = reg_tau_surf / scaling_factor
   else where
-    loc_reg_tau_surf = varmissval(13)
+    loc_reg_tau_surf = outvar_info(8)%fillval
   end where
-  ! for some obscure reasons, the where loop sometimes crashes in the following cases:
+  ! for some obscure reasons, the commented "where" loop sometimes crashes in the following cases:
   do j = 1,npxl
     do i = 1,nlitho
       do k = 1,nDSlev
-        if (reg_z_prof(k,i,j) /= varmissval(14)) then
+        if (reg_z_prof(k,i,j) /= outvar_info(9)%fillval) then
           loc_reg_z_prof(k,i,j)   = reg_z_prof(k,i,j) / scaling_factor
         else
-          loc_reg_z_prof(k,i,j)   = varmissval(14)
+          loc_reg_z_prof(k,i,j)   = outvar_info(9)%fillval
         end if
-        if (reg_tau_prof(k,i,j) /= varmissval(15)) then
+        if (reg_tau_prof(k,i,j) /= outvar_info(10)%fillval) then
           loc_reg_tau_prof(k,i,j)   = reg_tau_prof(k,i,j) / scaling_factor
         else
-          loc_reg_tau_prof(k,i,j)   = varmissval(15)
+          loc_reg_tau_prof(k,i,j)   = outvar_info(10)%fillval
         end if
       end do
     end do
   end do
-!  where (reg_z_prof/=varmissval(14))
+!  where (reg_z_prof/=outvar_info(9)%fillval)
 !    loc_reg_z_prof   = reg_z_prof / scaling_factor
 !  else where
-!    loc_reg_z_prof   = varmissval(14)
+!    loc_reg_z_prof   = outvar_info(9)%fillval
 !  end where
-!  where (reg_tau_prof/=varmissval(15))
+!  where (reg_tau_prof/=outvar_info(10)%fillval)
 !    loc_reg_tau_prof = reg_tau_prof / scaling_factor
 !  else where
-!    loc_reg_tau_prof = varmissval(15)
+!    loc_reg_tau_prof = outvar_info(10)%fillval
 !  end where
 
 
@@ -83,55 +74,67 @@ use dynsoil_physical_parameters, only: nlon, nlat, nlitho, nDSlev, scaling_facto
   call create( fname , fid )
 
   ! golbal attributes
-  call put_att_text(fid, (/NF90_GLOBAL/), (/'title'/),      (/'DynSoil initial condition (restart)'/))
-  call put_att_text(fid, (/NF90_GLOBAL/), (/'parent_run'/), (/trim(run_name)/))
+  call put_att(  fid, NF90_GLOBAL, 'title',           attribute_text='DynSoil initial condition (restart)')
+  call put_att(  fid, NF90_GLOBAL, 'parent_run',      attribute_text=trim(run_name))
   if (use_dynsoil_steady_state) then
-    call put_att_text(fid, (/NF90_GLOBAL/), (/'DynSoil_mode'/),  (/'steady-state'/))
+    call put_att(fid, NF90_GLOBAL, 'DynSoil_mode',    attribute_text='steady-state')
   else
-    call put_att_text(fid, (/NF90_GLOBAL/), (/'DynSoil_mode'/),  (/'dynamic'/))
+    call put_att(fid, NF90_GLOBAL, 'DynSoil_mode',    attribute_text='dynamic')
   end if
-  call put_att_real(fid, (/NF90_GLOBAL/), (/'run_duration_yr'/), (/real(t)/))
-  call put_att_real(fid, (/NF90_GLOBAL/), (/'run_time_yr'/),     (/real(t-tstart)/))
+  call put_att(  fid, NF90_GLOBAL, 'run_duration_yr', attribute_numeric=t)
+  call put_att(  fid, NF90_GLOBAL, 'run_time_yr',     attribute_numeric=t-tstart)
 
   ! define dimensions
-  call def_dim( fid , varname(1:4), (/nlon,nlat,nlitho,nDSlev/) , dimid )
+  call def_dim( fid , 'lon', nlon   , dimid(1) )
+  call def_dim( fid , 'lat', nlat   , dimid(2) )
+  call def_dim( fid , 'litho', nlitho , dimid(3) )
+  call def_dim( fid , 'xlevs', nDSlev , dimid(4) )
 
   ! define dimension variables
-  call def_var( fid , varname(1:1), (/NF90_FLOAT/), dimid(1:1) , varid(1:1)  )
-  call def_var( fid , varname(2:2), (/NF90_FLOAT/), dimid(2:2) , varid(2:2)  )
-  call def_var( fid , varname(3:3), (/NF90_INT/),   dimid(3:3) , varid(3:3)  )
-  call def_var( fid , varname(4:4), (/NF90_FLOAT/), dimid(4:4) , varid(4:4)  )
+  call def_var( fid , DYNS_restart_dim(1), 'float', dimid(1:1) , (/.true./) , varid(1)  )
+  call def_var( fid , DYNS_restart_dim(2), 'float', dimid(2:2) , (/.true./) , varid(2)  )
+  call def_var( fid , DYNS_restart_dim(3), 'int',   dimid(3:3) , (/.true./) , varid(3)  )
+  call def_var( fid , DYNS_restart_dim(4), 'float', dimid(4:4) , (/.true./) , varid(4)  )
 
   ! define other variables
-  call def_var( fid , varname(11:13), (/NF90_FLOAT/), dimid(1:3) , varid(11:13) ) ! h_soil, x_surf, tau_surf
-  call def_var( fid , varname(14:15), (/NF90_FLOAT/), dimid      , varid(14:15) ) ! z_prof, tau_prof
+  call def_var( fid , DYNS_restart_var(1),  'float', dimid(1:3) , (/.true./) , varid(6)  ) ! h_soil
+  call def_var( fid , DYNS_restart_var(2),  'float', dimid(1:3) , (/.true./) , varid(7)  ) ! x_surf
+  call def_var( fid , DYNS_restart_var(3),  'float', dimid(1:3) , (/.true./) , varid(8)  ) ! tau_surf
+  call def_var( fid , DYNS_restart_var(4),  'float', dimid      , (/.true./) , varid(9)  ) ! z_prof
+  call def_var( fid , DYNS_restart_var(5),  'float', dimid      , (/.true./) , varid(10) ) ! tau_prof
 
   ! put dimension attributes:
-  call put_att_text( fid, varid(1:1), (/'axis'/), (/'X'/)                    )
-  call put_att_text( fid, varid(1:1), (/'nav_model'/), (/'Default grid'/)    )
-  call put_att_text( fid, varid(2:2), (/'axis'/), (/'Y'/)                    )
-  call put_att_text( fid, varid(2:2), (/'nav_model'/), (/'Default grid'/)    )
-  call put_att_text( fid, varid(4:4), (/'axis'/), (/'Z'/)                    )
-  call put_att_text( fid, varid(4:4), (/'positive'/), (/'down'/)             )
+  call put_att( fid, varid(1), 'axis',      attribute_text='X'               )
+  call put_att( fid, varid(1), 'nav_model', attribute_text='Default grid'    )
+  call put_att( fid, varid(2), 'axis',      attribute_text='Y'               )
+  call put_att( fid, varid(2), 'nav_model', attribute_text='Default grid'    )
+  call put_att( fid, varid(4), 'axis',      attribute_text='Z'               )
+  call put_att( fid, varid(4), 'positive',  attribute_text='down'            )
 
   ! put attributes
-  call put_att_text( fid , (/varid(1:4),varid(11:15)/) ,    (/'name'/)        , (/varname(1:4),varname(11:15)/)     )
-  call put_att_text( fid , (/varid(1:4),varid(11:15)/) ,    (/'units'/)       , (/varunits(1:4),varunits(11:15)/)   )
-  call put_att_real( fid ,        varid(11:15)         , varmissvalname(11:15) , real(varmissval(11:15))            )
+  !do i = 1,4
+  !  call put_att( fid , varid(i) , 'name'  , attribute_text=varname(i)    )
+  !  call put_att( fid , varid(i) , 'units' , attribute_text=varunits(i)   )
+  !end do
+  do i = 6,10
+    call put_att( fid , varid(i) , 'name'               , attribute_text=outvar_info(i)%vname                           )
+    call put_att( fid , varid(i) , 'units'              , attribute_text=outvar_info(i)%units                           )
+    call put_att( fid , varid(i) , DEFAULT_FILLVAL_NAME , attribute_numeric=outvar_info(i)%fillval, convert2type='real' )
+  end do
 
   ! end of definition
   call enddef( fid )
 
   ! put variables
-  call put_var_real1D( fid, varid(1), real(longi)        )
-  call put_var_real1D( fid, varid(2), real(latit)        )
-  call put_var_int1D(  fid, varid(3), (/(j,j=1,nlitho)/) )
-  call put_var_real1D( fid, varid(4), real(xlevs)        )
-  call put_var_real3D( fid, varid(11), real(reshape(loc_reg_thick,   shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))) )
-  call put_var_real3D( fid, varid(12), real(reshape(reg_x_surf,      shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))) )
-  call put_var_real3D( fid, varid(13), real(reshape(loc_reg_tau_surf, shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))) )
-  call put_var_real4D( fid, varid(14), real(reshape(loc_reg_z_prof,   shape=(/nlon,nlat,nlitho,nDSlev/), order=(/4,3,1,2/))) )
-  call put_var_real4D( fid, varid(15), real(reshape(loc_reg_tau_prof, shape=(/nlon,nlat,nlitho,nDSlev/), order=(/4,3,1,2/))) )
+  call put_var( fid, varid(1),  var_real1D=real(longi)        )
+  call put_var( fid, varid(2),  var_real1D=real(latit)        )
+  call put_var( fid, varid(3),   var_int1D=(/(j,j=1,nlitho)/) )
+  call put_var( fid, varid(4),  var_real1D=real(xlevs)        )
+  call put_var( fid, varid(6),  var_real3D=real(reshape(loc_reg_thick,    shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))) )
+  call put_var( fid, varid(7),  var_real3D=real(reshape(reg_x_surf,       shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))) )
+  call put_var( fid, varid(8),  var_real3D=real(reshape(loc_reg_tau_surf, shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))) )
+  call put_var( fid, varid(9),  var_real4D=real(reshape(loc_reg_z_prof,   shape=(/nlon,nlat,nlitho,nDSlev/), order=(/4,3,1,2/))) )
+  call put_var( fid, varid(10), var_real4D=real(reshape(loc_reg_tau_prof, shape=(/nlon,nlat,nlitho,nDSlev/), order=(/4,3,1,2/))) )
 
   ! close output file
   call close_file( fid )

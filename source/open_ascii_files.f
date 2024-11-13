@@ -1,256 +1,395 @@
 subroutine open_ascii_files(ID)
     use utils, only: add_path, read_comment
+    use io_module, only: UNDEFINED_VALUE_CHAR, UNDEFINED_VALUE_DBLE, check_namelist_def
     implicit none
     integer, intent(in):: ID
     include 'combine_foam.inc'
-    character(len=1000):: line
-    integer:: ierr
-    
-    
-    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!                INPUT AND INITIALIZATION FILES               !!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-    
-    !GEOCLIM_VAR_INIT_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (2  ,status='old',file=filename)
 
-    
+    ! Local variables
+    character(len=30):: ocean_temp_mode
+    character(len=100):: var_name, fillval_name ! note : unused, but needed because present in LITHO_INFO namelist
+    character(len=500):: file_name, geoc_var_init_file, grid_area_file, cont_area_file, &
+                         temperature_file, runoff_file, interp_T_factor, interp_R_factor, GCM_input_condition_file, &
+                         ocean_temp_file, box_volume_file,box_surf_file, box_surf_sedi_file, deep_box_file, sedim_box_file, &
+                         appcont_box_file, thermocline_file, surface_box_file, epicont_box_file, polar_box_file, box_press_file, &
+                         exchange_file, fsink_inorg_file, fsink_file, COMBINE_restart_file
+    integer:: ierr
+    double precision, dimension(nlitho):: singlepixel_lithofrac
+
+
+    ! Namelists declaration
+    ! ---------------------
+    namelist /INIT_INFO/ geoc_var_init_file
+    namelist /CONT_INFO/ cont_input_mode, grid_area_file, cont_area_file, temperature_file, runoff_file, &
+                         interp_T_factor, interp_R_factor, GCM_input_condition_file
+    namelist /LITHO_INFO/ file_name, var_name, fillval_name, singlepixel_lithofrac
+    namelist /VEGET_INFO/ file_name
+    namelist /CLIMPARAM_INFO/ file_name
+    namelist /COMBINE_INFO/ ocean_temp_mode, ocean_temp_file, &
+                            box_volume_file, box_surf_file, box_surf_sedi_file, &
+                            deep_box_file, sedim_box_file, appcont_box_file, thermocline_file, surface_box_file, epicont_box_file, &
+                            polar_box_file, box_press_file, exchange_file, fsink_inorg_file, fsink_file
+    namelist /RESTART_INFO/ COMBINE_restart_file, DynSoil_restart_file
+
+
+    ! Default values of namelist variables
+    ! ------------------------------------
+    geoc_var_init_file       = UNDEFINED_VALUE_CHAR
+    cont_input_mode          = UNDEFINED_VALUE_CHAR
+    grid_area_file           = UNDEFINED_VALUE_CHAR
+    cont_area_file           = UNDEFINED_VALUE_CHAR
+    temperature_file         = UNDEFINED_VALUE_CHAR
+    runoff_file              = UNDEFINED_VALUE_CHAR
+    interp_T_factor          = UNDEFINED_VALUE_CHAR
+    interp_R_factor          = UNDEFINED_VALUE_CHAR
+    GCM_input_condition_file = UNDEFINED_VALUE_CHAR
+    singlepixel_lithofrac    = UNDEFINED_VALUE_DBLE
+    ocean_temp_mode          = UNDEFINED_VALUE_CHAR
+    ocean_temp_file          = UNDEFINED_VALUE_CHAR
+    box_volume_file          = UNDEFINED_VALUE_CHAR
+    box_surf_file            = UNDEFINED_VALUE_CHAR
+    box_surf_sedi_file       = UNDEFINED_VALUE_CHAR
+    deep_box_file            = UNDEFINED_VALUE_CHAR
+    sedim_box_file           = UNDEFINED_VALUE_CHAR
+    appcont_box_file         = UNDEFINED_VALUE_CHAR
+    thermocline_file         = UNDEFINED_VALUE_CHAR
+    surface_box_file         = UNDEFINED_VALUE_CHAR
+    epicont_box_file         = UNDEFINED_VALUE_CHAR
+    polar_box_file           = UNDEFINED_VALUE_CHAR
+    box_press_file           = UNDEFINED_VALUE_CHAR
+    exchange_file            = UNDEFINED_VALUE_CHAR
+    fsink_inorg_file         = UNDEFINED_VALUE_CHAR
+    fsink_file               = UNDEFINED_VALUE_CHAR
+    COMBINE_restart_file     = UNDEFINED_VALUE_CHAR
+    DynSoil_restart_file     = UNDEFINED_VALUE_CHAR
+
+
+
+    !! =========================================================== !!
+    !!                INPUT AND INITIALIZATION FILES               !!
+    !! =========================================================== !!
+
+
+    ! <><><><><><><><><><><><> !
+    read(unit=ID, nml=INIT_INFO)
+    ! <><><><><><><><><><><><> !
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "geoc_var_init_file" was not given in config/IO_CONDITIONS', &
+                            char_var=geoc_var_init_file)
+    call add_path(geoc_var_init_file)
+    open (2  , status='old', action='read', file=geoc_var_init_file)
+    !    ***********************************************************
+
+
     !--------!
-    
-    
-    !CONTINENTAL_INPUT_MODE
-    call read_comment(ID)
-    read(unit=ID, fmt=*) dummychar, land_input_mode
-    
-    if (land_input_mode=='ascii') then
-    
-        !GRID_AREA_FILE:
-        call read_comment(ID)
-        read(unit=ID,fmt=*) dummychar, filename
-        call add_path(filename)
-        open (301,status='old',file=filename)
-    
-        !CONTINENTAL_AREA_FILE:
-        call read_comment(ID)
-        read(unit=ID,fmt=*) dummychar, filename
-        call add_path(filename)
-        open (7  ,status='old',file=filename)
-    
-    
-        !ccccccc +++++++++++++++++++++++++++++++++ 
-        !       Climate under several CO2 levels
-    
-        !TEMPERATURE_FILE:
-        call read_comment(ID)
-        read(unit=ID,fmt=*) dummychar, filename
-        call add_path(filename)
-        open (30 ,status='old',file=filename)
-    
-        !RUNOFF_FILE:
-        call read_comment(ID)
-        read(unit=ID,fmt=*) dummychar, filename
-        call add_path(filename)
-        open (31 ,status='old',file=filename)
-    
-        call read_comment(ID)
-        read(unit=ID,fmt=*) dummychar, filename
-        !call add_path(filename)
-        !open (302 ,status='old',file=filename)
-    
-        call read_comment(ID)
-        read(unit=ID,fmt=*) dummychar, filename
-        !call add_path(filename)
-        !open (303 ,status='old',file=filename)
-    
-        !GCM_INPUT_CONDITIONS_FILE (ignore)
-        call read_comment(ID)
-        read(unit=ID, fmt=*)
-    
-    
-    elseif (land_input_mode == 'GCM') then
-    
-        ! Skip 6 ascii-mode entries
-        do k = 1,6
-            call read_comment(ID)
-            read(unit=ID, fmt=*)
+
+
+    ! <><><><><><><><><><><><> !
+    read(unit=ID, nml=CONT_INFO)
+    ! <><><><><><><><><><><><> !
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "cont_input_mode" was not given in config/IO_CONDITIONS', &
+                            char_var=cont_input_mode)
+
+    select case (cont_input_mode)
+
+        case ("ascii")
+
+            call check_namelist_def('Error - in open_ascii_files.f: variable "grid_area_file" was not given in '// &
+                                    'config/IO_CONDITIONS', char_var=grid_area_file)
+            call add_path(grid_area_file)
+            open (301, status='old', action='read', file=grid_area_file)
+            !    *******************************************************
+
+            call check_namelist_def('Error - in open_ascii_files.f: variable "cont_area_file" was not given in '// &
+                                    'config/IO_CONDITIONS', char_var=cont_area_file)
+            call add_path(cont_area_file)
+            open (7  , status='old', action='read', file=cont_area_file)
+            !    *******************************************************
+
+            !ccccccc +++++++++++++++++++++++++++++++++ 
+            !       Climate under several CO2 levels
+            !
+            call check_namelist_def('Error - in open_ascii_files.f: variable "temperature_file" was not given in '// &
+                                    'config/IO_CONDITIONS', char_var=temperature_file)
+            call add_path(temperature_file)
+            open (30 , status='old', action='read', file=temperature_file)
+            !    *********************************************************
+            !
+            call check_namelist_def('Error - in open_ascii_files.f: variable "runoff_file" was not given in '// &
+                                    'config/IO_CONDITIONS', char_var=runoff_file)
+            call add_path(runoff_file)
+            open (31 , status='old', action='read', file=runoff_file)
+            !    ****************************************************
+            !
+            !! ALTERNATIVE: log(CO2)-interpolation on each grid point:
+            !
+            !call check_namelist_def('Error - in open_ascii_files.f: variable "interp_T_factor" was not given in'// &
+            !                        'config/IO_CONDITIONS', char_var=interp_T_factor)
+            !call add_path(interp_T_factor)
+            !open (302 , status='old', action='read', file=interp_T_factor)
+            !!    *********************************************************
+            !
+            !call check_namelist_def('Error - in open_ascii_files.f: variable "interp_R_factor" was not given in '// &
+            !                        'config/IO_CONDITIONS', char_var=interp_R_factor)
+            !call add_path(interp_R_factor)
+            !open (303 , status='old', action='read', file=interp_R_factor)
+            !!    *********************************************************
+
+        case ("GCM")
+
+            call check_namelist_def('Error - in open_ascii_files.f: variable "GCM_input_condition_file" was not given in'// &
+                                    ' config/IO_CONDITIONS', char_var=GCM_input_condition_file)
+            call add_path(GCM_input_condition_file)
+            open (333, status='old', action='read', file=GCM_input_condition_file)
+            !    *****************************************************************
+
+        case default
+
+            print *, 'ERROR - in open_ascii_files.f: "cont_input_mode" (read in config/IO_CONDITIONS must be "GCM" or "ascii")'
+            stop
+
+    end select
+
+
+    !--------!
+
+
+    ! Generic variables default value
+    file_name = UNDEFINED_VALUE_CHAR
+
+    ! <><><><><><><><><><><><><> !
+    read(unit=ID, nml=LITHO_INFO)
+    ! <><><><><><><><><><><><><> !
+
+    if (file_name=='' .or. file_name==UNDEFINED_VALUE_CHAR) then
+
+        call check_namelist_def('Error - in open_ascii_files.f: variable "singlepixel_lithofrac" was not given in'// &
+                                ' config/IO_CONDITIONS', dble_var=singlepixel_lithofrac(1))
+        !
+        print *
+        print *, '    Uniform lithology  => loaded from main config file'
+        !
+        do k = 1,nlitho
+            litho_frac(k,:) = singlepixel_lithofrac(k)
         end do
-    
-        !GCM_INPUT_CONDITIONS_FILE
-        call read_comment(ID)
-        read(unit=ID, fmt=*) dummychar, filename
-        call add_path(filename)
-        open (333, status='old', file=filename)
-    
-    
+        !
+        uniform_lithology = .true.
+
     else
-    
-        print *, 'ERROR: continental input mode (defined config/IO_CONDITIONS) must be "ascii" or "GCM"'
-        stop
-    
+
+        uniform_lithology = .false.
+        ! => lithology data will be load later
+        
     end if
-    
-    
-    
-    !LITHOLOGICAL FRACTION (NETCDF FILE): 
-    call read_comment(ID)
-    ! => store info in scratch file (that will be read by 'load_lithology' subroutine)
-    read(unit=ID,fmt='(A1000)') line
-    open (304 ,status='scratch')
-    write(304, fmt='(A1000)') line
-    
-    !VEGETATION_FILE:
-    call read_comment(ID)
-    if (coupling_veget==1) then
-        read(unit=ID,fmt=*) dummychar, filename
-        call add_path(filename)
-        open (48 ,status='old',file=filename)
-    else
-        read(ID,*)
+
+
+    !--------!
+
+
+    if (coupling_veget) then
+
+        ! Generic variables default value
+        file_name = UNDEFINED_VALUE_CHAR
+
+        ! <><><><><><><><><><><><><> !
+        read(unit=ID, nml=VEGET_INFO)
+        ! <><><><><><><><><><><><><> !
+
+        call check_namelist_def('Error - in open_ascii_files.f: variable "file_name" from namelist "VEGET_INFO" was not given'// &
+                                ' in config/IO_CONDITIONS', char_var=file_name)
+        call add_path(file_name)
+        open (48 , status='old', action='read', file=file_name)
+        !    **************************************************
+
     end if
-    
-    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    !--------!
+
+
+    if (nclimparam > 0) then
+
+        ! Generic variables default value
+        file_name = UNDEFINED_VALUE_CHAR
+
+        ! <><><><><><><><><><><><><><><> !
+        read(unit=ID, nml=CLIMPARAM_INFO)
+        ! <><><><><><><><><><><><><><><> !
+
+        call check_namelist_def('Error - in open_ascii_files.f: variable "file_name" from namelist "CLIMPARAM_INFO" was not'// &
+                                ' given in config/IO_CONDITIONS', char_var=file_name)
+        call add_path(file_name)
+        open (49 , status='old', action='read', file=file_name)
+        !    **************************************************
+        call read_comment(49) ! only accept comments at beginning of climatic parameters file
+
+    end if
+
+
+
+    !! =========================================================== !!
     !!                     COMBINE INPUT FILES                     !!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-    
-    !OCEANIC_TEMPERATURE_FILE
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    ! Check if got "parametric" instead of file name
-    if (filename=='parametric') then
-        ! if so, store that info in a scratch file
+    !! =========================================================== !!
+
+
+    ! <><><><><><><><><><><><><><> !
+    read(unit=ID, nml=COMBINE_INFO)
+    ! <><><><><><><><><><><><><><> !
+
+    if (ocean_temp_mode=='parametric') then
+
+        ! parametric ocean temperature => write "parametric" in scratch input file (that will be read later)
         open(unit=32, status='scratch', action='readwrite')
+        !    **********************************************
         write(unit=32, fmt=*) 'parametric'
         rewind(unit=32)
+        !
+        print *
+        print *, '    Parametric ocean temperature => internally-defined relationship'
+
     else
-        ! if not, open expected input ascii file
-        call add_path(filename)
-        open (32 ,status='old',file=filename)
+
+        call check_namelist_def('Error - in open_ascii_files.f: variable "ocean_temp_file" was not given in config/IO_CONDITIONS', &
+                                char_var=ocean_temp_file)
+        call add_path(ocean_temp_file)
+        open (32 , status='old', action='read', file=ocean_temp_file)
+        !    ********************************************************
+
     end if
-    
-    ! **OBSOLETE** (former HYPSO_FILE):
-    call read_comment(ID)
-    read(unit=ID,fmt=*)! dummychar, filename
-    !call add_path(filename)
-    !open (4  ,status='old',file=filename)
-    
-    
+
+    !
+    ! unit=4: obsolete file: INPUT/hypso.dat
+    !
+
     !ccccccc +++++++++++++++++++++++++++++++++ 
     !       Earth physical dimensions
-    
-    !OCEANIC_BOX_VOLUME_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (33 ,status='old',file=filename)
-    
-    !OCEAN_SURFACE_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (34 ,status='old',file=filename)
-    
-    !SURF_SEDIM_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (37 ,status='old',file=filename)
-    
-    
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "box_volume_file" was not given in config/IO_CONDITIONS', &
+                            char_var=box_volume_file)
+    call add_path(box_volume_file)
+    open (33 , status='old', action='read', file=box_volume_file)
+    !    ********************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "box_surf_file" was not given in config/IO_CONDITIONS', &
+                            char_var=box_surf_file)
+    call add_path(box_surf_file)
+    open (34 , status='old', action='read', file=box_surf_file)
+    !    ******************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "box_surf_sedi_file" was not given in config/IO_CONDITIONS', &
+                            char_var=box_surf_sedi_file)
+    call add_path(box_surf_sedi_file)
+    open (37 , status='old', action='read', file=box_surf_sedi_file)
+    !    ***********************************************************
+
+
     !ccccccc+++++++++++++++++++++++++++++++++
     !       definition of boxes
-    
-    !DEEP_BOX_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (35 ,status='old',file=filename)
-    
-    !SEDIM_BOX_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (36 ,status='old',file=filename)
-    
-    !BOX_TEMPERATURE_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (38 ,status='old',file=filename)
-    
-    !APP_CONT_BOX_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (39 ,status='old',file=filename)
-    
-    !THERMOCLINE_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (40 ,status='old',file=filename)
-    
-    !SURFACE_BOX_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (41 ,status='old',file=filename)
-    
-    !EXCHANGE_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (42 ,status='old',file=filename)
-    
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "deep_box_file" was not given in config/IO_CONDITIONS', &
+                            char_var=deep_box_file)
+    call add_path(deep_box_file)
+    open (35 , status='old', action='read', file=deep_box_file)
+    !    ******************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "sedim_box_file" was not given in config/IO_CONDITIONS', &
+                            char_var=sedim_box_file)
+    call add_path(sedim_box_file)
+    open (36 , status='old', action='read', file=sedim_box_file)
+    !    *******************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "box_press_file" was not given in config/IO_CONDITIONS', &
+                            char_var=box_press_file)
+    call add_path(box_press_file)
+    open (38 , status='old', action='read', file=box_press_file)
+    !    *******************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "appcont_box_file" was not given in config/IO_CONDITIONS', &
+                            char_var=appcont_box_file)
+    call add_path(appcont_box_file)
+    open (39 , status='old', action='read', file=appcont_box_file)
+    !    *********************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "thermocline_file" was not given in config/IO_CONDITIONS', &
+                            char_var=thermocline_file)
+    call add_path(thermocline_file)
+    open (40 , status='old', action='read', file=thermocline_file)
+    !    *********************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "surface_box_file" was not given in config/IO_CONDITIONS', &
+                            char_var=surface_box_file)
+    call add_path(surface_box_file)
+    open (41 , status='old', action='read', file=surface_box_file)
+    !    *********************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "exchange_file" was not given in config/IO_CONDITIONS', &
+                            char_var=exchange_file)
+    call add_path(exchange_file)
+    open (42 , status='old', action='read', file=exchange_file)
+    !    ******************************************************
+
     !
     ! unit=43: obsolete file: INPUT/indice_part.dat
     !
-    
-    !FSINK_INORG_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (44 ,status='old',file=filename)
-    
-    !FSINK_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (45 ,status='old',file=filename)
-    
-    !EPICONT_BOX_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (46 ,status='old',file=filename)
-    
-    !POLAR_BOX_FILE:
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    call add_path(filename)
-    open (47 ,status='old',file=filename)
-    
-    
-    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!                  RESTART AND OFFLINE FILES                  !!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-    
-    !ccccccc+++++++++++++++++++++++++++++++++ 
-    !       geoclim restart files:
-    
-    call read_comment(ID)
-    read(unit=ID,fmt=*) dummychar, filename
-    open (10 ,status='REPLACE',file=trim(output_path)//trim(filename)//run_name)
 
-    
-    
-    
+    call check_namelist_def('Error - in open_ascii_files.f: variable "fsink_inorg_file" was not given in config/IO_CONDITIONS', &
+                            char_var=fsink_inorg_file)
+    call add_path(fsink_inorg_file)
+    open (44 , status='old', action='read', file=fsink_inorg_file)
+    !    *********************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "fsink_file" was not given in config/IO_CONDITIONS', &
+                            char_var=fsink_file)
+    call add_path(fsink_file)
+    open (45 , status='old', action='read', file=fsink_file)
+    !    ***************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "epicont_box_file" was not given in config/IO_CONDITIONS', &
+                            char_var=epicont_box_file)
+    call add_path(epicont_box_file)
+    open (46 , status='old', action='read', file=epicont_box_file)
+    !    *********************************************************
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "polar_box_file" was not given in config/IO_CONDITIONS', &
+                            char_var=polar_box_file)
+    call add_path(polar_box_file)
+    open (47 , status='old', action='read', file=polar_box_file)
+    !    *******************************************************
+
+
+
+    !! =========================================================== !!
+    !!                  RESTART AND OFFLINE FILES                  !!
+    !! =========================================================== !!
+
+
+    ! <><><><><><><><><><><><><><> !
+    read(unit=ID, nml=RESTART_INFO)
+    ! <><><><><><><><><><><><><><> !
+
+
+    !ccccccc+++++++++++++++++++++++++++++++++ 
+    !       geoclim restart file:
+
+    call check_namelist_def('Error - in open_ascii_files.f: variable "COMBINE_restart_file" was not given in config/IO_CONDITIONS',&
+                            char_var=COMBINE_restart_file)
+    open (10 , status='REPLACE', action='write', file=trim(output_directory)//trim(COMBINE_restart_file)//trim(run_name))
+    !    ****************************************************************************************************************
+
+
+    if (coupling_dynsoil) then
+
+        !ccccccc+++++++++++++++++++++++++++++++++ 
+        !        DynSoil restart file:
+
+        call check_namelist_def('Error - in open_input_files.f: variable "DynSoil_restart_file" was not given in'// &
+                                ' config/IO_CONDITIONS', char_var=DynSoil_restart_file)
+        ! note: "DynSoil_restart_file" is a global variable
+
+    end if
+
+
+
+
 end subroutine

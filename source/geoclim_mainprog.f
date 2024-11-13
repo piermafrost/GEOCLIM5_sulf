@@ -20,12 +20,18 @@ program geoclim
     use dynsoil_read_input_mod,        only: dynsoil_read_input
     use dynsoil_create_output_mod,     only: dynsoil_create_output
     use dynsoil_initialization_mod,    only: dynsoil_initialization
-    use io_module,                     only: check_invalid
+    use io_module,                     only: netcdf_output_var, check_invalid
     use output_netcdf2ascii_mod,       only: output_netcdf2ascii
-    use utils,                         only: read_comment, set_error_handling_option
+    use read_oceanic_temperature_mod,  only: read_oceanic_temperature
+    use utils,                         only: set_error_handling_option
+    use climatic_parameters,           only: get_clim_param
     implicit none
     include 'combine_foam.inc'
     integer:: ierr
+    ! Declare structures for netCDF output info (cannot be declared in combine_foam.inc)
+    type(netcdf_output_var), dimension(nCOMBoutvar) :: COMB_outvar_info
+    type(netcdf_output_var), dimension(nGEOGoutvar) :: GEOG_outvar_info
+    type(netcdf_output_var), dimension(nDYNSoutvar) :: DYNS_outvar_info
 
 
 
@@ -64,18 +70,19 @@ program geoclim
     tbegin=tsta
     tend=tfi
     stept=ts
-!    check=xjump
+!    check=ijump_print
     time=tbegin
-    compteur=int(xjump)+1
+!    compteur=ijump_print+1
     htry=ts
     eps=1.d-8
     icount_geogprint = ijump_geogprint
     icount_veget = ijump_veget
-    if (coupling_veget==0) then
+    if (.not. coupling_veget) then
         !no modification
         veget_factor = 1
         veget_eros_factor = 1
     end if
+    icount_climparam = ijump_climparam
 
 
 !   ############ FILE OPENNING ############ !
@@ -86,9 +93,14 @@ program geoclim
 !   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
 !   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
 !   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
-!   Read continental inputs:
+!   Read climatic inputs (global, land, ocean) and other land data:
 
-    if (land_input_mode == 'ascii') then
+    if (cont_input_mode == 'ascii') then
+
+        if (nclimparam > 0) then
+            print *, 'ERROR: use of climatic parameters (other than CO2) is not supported in "ascii" input mode'
+            stop
+        end if
 
         ref_x_axis = 0d0
         ref_y_axis = 0d0
@@ -108,16 +120,22 @@ program geoclim
 
         do j=1,nclimber
             read(30,*)co2climber(nclimber+1-j), &
-                    (Tairclimber(i,nclimber+1-j),i=1,npixel)
-            read(31,*)dummy,(Runclimber(i,nclimber+1-j),i=1,npixel)
+                    (Tairclimber(i,nclimber+1-j,1,1,1,1,1),i=1,npixel)
+            read(31,*)dummy,(Runclimber(i,nclimber+1-j,1,1,1,1,1),i=1,npixel)
         end do
         close(unit=30)
         close(unit=31)
 
         GMSTclimber = -1d99 ! no definition of GMST in inputs
 
+        ! Units conversion: CO2: ppmv -> PAL
+        co2climber = co2climber/280.
 
-    elseif (land_input_mode == 'GCM') then
+        ! temperature of oceanic basins
+        call read_oceanic_temperature(32, Toceclimber, co2_axis=co2climber)
+
+
+    else ! cont_input_mode == 'GCM'
 
         call load_climatology(333)
         ! Get global variables:
@@ -128,40 +146,34 @@ program geoclim
         !    'areaclimber'
         !    'Tairclimber'
         !    'Runclimber'
+        !    'Toceclimber'
         !    'GMSTclimber'
 
     end if
 
-    ! Units conversion:
-    !
-    ! area: m2 -> 1e6km2:
+    ! Units conversion: area: m2 -> 1e6km2:
     areaclimber = areaclimber/1e12
     areaEarth = areaEarth/1e12
-    !
-    ! CO2: ppmv -> PAL
-    co2climber = co2climber/280.
 
     ! get total land area
     areatot = sum(areaclimber)
 
-    call load_lithology(304)
-    ! get global variable 'litho_frac'
+    if (.not. uniform_lithology) call load_lithology(0)
+    ! get global variable 'litho_frac' and check consistency with continental grid
 
 !   Check for negative runoff
     print *
-    call check_invalid('runoff', areaclimber, ERROR_HANDLING_OPTION(3), var2D=Runclimber, axis=2)
-
-
-!   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
-!   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
-
-
-    ! Read oceanic inputs
-
-    call read_oceanic_temperature(32, co2climber, Toceclimber)
+    call check_invalid('runoff', areaclimber, ERROR_HANDLING_OPTION(3), var7D=Runclimber, axis=2)
 
     ! Store GMST in last box (atmosphere) of Toceclimber:
-    Toceclimber(nbasin,:) = GMSTclimber
+    Toceclimber(nbasin,:,:,:,:,:,:) = GMSTclimber
+
+
+!   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+!   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+
+
+    ! Read other oceanic inputs
 
     ! Obsolete: hypso file
     !do j=1,13
@@ -189,6 +201,20 @@ program geoclim
 !   <><><><><><><><><><><><>
 !   read initial conditions
 !   <><><><><><><><><><><><>
+
+
+    ! Rewind main IO file, because earlier namelists need to be read
+    rewind(unit=0)
+
+
+!   CLIMATIC PARAMETERS: (potentially needed to generate DynSoil initial condition) 
+!   --------------------
+
+    ! Lower bounds of climatic parameters (needed for climatic parameters with periodic ranges)
+    cp_lowest_value = (/clim_param_1(1), clim_param_2(1), clim_param_3(1), clim_param_4(1), clim_param_5(1)/)
+
+    call get_clim_param(time, tend, ijump_climparam, icount_climparam, prev_cpvec, next_cpvec, cpvec, cp_lowest_value, &
+                        initialization=.true.)
 
 
 !   COMBINE:
@@ -230,42 +256,20 @@ program geoclim
 !    -------
 
     if (coupling_dynsoil) then
-        ! Note: there are 12 uncommented lines to read:
-        !  - name of restart file to create
-        !  - initialization mode
-        !  - initialization file name
-        !  - 8 initialization variables
-        !  - slope file and variable name
 
-        call read_comment(0)
-        read(unit=0,fmt=*) dummychar, DS_restart_name
-        call read_comment(0)
-        read(unit=0,fmt=*) DS_init_mode
         ! read init file info or create init cond
-        call dynsoil_read_input( DS_init_mode, 0,                                                 &
-                                 ref_x_axis,ref_y_axis,xlevs,                                     &
+        call dynsoil_read_input( 0,                                                               &
+                                 ref_x_axis,ref_y_axis,areaclimber, xlevs,                        &
                                  reg_thick,reg_x_surf,reg_tau_surf,reg_z_prof,reg_tau_prof,slope, &
-                                 DS_missingpoints, DS_slopemissval                                )
+                                 DS_missingpoints, DYNS_restart_dim, DYNS_restart_var             )
 
-        ! initialisation of rest of dynsoil variables:
-        call dynsoil_initialization( xlevs, slope,areaclimber,                                  &
-                                     reg_thick,reg_x_surf,reg_tau_surf,reg_z_prof,reg_tau_prof, &
-                                     reg_prod,reg_eros,reg_P_diss,reg_P_eros,reg_x_surf_eros,   &
-                                     reg_x_mean,reg_mean_age,reg_P_vol, reg_ktop,               &
-                                     reg_Li_Friv,reg_Li_Fsp,reg_Li_driv,                        &
-                                     DS_slopemissval,DS_missingpoints                           )
+        ! initialisation of offline dynsoil variables (ktop and P_vol):
+        call dynsoil_initialization( xlevs, reg_thick, reg_x_surf, reg_z_prof, DS_missingpoints,  &
+                                     reg_P_vol, reg_ktop                                          )
 
         DS_timestep = ijump_DS_integration * ijump_cont_weath * ts
         icount_DS_int = ijump_DS_integration
         icount_DS_pri = ijump_DS_print
-
-    else
-
-        ! skip the 12 uncommented lines
-        do i = 1,12
-            call read_comment(0)
-            read(unit=0,fmt=*)
-        end do
 
     end if
 
@@ -297,30 +301,22 @@ program geoclim
 !   <><><><><><><><><><>
 
 !   read combine (oceanic) output conditions and create output file(s):
-    call geoclim_create_output( 0, output_path,run_name,vol,oce_surf,surf_sedi,                 &
-                                GEO_ofile_name,GEO_ofile_num,GEO_varout_name,GEO_varout_missval )
-    ! Special case of GMST (optional input)
+    call geoclim_create_output(0, output_directory, run_name, vol, oce_surf, surf_sedi, &
+                               COMB_ofile_name, COMB_time_dimname, COMB_outvar_info     )
+    ! Special case of GMST (optional input, output variable #93)
     where(GMSTclimber==-1d99)
-        GMSTclimber           = GEO_varout_missval(95)
-        Toceclimber(nbasin,:) = GEO_varout_missval(95)
+        GMSTclimber                     = COMB_outvar_info(93)%fillval
+        Toceclimber(nbasin,:,:,:,:,:,:) = COMB_outvar_info(93)%fillval
     end where
 
 !   read geographic output conditions and create output file(s):
-    call geographic_create_output( 0, output_path,run_name,ref_x_axis,ref_y_axis,areaclimber,slope, &
-                 litho_frac,GEOG_ofile_name,GEOG_ofile_num,GEOG_varout_name,GEOG_varout_missval     )
+    call geographic_create_output(0, output_directory, run_name, ref_x_axis, ref_y_axis, areaclimber, litho_frac, slope, &
+                                  GEOG_ofile_name, GEOG_time_dimname, GEOG_outvar_info                                   )
 
 !   read dynsoil output conditions and create output file(s):
     if (coupling_dynsoil) then
-        call dynsoil_create_output( 0, output_path,run_name,                                    &
-                                    xlevs,ref_x_axis,ref_y_axis,areaclimber,litho_frac,slope,   &
-                                    DS_ofile_num,DS_ofile_name,DS_varout_name,DS_varout_units,  &
-                                    DS_varout_missvalname,DS_varout_missval                     )
-
-    else
-        do i = 1,nDSvar
-            call read_comment(0)
-            read(0,*)
-        end do
+        call dynsoil_create_output(0, output_directory, run_name, xlevs, ref_x_axis, ref_y_axis, areaclimber, litho_frac, slope, &
+                                   DYNS_ofile_name, DYNS_time_dimname, DYNS_outvar_info                                          )
     end if
 
 !   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
@@ -332,11 +328,17 @@ program geoclim
     fog = 0
 
 
-!   close IO condition file:
+!   Close IO condition file:
+!   ------------------------
+!   ########
     close(0)
+!   ########
 
-!   signal that the current run is done with the 2 configuration files,
-!   they can be safely modified.
+
+!   <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>   !
+!   indicate that the current run is done with its configuration files,
+!   they can therefore be safely modified by other GEOCLIM program running.
+!   <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>   !
     open(unit=0, file=geoclim_path//'.config-queue', status='old', action='readwrite', iostat=ierr)
     if (ierr/=0)  open(unit=0, file=geoclim_path//'.config-queue', status='replace', action='readwrite')
     ierr=0
@@ -347,6 +349,7 @@ program geoclim
     backspace(unit=0)
     write(unit=0, fmt='(A)') 'free (run: '//trim(run_name)//')'
     close(unit=0)
+!   <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>   !
 
 
 
@@ -357,44 +360,49 @@ program geoclim
 
     do j = 1,npixel
         if (areaclimber(j)==0) then
-            Tclim(j)           = GEOG_varout_missval(7)
-            Runclim(j)         = GEOG_varout_missval(8)
-            wth_allsil(j)      = GEOG_varout_missval(10)
-            wth_litho_wgh(:,j) = GEOG_varout_missval(11)
-            wth_litho(:,j)     = GEOG_varout_missval(12)
-            fker(j)            = GEOG_varout_missval(13)
-            POC_export_rate(j) = GEOG_varout_missval(14)
-            fp(j)              = GEOG_varout_missval(15)
+            Tclim(j)           = GEOG_outvar_info(8)%fillval
+            Runclim(j)         = GEOG_outvar_info(9)%fillval
+            wth_allsil(j)      = GEOG_outvar_info(11)%fillval
+            wth_litho_wgh(:,j) = GEOG_outvar_info(12)%fillval
+            wth_litho(:,j)     = GEOG_outvar_info(13)%fillval
+            fker(j)            = GEOG_outvar_info(14)%fillval
+            POC_export_rate(j) = GEOG_outvar_info(15)%fillval
+            fp(j)              = GEOG_outvar_info(16)%fillval
         end if
     end do
 
     ! DynSoil output variables
     if (coupling_dynsoil) then
         do j = 1,npixel
+            ! missing-value for all variables on the carbonate lithology (#nlitho)
+            reg_thick(nlitho,j)      = DYNS_outvar_info(6)%fillval
+            reg_x_surf(nlitho,j)     = DYNS_outvar_info(7)%fillval
+            reg_tau_surf(nlitho,j)   = DYNS_outvar_info(8)%fillval
+            reg_z_prof(:,nlitho,j)   = DYNS_outvar_info(9)%fillval
+            reg_tau_prof(:,nlitho,j) = DYNS_outvar_info(10)%fillval
+            reg_x_mean(nlitho,j)     = DYNS_outvar_info(16)%fillval
+            reg_mean_age(nlitho,j)   = DYNS_outvar_info(17)%fillval
+            reg_Li_Friv(nlitho,j)    = DYNS_outvar_info(18)%fillval
+            reg_Li_Fsp(nlitho,j)     = DYNS_outvar_info(19)%fillval
+            reg_Li_driv(nlitho,j)    = DYNS_outvar_info(20)%fillval
             ! missing-value for initial fluxes on ALL pixels (can only be computed between two time steps)
-            reg_prod(:,j)        = DS_varout_missval(16)
-            reg_eros(:,j)        = DS_varout_missval(17)
-            reg_P_diss(:,j)      = DS_varout_missval(18)
-            reg_P_eros(:,j)      = DS_varout_missval(19)
-            reg_x_surf_eros(:,j) = DS_varout_missval(20)
+            reg_prod(:,j)        = DYNS_outvar_info(11)%fillval
+            reg_eros(:,j)        = DYNS_outvar_info(12)%fillval
+            reg_P_diss(:,j)      = DYNS_outvar_info(13)%fillval
+            reg_P_eros(:,j)      = DYNS_outvar_info(14)%fillval
+            reg_x_surf_eros(:,j) = DYNS_outvar_info(15)%fillval
             ! missing-value on non-continental pixels for other output variables
             if (areaclimber(j)==0) then
-                reg_thick(:,j)      = DS_varout_missval(11)
-                reg_x_surf(:,j)     = DS_varout_missval(12)
-                reg_tau_surf(:,j)   = DS_varout_missval(13)
-                reg_z_prof(:,:,j)   = DS_varout_missval(14)
-                reg_tau_prof(:,:,j) = DS_varout_missval(15)
-                reg_x_mean(:,j)     = DS_varout_missval(21)
-                reg_mean_age(:,j)   = DS_varout_missval(22)
-                reg_Li_Friv(:,j)    = DS_varout_missval(23)
-                reg_Li_Fsp(:,j)     = DS_varout_missval(24)
-                reg_Li_driv(:,j)    = DS_varout_missval(25)
-            else
-                ! missing-value above top of regolith for 3D variables
-                do k = 1,nlitho
-                    reg_z_prof(   reg_ktop(k,j)+1:nlitho, k, j ) = DS_varout_missval(14)
-                    reg_tau_prof( reg_ktop(k,j)+1:nlitho, k, j ) = DS_varout_missval(15)
-                end do
+                reg_thick(:,j)      = DYNS_outvar_info(6)%fillval
+                reg_x_surf(:,j)     = DYNS_outvar_info(7)%fillval
+                reg_tau_surf(:,j)   = DYNS_outvar_info(8)%fillval
+                reg_z_prof(:,:,j)   = DYNS_outvar_info(9)%fillval
+                reg_tau_prof(:,:,j) = DYNS_outvar_info(10)%fillval
+                reg_x_mean(:,j)     = DYNS_outvar_info(16)%fillval
+                reg_mean_age(:,j)   = DYNS_outvar_info(17)%fillval
+                reg_Li_Friv(:,j)    = DYNS_outvar_info(18)%fillval
+                reg_Li_Fsp(:,j)     = DYNS_outvar_info(19)%fillval
+                reg_Li_driv(:,j)    = DYNS_outvar_info(20)%fillval
             end if
         end do
     end if
@@ -411,7 +419,7 @@ program geoclim
 !   End of initialization:
 
     htot=0.
-    icompteur=int(xjump)+1
+    icount=ijump_print+1
     icount_cont_weath = ijump_cont_weath
 
 !   ++++++++++++++++++++++++++++++++++++++++++++++++++++++        
@@ -442,7 +450,8 @@ program geoclim
       reg_ktop_0     = reg_ktop
     end if
 
-    call read_veget
+    call read_veget()
+    ! no need to call "get_clim_param" => 'cpvec' variable already assigned during initialization
     call creades(time)
     call rk4(y,dydx,nvar,time,htry,yout)
 
@@ -466,14 +475,15 @@ program geoclim
     call varset(y,nvar)
     icount_cont_weath = ijump_cont_weath
     icount_veget = ijump_veget
+    ! 'icount_climparam' not modified during dummy integration
 
-    call printf(time,icompteur,y)
+    call printf(time, icount, y, COMB_outvar_info, GEOG_outvar_info, DYNS_outvar_info)
 
     ! For not printing the initial state a second time but still counting it:
     if (coupling_dynsoil) icount_DS_pri = -1
     icount_geogprint = -1
-    compteur=-1
-    icompteur=-1
+!    compteur=-1
+    icount=-1
 
 !   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   !
 
@@ -497,6 +507,7 @@ program geoclim
     do while (time.le.tend)
 
       call read_veget()
+      call get_clim_param(time, tend, ijump_climparam, icount_climparam, prev_cpvec, next_cpvec, cpvec, cp_lowest_value)
       call creades(time)
       call rk4(y,dydx,nvar,time,htry,yout)
       do j=1,nvar
@@ -505,7 +516,7 @@ program geoclim
 
       call varset(y,nvar)
 
-      call printf(time,icompteur,y)
+      call printf(time, icount, y, COMB_outvar_info, GEOG_outvar_info, DYNS_outvar_info)
       time=time+htry
 
     end do
@@ -513,13 +524,13 @@ program geoclim
 
 
     ! call 'printf' again only for creating restart files (in case asked to do at end of run)
-    icompteur = -1
+    icount = -1
     icount_geogprint = -1
     icount_DS_pri = -1
     ! => do not print anything
     ageYprint = time - 2*ts
     ! => create restart, if not already created
-    call printf(time, icompteur, y)
+    call printf(time, icount, y, COMB_outvar_info, GEOG_outvar_info, DYNS_outvar_info)
 
 
     print *
@@ -531,7 +542,7 @@ program geoclim
 
 
     ! CONVERT NETCDF OUTPUTS TO ASCII OUTPUTS:
-    if (convert2ascii==1) call output_netcdf2ascii()
+    if (convert2ascii) call output_netcdf2ascii(COMB_outvar_info)
 
 
 

@@ -3,8 +3,8 @@ implicit none
 include 'combine_foam.inc'
 integer:: ierr
 
-open(unit=666, status='old', action='read', file=killing_file_name, iostat=ierr)
-!                           do not raise error if file do not exist ^^^^^^^^^^^
+open(unit=666, status='old', action='read', file=killing_file, iostat=ierr)
+!                      do not raise error if file do not exist ^^^^^^^^^^^
 
 do while(ierr==0)
   check_run_name = ' '

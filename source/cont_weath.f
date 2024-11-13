@@ -1,6 +1,6 @@
 subroutine cont_weath(t)
 !************************
-use co2_interpolation, only: climate_interpolation
+use multidimensional_interpolation, only: climate_interpolation
 use dynsoil, only: regolith_time_integration
 use dynsoil_steady_state, only: steady_state_surface_regolith
 use constante, only: PI_n_CO2_atm, Rgas, TSS_density, rsw_litho, CaMg_rock, P_rock, P2C_ker, P2C_carb, OC_rock, cp_cont, &
@@ -18,7 +18,9 @@ include 'combine_foam.inc'
 ! -------------------------------------------------------------------------------------
 
 p=var(12,nbasin)/PI_n_CO2_atm
-call climate_interpolation(p)
+call climate_interpolation(co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5,    &
+                           p, cpvec, list_cont_pixel=list_cont_pixel, ncontpxl=ncontpxl,                        &
+                           temp_array=Tairclimber, runf_array=Runclimber, interp_temp=Tclim, interp_runf=runclim)
 
 
 
@@ -102,13 +104,13 @@ if (.not. coupling_dynsoil) then
             wth_litho(k,j) = loc_granwth
             wth_litho_wgh(k,j) = wth_litho(k,j) * litho_frac(k,j)
             fsil(j) = fsil(j) + wth_litho_wgh(k,j)
-            weighted_rsw = weighted_rsw + rsw_litho(k)*wth_litho_wgh(k,j)*1e12*areaclimber(j)
+            weighted_rsw = weighted_rsw + rsw_litho(k)*wth_litho_wgh(k,j)*areaclimber(j)
         end do
         do k = BASALT_LITHO_NUM+1,nlitho-1 ! skip carbonates
             wth_litho(k,j) = loc_granwth
             wth_litho_wgh(k,j) = wth_litho(k,j) * litho_frac(k,j)
             fsil(j) = fsil(j) + wth_litho_wgh(k,j)
-            weighted_rsw = weighted_rsw + rsw_litho(k)*wth_litho_wgh(k,j)*1e12*areaclimber(j)
+            weighted_rsw = weighted_rsw + rsw_litho(k)*wth_litho_wgh(k,j)*areaclimber(j)
         end do
         fsil(j) = fsil(j) * areaclimber(j)
         fsilw=fsilw+fsil(j)*clo
@@ -204,7 +206,7 @@ else
             call regolith_time_integration(xlevs, reg_thick, reg_x_surf, reg_tau_surf, reg_P_vol, reg_ktop,                 &
                                            reg_z_prof, reg_tau_prof,                                                        &
                                            reg_prod,reg_eros,reg_P_diss,reg_P_eros, reg_x_surf_eros, Tclim, runclim, slope, &
-                                           DS_timestep, DS_varout_missval(9), DS_varout_missval(10),                        &
+                                           DS_timestep,                                                                     &
                                            veget_factor, veget_eros_factor, list_cont_pixel, ncontpxl                       )
         end if
         !call lithium(reg_P_diss, Tclim, runclim, reg_thick, reg_Li_Friv, reg_Li_Fsp, reg_Li_driv, list_cont_pixel, ncontpxl)
@@ -269,12 +271,6 @@ else
                                                             ! *dexp(facker)  !0.672d+10
             fker(j) = 0.5 * sum(litho_frac(:,j)*OC_rock*reg_eros(:,j))
             !         ^^^ : oxidation efficiency
-            ! *************************************
-            ! Kerogen weathering perturbation: +50%
-            !fker(j) = 1.5 * fker(j)
-            ! +10.32% (eq. in C source as + 50% of sulfuric weathering)
-            !fker(j) = 1.1032 * fker(j)
-            ! *************************************
             if (.not. lock_oxygen_cycle)  fkerw = fkerw + fker(j)*1e12*areaclimber(j)*clo
 
 
@@ -288,10 +284,6 @@ else
             reg_eros_galy_unit=reg_eros_lithmean(j)*TSS_density*1.e6*1.e-3  !moving from m/yr to t/km2/yr
             POC_export_rate(j)=0.081*(reg_eros_galy_unit)**0.56  !in t/km2/yr
             POC_export_rate(j)=POC_export_rate(j)/12.         !mol/m2/yr
-            !! add O2 feedback
-            !POC_export_rate(j) = POC_export_rate(j) / sqrt(var(11,nbasin)/38.002d18)
-            !! add stronger O2 feedback
-            !POC_export_rate(j) = POC_export_rate(j) / (var(11,nbasin)/38.002d18)
             total_cont_POC_export=total_cont_POC_export+POC_export_rate(j)*areaclimber(j)*1.e+12  !mol/yr
 
 
@@ -308,34 +300,7 @@ else
             ! molar flux of H2SO4 from pyrite oxidation directly reaching the ocean
             fH2SO4sulfw = fH2SO4sulfw   +  0*fpyrw  *1e12*areaclimber(j)
 
-
-            !*********************************************************************!
-            ! SULFURIC WEATHERING PERTURBATION - PART 1/3
-            ! -------------------------------------------
-            ! PERTURBATION: +50% of pyrite weathering flux (with kerw => +10.32%):
-            ! abrupt perturbation
-            !faddsulfw = faddsulfw + 0.5*fpyrw*1e12*areaclimber(j)
-            !faddsulfw = faddsulfw + 0.1032*fpyrw*1e12*areaclimber(j)
-            ! progressive pertubation over 40 Ma
-            !faddsulfw = faddsulfw + 0.5*min(1d0, t/40d6)*fpyrw*1e12*areaclimber(j)
-            !faddsulfw = faddsulfw + 0.1032*min(1d0, t/40d6)*fpyrw*1e12*areaclimber(j)
-            !*********************************************************************!
-
         end do
-
-        !*********************************************************************!
-        ! SULFURIC WEATHERING PERTURBATION - PART 2/3
-        ! -------------------------------------------
-        !
-        !fcarbsulfw  = fcarbsulfw  + faddsulfw
-        !fsilsulfw   = fsilsulfw   + faddsulfw
-        !fH2SO4sulfw = fH2SO4sulfw + faddsulfw
-        !
-        ! Trade-off between sulfuric weathering and carbonic weathering:
-        ! => deduce additional sulfuric weathering from carbonic weathering
-        ! (Silicate sulfuric weathering only)
-        !fsilw  = fsilw  - faddsulfw
-        !*********************************************************************!
 
         ! Lithium riverine isotopic delta
         !dLiriv = dLiriv/FrivLi
@@ -388,11 +353,6 @@ do j0=1,ncontpxl
     fp(j) = sum((P_rock(1:nlitho-1)/CaMg_rock(1:nlitho-1)) * wth_litho_wgh(1:nlitho-1,j)) & ! silicate part
             +  P2C_carb * wth_litho_wgh(nlitho,j) & ! carbonate part
             +  P2C_ker * fker(j) ! kerogen part
-            ! *************************************
-            ! Do not consider "extra" kerogen weathering (ie, perturbation) for P weathering
-            !+  P2C_ker * fker(j) / 1.5    ! kerogen part
-            !+  P2C_ker * fker(j) / 1.1032 ! kerogen part
-            ! *************************************
     fpw = fpw + fp(j)*1d12*areaclimber(j)*clo*phosss
 
 end do
@@ -423,15 +383,6 @@ if (lock_oxygen_cycle)  fkerw = sum( fO2_odc(1:nbasin-1) ) - (15./8.)*(fcarbsulf
 
 
 
-
-!*********************************************************************!
-! SULFURIC WEATHERING PERTURBATION - PART 3/3
-! -------------------------------------------
-! Trade-off between sulfuric weathering and carbonic weathering:
-! => deduce additional sulfuric weathering from carbonic weathering
-! (Carbonate sulfuric weathering only)
-!fcarbw = fcarbw - faddsulfw
-!*********************************************************************!
 
 
 

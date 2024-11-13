@@ -8,7 +8,7 @@ module dynsoil_create_init_condition
                                      loc_missingpoints)
 
         use constante, only: PI_n_CO2_atm
-        use co2_interpolation, only: climate_interpolation
+        use multidimensional_interpolation, only: climate_interpolation
 
         include 'combine_foam.inc'
 
@@ -37,17 +37,11 @@ module dynsoil_create_init_condition
                 end do
 
             case ("eq")
-                call get_cont_pixel() ! => set global variable 'list_continental_pixel' needed for climate interpolation
-                if (nclimber==1) then
-                    do j0=1,ncontpxl
-                        j = list_cont_pixel(j0)
-                        Tclim(j)   = Tairclimber(j,1)
-                        runclim(j) = Runclimber(j,1)
-                    end do
-                else
-                    p=var(12,nbasin)/PI_n_CO2_atm
-                    call climate_interpolation(p) ! => set the global variables Tclim and Runclim
-                end if
+                call get_cont_pixel() ! => set global variable 'list_cont_pixel' needed for climate interpolation
+                p=var(12,nbasin)/PI_n_CO2_atm
+                call climate_interpolation(co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5,    &
+                                           p, cpvec, list_cont_pixel=list_cont_pixel, ncontpxl=ncontpxl,                        &
+                                           temp_array=Tairclimber, runf_array=Runclimber, interp_temp=Tclim, interp_runf=runclim)
                 call equilibrium_values(loc_missingpoints, Tclim, Runclim, slope, loc_xlevs, &
                                         loc_reg_thick, loc_x_P_surf, loc_tau_surf, loc_z_prof, loc_tau_prof)
 

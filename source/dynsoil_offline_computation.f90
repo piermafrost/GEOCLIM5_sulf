@@ -4,32 +4,40 @@ implicit none
 contains
 
 
-subroutine dynsoil_offline_computation( xlevs, z,tau, tausurf,xsurf,hsoil,erosion,temperature,runoff,veget_factor, &
-                                        ktop,reg_P_vol, missingpoints, z_missval, tau_missval, x_mean,reg_mean_age )
+subroutine dynsoil_offline_computation(xlevs, z, tau, tausurf, xsurf, hsoil, erosion, temperature, runoff, veget_factor, &
+                                       ktop, reg_P_vol, missingpoints, z_fillval, tau_fillval, x_mean, reg_mean_age)
   use dynsoil_steady_state, only: steady_state_inner_regolith
+  use dynsoil_physical_parameters, only: nlon, nlat, nlitho, nDSlev
   include 'coupler.inc'
-  double precision, intent(in), dimension(:):: xlevs
-  double precision, intent(in), dimension(:,:):: tausurf,xsurf,hsoil,erosion
-  double precision, intent(inout), dimension(:,:,:):: z, tau
-  double precision, intent(in), dimension(:):: temperature, runoff, veget_factor
-  integer, intent(inout), dimension(:,:):: ktop
-  double precision, intent(inout), dimension(:,:):: reg_P_vol
-  logical, intent(in), dimension(:):: missingpoints
-  double precision, intent(in):: z_missval, tau_missval
-  double precision, intent(out), dimension(:,:):: x_mean,reg_mean_age
-  integer:: j, k, npxl, nlit
-
-  ! get data shape:
-  npxl = size(hsoil,2)
-  nlit = size(hsoil,1)
+  integer, parameter:: npxl=nlon*nlat
+  double precision, intent(in), dimension(nDSlev):: xlevs
+  double precision, intent(in), dimension(nlitho,npxl):: tausurf,xsurf,hsoil,erosion
+  double precision, intent(inout), dimension(nDSlev,nlitho,npxl):: z, tau
+  double precision, intent(in), dimension(npxl):: temperature, runoff, veget_factor
+  integer, intent(inout), dimension(nlitho,npxl):: ktop
+  double precision, intent(inout), dimension(nlitho,npxl):: reg_P_vol
+  logical, intent(in), dimension(npxl):: missingpoints
+  double precision, intent(in):: z_fillval, tau_fillval
+  double precision, intent(out), dimension(nlitho,npxl):: x_mean,reg_mean_age
+  integer:: j, k
 
   if (use_dynsoil_steady_state) then
     ! Compute inner regolith variables (offline, as not used for computing weathering rate)
-    call steady_state_inner_regolith(xlevs, hsoil, xsurf, temperature, runoff, erosion, z, tau,           &
-                                     reg_P_vol, ktop, z_missval, tau_missval, veget_factor, missingpoints )
+    call steady_state_inner_regolith(xlevs, hsoil, xsurf, temperature, runoff, erosion, z, tau, &
+                                     reg_P_vol, ktop, veget_factor, missingpoints               )
   end if
-  call xP_average( reg_P_vol, hsoil ,missingpoints  , x_mean )
-  call tau_average( xlevs, tau, tausurf,xsurf,hsoil, ktop, reg_P_vol, missingpoints  , reg_mean_age )
+  call xP_average(reg_P_vol, hsoil, missingpoints, x_mean)
+  call tau_average(xlevs, tau, tausurf, xsurf, ktop, reg_P_vol, missingpoints, reg_mean_age)
+
+  ! Fillvalue for x points higher than regolith surface
+  do j = 1,npxl
+    if (.not. missingpoints(j)) then
+      do k = 1,nlitho-1 ! Skip last lithology class => carbonates
+        z(  ktop(k,j)+1:nDSlev, k, j) = z_fillval
+        tau(ktop(k,j)+1:nDSlev, k, j) = tau_fillval
+      end do
+    end if
+  end do
 
 end subroutine
 
@@ -39,13 +47,13 @@ end subroutine
 
 
 
-subroutine tau_average( x, tau,tausurf,xsurf,h, ktop, reg_P_vol, missingpoints  , tau_ave )
+subroutine tau_average(x, tau, tausurf, xsurf, ktop, reg_P_vol, missingpoints, tau_ave)
 ! Vertical primary-mass-averaged of tau in the regolith.
   use dynsoil_physical_parameters, only: nlon, nlat, nlitho, nDSlev
   integer, parameter:: npxl = nlon*nlat
   double precision, intent(in), dimension(nDSlev):: x
   double precision, intent(in), dimension(nDSlev,nlitho,npxl):: tau
-  double precision, intent(in), dimension(nlitho,npxl):: tausurf, xsurf, h, reg_P_vol
+  double precision, intent(in), dimension(nlitho,npxl):: tausurf, xsurf, reg_P_vol
   integer, intent(in), dimension(nlitho,npxl):: ktop
   logical, intent(in), dimension(npxl):: missingpoints
   double precision, intent(out), dimension(nlitho,npxl):: tau_ave
@@ -55,11 +63,11 @@ subroutine tau_average( x, tau,tausurf,xsurf,h, ktop, reg_P_vol, missingpoints  
   mdx = x(1) - x(2)
 
   do i = 1,npxl
-    if ( .not. missingpoints(i) ) then
+    if (.not. missingpoints(i)) then
 
       do j = 1,nlitho
 
-        if (reg_P_vol(j,i)>0 ) then
+        if (reg_P_vol(j,i)>0) then
 
           tau_sum = 0
           ! sum of regolith inner points:
@@ -97,7 +105,7 @@ end subroutine
 
 
 
-subroutine xP_average( reg_P_vol, h, missingpoints  , xP_ave )
+subroutine xP_average(reg_P_vol, h, missingpoints, xP_ave)
   use dynsoil_physical_parameters, only: nlon, nlat, nlitho
   integer, parameter:: npxl = nlon*nlat
   double precision, intent(in), dimension(nlitho,npxl):: reg_P_vol, h
