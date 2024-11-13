@@ -18,7 +18,7 @@ FC = gfortran
 MODE = standard
 
 # Path of netCDF library (must contains subrepertories lib/ and include/)
-ncpath = /usr
+NCPATH = /usr
 
 
 #############################
@@ -165,9 +165,9 @@ endif
 
 
 # NetCDF library:
-inc_flags += -I$(ncpath)/include
-lib_flags += -L$(ncpath)/lib
-netcdf_flags = -lnetcdf -lnetcdff
+inc_flags += -I$(NCPATH)/include
+lib_flags += -L$(NCPATH)/lib
+NETCDF_FLAGS = -lnetcdf -lnetcdff
 
 
 ##############################################
@@ -175,7 +175,7 @@ netcdf_flags = -lnetcdf -lnetcdff
 ##############################################
 
 main_flags = $(lang_flags) $(warn_flags) $(debug_flags) $(code_flags) $(optim_flags)
-FFLAGS = $(main_flags) $(inc_flags) $(lib_flags) $(netcdf_flags)
+FFLAGS = $(main_flags) $(inc_flags) $(lib_flags) $(NETCDF_FLAGS)
 
 
 #############################################################################
@@ -187,7 +187,7 @@ FFLAGS = $(main_flags) $(inc_flags) $(lib_flags) $(netcdf_flags)
 
 
 # source files:
-sources = compare_template.f90 netcdf_io_module.f90 utils.f90
+sources = compare_template.f90 netcdf_io_module.f90 local_functions.f90
 
 # Executable file:
 execut = compare_template.exe
@@ -209,7 +209,8 @@ ${execut}: ${objects}
 
 
 # File dependencies:
-compare_template.o: netcdf_io_module.o utils.o path.inc shape.inc
+local_functions.o: shape.inc
+compare_template.o: netcdf_io_module.o local_functions.o path.inc shape.inc output_size.inc
 
 
 
