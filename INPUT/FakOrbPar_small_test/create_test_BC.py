@@ -94,7 +94,7 @@ netcdf_output('clim_ecc-hig_obl-hig_pre-270.nc', temperature=Temp(14.6), runoff=
 # Create input file of orbital parameter time-series
 # ==================================================
 
-TEND = 850e3
+TEND = 400e3
 DT = 1e3
 
 t = np.arange(0., TEND, DT)
