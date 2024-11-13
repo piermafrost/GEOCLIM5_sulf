@@ -15,6 +15,7 @@ declare -a KNOWN_COMPILERS=('gfortran' 'ifort' 'pgfortran')
 ##                            Argument scanning                           ##
 ############################################################################
 
+# DEFAULT VALUES
 display_help=0
 compset=""
 resolution=""
@@ -23,10 +24,15 @@ lock=""
 comp_mode=""
 compiler=""
 main_fflags=""
+ncflags=""
 all_fflags=""
 display_list=""
 reset=0
+clim_param=""
+clim_param_ending="cyclic"
+clim_param_periods=""
 # do not initialize 'ncpath' => take the environment variable if defined. If not, will be defined in the Makefile
+use_ncconfig_flags=1
 
 need_value=""
 got_option=0
@@ -50,9 +56,21 @@ do
 		need_value="res"
 		;;
 
-	    "-i"|"--interp"|"--interpolation")
+	    "-i"|"--interp"|"--co2-interp"|"--co2-interpolation")
 		need_value="interp"
 		;;
+
+            "-p"|"--clim-param"|"--climatic-parameters")
+		need_value="clim-param"
+	        ;;
+
+            "--pend"|"--param-ending"|"--clim-param-ending"|"--climatic-parameters-ending")
+		need_value="param-ending"
+	        ;;
+
+            "--periods"|"--param-periods"|"--clim-param-periods"|"--climatic-parameters-periods")
+		need_value="param-periods"
+	        ;;
 
 	    "--lock")
 		need_value="lock"
@@ -74,6 +92,10 @@ do
 		need_value="fflags"
 		;;
 
+	    "--nc-flags")
+		need_value="nc-flags"
+		;;
+
 	    "--all-fflags")
 		need_value="all-fflags"
 		;;
@@ -90,6 +112,10 @@ do
 		display_help=1
 		;;
 
+	    "--no-nc-config-flags")
+		use_ncconfig_flags=0
+		;;
+
 	    *)
 	        echo ""
 		echo "Warning: unexpected argument $1. Will be ignored"
@@ -100,16 +126,20 @@ do
     else  # => previous option need a value
 
 	case $need_value in
-	    "compset")     compset=$1;;
-	    "res")         resolution=$1;;
-	    "interp")      interpolation=$1;;
-	    "lock")        lock=$1;;
-	    "mode")        comp_mode=$1;;
-	    "compiler")    compiler=$1;;
-	    "ncpath")      ncpath=$1;;
-	    "fflags")      main_fflags=$1;;
-	    "all-fflags")  all_fflags=$1;;
-	    "list")        display_list=$1;;
+	    "compset")       compset=$1;;
+	    "res")           resolution=$1;;
+	    "interp")        interpolation=$1;;
+	    "clim-param")    clim_param=$1;;
+	    "param-ending" ) clim_param_ending=$1;;
+	    "param-periods") clim_param_periods=$1;;
+	    "lock")          lock=$1;;
+	    "mode")          comp_mode=$1;;
+	    "compiler")      compiler=$1;;
+	    "ncpath")        ncpath=$1;;
+	    "fflags")        main_fflags=$1;;
+	    "nc-flags")      ncflags=$1;;
+	    "all-fflags")    all_fflags=$1;;
+	    "list")          display_list=$1;;
 	esac
 	need_value=""
 
@@ -128,8 +158,12 @@ fi
 
 test $got_option -eq 0 && display_help=1
 
-# "All fflags" option override "main fflags":
-test -z $all_fflags || main_fflags=""
+# "All fflags" option override "main fflags" and "ncflags":
+if [ ! -z "$all_fflags" ]
+then
+    main_fflags=""
+    ncfflags=""
+fi
 
 
 
@@ -146,7 +180,10 @@ then
     echo ""
     echo "SYNOPSIS"
     echo ""
-    echo "     ./build_GEOCLIM --compset set_of_comps --res c,n,m[,l[,k]] [--interp log|linear] [--compiler comp] [--ncpath path]"
+    echo "     ./build_GEOCLIM --compset set_of_comps --res c,n,m[,l[,k]] [--clim-param n1[,n2[,n3[,n4[,n5]]]]]"
+    echo "                     [--param-ending cyclic|sustain|stoprun]"
+    echo "                     [--periods|--param-periods|--clim-param-periods|--climatic-parameters-periods] v1[,v2[,v3[,v4[,v5]]]]"
+    echo "                     [--interp log|linear] [--compiler comp] [--ncpath path]"
     echo "     ./build_GEOCLIM --list compsets|compilers"
     echo "     ./build_GEOCLIM --help"
     echo ""
@@ -179,7 +216,34 @@ then
     echo ""
     echo "     OPTIONAL ARGUMENTS:"
     echo ""
-    echo "     -i|--interp|--interpolation interpolation_mode"
+    echo "     -p|--clim-param|--climatic-parameters n1[,n2[,n3[,n4[,n5]]]]"
+    echo "             Indicate dimensions length (n1, n2, ...) for additional climatic"
+    echo "             parameters (other than CO2). e.g., eccentricity, obliquity..."
+    echo "             write dimension lengths separated by commas, without space. Up to 5"
+    echo "             dimensions (climatic parameters) are allowed."
+    echo "             This statement must be consistent with input the files (climatic"
+    echo "             parameter file, GCM output files declared in IO_CONDITIONS...)"
+    echo "             If this argument is not used, the climatic parameter file line in"
+    echo "             config/IO_CONDITIONS will be ignored"
+    echo ""
+    echo "     --pend|--param-ending|--clim-param-ending|--climatic-parameters-ending cyclic|sustain|stoprun"
+    echo "             How to handle end of climatic parameter file (giving the values"
+    echo "             of those parameters through time)"
+    echo '             "cyclic":  restart from beginning of file'
+    echo '             "sustain": keep last parameter values for the rest of the run'
+    echo '             "stoprun": stop GEOCLIM run when reaching end of file.'
+    echo "                        This behaviour supersedes the end-of-run time declared"
+    echo "                        in config/cond_p20.dat"
+    echo ""
+    echo "     --periods|--param-periods|--clim-param-periods|--climatic-parameters-periods v1[,v2[,v3[,v4[,v5]]]]"
+    echo "             Indicate that one or several climatic parameters have a periodic"
+    echo "             range of values. e.g., the precession angle have a periodic range"
+    echo "             from 0 to 360. Only indicate the value (v*) of the period. (e.g., for"
+    echo "             the precession: 360), separated by \",\". To skip a parameter, use \",,\""
+    echo "             e.g., if only the 3rd climatic parameter is periodic, with a period 360, use:"
+    echo "               '--param-periods ,,360.'"
+    echo ""
+    echo "     -i|--interp|--co2-interp|--co2-interpolation CO2_interpolation_mode"
     echo "             Specify which functional form to use for CO2 interpolation (i.e.,"
     echo "             to interpolate climate fields between 2 CO2 levels)."
     echo "             Must be 'linear' (abrr. 'lin') or 'logarithmic' (abrr. 'log')."
@@ -217,12 +281,22 @@ then
     echo "     --fflags \"your compilation flags\""
     echo "             Tell the Makefile to use that list of compilation flags."
     echo "             (override Makefile variable 'main_flags')."
-    echo "             Only keep the flags:"
-    echo "               '-I\$ncpath/include -L\$ncpath/lib -lnetcdff -lnetcdf'"
+    echo "             Only keep the netCDF flags. e.g.:"
+    echo "               '-I\$ncpath/include -L\$ncpath/lib -lnetcdff'"
+    echo ""
+    echo "     --nc-flags \"your compilation flags\""
+    echo "             Tell the Makefile to use the list of netcdf compilation flags"
+    echo "             (override Makefile variable 'NETCDF_FLAGS')."
+    echo "             Keep the main compilation flags"
     echo ""
     echo "     --all-fflags \"your compilation flags\""
     echo "             Same as '--fflags' option, but replacing ALL the flags,"
     echo "             including the netcdf ones (override Makefile variable 'FFLAGS')"
+    echo ""
+    echo "     --no-nc-config-flags"
+    echo "             Do not use options from 'nc-config --flibs' and 'nc-config --fflags'."
+    echo "             Use instead default Makefile netcdf options and netcdf path from"
+    echo "             'nc-config --prefix'"
     echo ""
     echo "     --reset"
     echo "             Delete all compilation intermediate files and executables before"
@@ -450,10 +524,92 @@ then
 fi
 
 
+
+##======================##
+##  OPTIONAL ARGUMENTS  ##
+##======================##
+
+
+## climatic parameters
+## ===================
+
+# default values
+n_cp=0
+declare -a len_cp=(1 1 1 1 1)
+
+i0=0
+for (( i=0; i<${#clim_param}; i++ ))
+do
+    c=${clim_param:$i:1}
+    if [[ "$c" == "," ]]
+    then
+	len_cp[$n_cp]=${clim_param:$i0:$((i-i0))}
+	i0=$((i + 1))
+	n_cp=$((n_cp + 1))
+    fi
+done
+if [[ ${#clim_param} -gt 0 ]]
+then
+    len_cp[$n_cp]=${clim_param:$i0}
+    n_cp=$((n_cp + 1))
+fi
+#
+if [[ $n_cp -gt 5 ]]
+then
+    echo ""
+    echo "Error: at most 5 additional climatic parameters (other than CO2) are allowed"
+    exit 1
+fi
+
+# Potential periodic ranges of climatic parameters
+# ------------------------------------------------
+echo ""
+declare -a period_values=(0 0 0 0 0)
+k=0
+ii=0
+for (( i=0; i<${#clim_param_periods}; i++ ))
+do
+    c=${clim_param_periods:$i:1}
+    if [[ "$c" == ',' ]]
+    then
+	l=$((i - ii))
+	if [[ $l -gt 0 ]]
+	then
+	    if [[ $k -ge $n_cp ]]
+	    then
+		echo ""
+		echo "Error: Got more climatic parameter periods than climatic parameters"
+		exit 1
+	    else
+		period_values[$k]=${clim_param_periods:$ii:$l}
+		len_cp[$k]=$((len_cp[$k] + 1))
+		echo "  > periodic climatic parameter #$((k+1)) -- period: \"${period_values[$k]}\""
+	    fi
+	fi
+        k=$((k + 1))
+	ii=$((i + 1))
+    fi
+done
+if [[ $i -gt $ii ]]
+then
+    if [[ $k -ge $n_cp ]]
+    then
+	echo ""
+	echo "Error: Got more climatic parameter periods than climatic parameters"
+	exit 1
+    else
+        l=$((i - ii))
+	period_values[$k]=${clim_param_periods:$ii:$l}
+	len_cp[$k]=$((len_cp[$k] + 1))
+	echo "  > periodic climatic parameter #$((k+1)) -- period: \"${period_values[$k]}\""
+    fi
+fi
+
+
 ## => Executable name:
 
 exec_name=geoclim
-exec_name=${exec_name}_${nco2}x${nx}x${ny}x${nlitho}
+exec_name=${exec_name}_${nco2}x${nx}x${ny}x${nlitho}-${len_cp[0]}x${len_cp[1]}x${len_cp[2]}x${len_cp[3]}x${len_cp[4]}
 if [ "$USE_DS" == "yes" ]
 then
     exec_name=${exec_name}_DS
@@ -468,10 +624,38 @@ test "$USE_ECO" == "yes" && exec_name=${exec_name}_ECO
 exec_name=${exec_name}.exe
 
 
+## climatic parameters end-of-reading mode
+## =======================================
 
-##======================##
-##  OPTIONAL ARGUMENTS  ##
-##======================##
+case $clim_param_ending in
+
+    "cyclic")
+        CP_LOOP=".true."
+        CP_KILL=".false."
+	;;
+
+    "sustain")
+        CP_LOOP=".false."
+        CP_KILL=".false."
+	;;
+
+    "stoprun")
+        CP_LOOP=".false."
+        CP_KILL=".true."
+	;;
+
+    *)
+        echo ""
+        echo "Error: illegal mode of climatic parameter end-of-reading: \"$clim_param_ending\""
+	echo 'Legal modes are "cyclic", "sustain" and "stoprun"'
+	exit 1
+esac
+
+if [[ $n_cp -gt 0 ]]
+then
+    echo ""
+    echo "Climatic parameters end-of-reading mode: $clim_param_ending"
+fi
 
 
 ## CO2 interpolation mode
@@ -505,7 +689,7 @@ esac
 lock_oxygen=0
 lock_sulfur=0
 
-for i in `seq 1 ${#lock}`
+for ((i=1; i<=${#lock}; i++))
 do
     spe=${lock:i-1:1}
 
@@ -613,33 +797,63 @@ then
 fi
 
 
-## netCDF library path
-## ===================
+## netCDF library and options
+## ==========================
 
-if [ -z $ncpath ] # if no netCDF path given, try and get it from `nc-config`
+if [ "$ncflags$all_fflags" == "" ]
 then
 
-    ncpath=`nc-config --prefix 2> /dev/null`
-    test $? -ne 0 && unset ncpath
-
-else # If netCDF path was given:
-
-    # Check if given path exists
-    if [ ! -d $ncpath ]
+    hasfortan=`nc-config --has-fortran 2> /dev/null`
+    if [ $? -ne 0 ]
     then
-        echo ""
-	echo "ERROR: given netCDF library path is not an existing repertory"
-	echo $ncpath
-	exit 1
-    fi
-    # Check if given path contains lib/ and include/ repertories
-    if [ ! -d $ncpath/lib  -o  ! -d $ncpath/include ]
+	echo ""
+	echo "WARNING: 'nc-config' command not installed. Cannot do automatic configuration"
+	unset ncpath
+
+    elif [[ "$hasfortran" == "no" ]]
     then
-        echo ""
-	echo "ERROR: given netCDF library path does not contain 'lib/' and 'include/' repertories"
-	echo $ncpath
-	exit 1
+
+	echo ""
+	echo "WARNING: 'nc-config --has-fortran' has returned 'no' => potential issue with netCDF library."
+	echo "Cannot do automatic configuration"
+	unset ncpath
+
+    else
+
+	if [ $use_ncconfig_flags -eq 1 ]
+	then
+
+	    ncflags="`nc-config --fflags` `nc-config --flibs`"
+	    unset ncpath
+
+	elif [ -z $ncpath ] # if no netCDF path given, try and get it from `nc-config`
+	then
+
+	    ncpath=`nc-config --prefix 2> /dev/null`
+	    test $? -ne 0 && unset ncpath
+
+	else # If netCDF path was given:
+
+	    # Check if given path exists
+	    if [ ! -d $ncpath ]
+	    then
+		echo ""
+		echo "ERROR: given netCDF library path is not an existing repertory"
+		echo $ncpath
+		exit 1
+	    fi
+	    # Check if given path contains lib/ and include/ repertories
+	    if [ ! -d $ncpath/lib  -o  ! -d $ncpath/include ]
+	    then
+		echo ""
+		echo "ERROR: given netCDF library path does not contain 'lib/' and 'include/' repertories"
+		echo $ncpath
+		exit 1
+	    fi
+	fi
+
     fi
+
 fi
 
 
@@ -656,15 +870,33 @@ fi
 # ----------------------------
 
 rm -f source/shape.inc
-echo '! File automatically generated by `build_GEOCLIM`' > source/shape.inc
-echo "integer, parameter :: nbasin = 10"                >> source/shape.inc
-echo "integer, parameter :: nclimber = $nco2"           >> source/shape.inc
-echo "integer, parameter :: nlon = $nx"                 >> source/shape.inc
-echo "integer, parameter :: nlat = $ny"                 >> source/shape.inc
-echo "integer, parameter :: nlitho = $nlitho"           >> source/shape.inc
-echo "integer, parameter :: nDSlev = $nDSz"             >> source/shape.inc
+#     ^^^^^^^^^^^^^^^^
+echo '! File automatically generated by `build_GEOCLIM`'                 > source/shape.inc
+echo "integer, parameter :: nbasin = 10"                                >> source/shape.inc
+echo "integer, parameter :: nclimber = $nco2"                           >> source/shape.inc
+echo "integer, parameter :: nlon = $nx"                                 >> source/shape.inc
+echo "integer, parameter :: nlat = $ny"                                 >> source/shape.inc
+echo "integer, parameter :: nlitho = $nlitho"                           >> source/shape.inc
+echo "integer, parameter :: nDSlev = $nDSz"                             >> source/shape.inc
+echo ""                                                                 >> source/shape.inc
+echo "! Additional climatic parameters"                                 >> source/shape.inc
+echo "integer, parameter :: nclimparam = $n_cp"                         >> source/shape.inc
+echo "integer, parameter :: len_p1 = ${len_cp[0]}"                      >> source/shape.inc
+echo "integer, parameter :: len_p2 = ${len_cp[1]}"                      >> source/shape.inc
+echo "integer, parameter :: len_p3 = ${len_cp[2]}"                      >> source/shape.inc
+echo "integer, parameter :: len_p4 = ${len_cp[3]}"                      >> source/shape.inc
+echo "integer, parameter :: len_p5 = ${len_cp[4]}"                      >> source/shape.inc
+echo ""                                                                 >> source/shape.inc
+echo "! Periodic range of climatic parameters (e.g., precession angle)" >> source/shape.inc
+echo "! Note: 0 is for aperiodic ranges"                                >> source/shape.inc
+echo "double precision, parameter :: p1_period = ${period_values[0]}"   >> source/shape.inc
+echo "double precision, parameter :: p2_period = ${period_values[1]}"   >> source/shape.inc
+echo "double precision, parameter :: p3_period = ${period_values[2]}"   >> source/shape.inc
+echo "double precision, parameter :: p4_period = ${period_values[3]}"   >> source/shape.inc
+echo "double precision, parameter :: p5_period = ${period_values[4]}"   >> source/shape.inc
 
 rm -f source/coupler.inc
+#     ^^^^^^^^^^^^^^^^^^
 echo '! File automatically generated by `build_GEOCLIM`'                     > source/coupler.inc
 if [ "$USE_DS" == "yes" ]
 then
@@ -697,7 +929,9 @@ then
 else
     echo "logical, parameter :: lock_sulfur_cycle = .false."                 >> source/coupler.inc
 fi
-echo "character(len=*), parameter :: interpolation_mode = '$interpolation'"  >> source/coupler.inc
+echo "character(len=*), parameter :: CO2_interpolation = '$interpolation'"   >> source/coupler.inc
+echo "logical, parameter :: climparam_loop = $CP_LOOP"                       >> source/coupler.inc
+echo "logical, parameter :: climparam_kill = $CP_KILL"                       >> source/coupler.inc
 
 
 # Define 'make' options
@@ -706,11 +940,12 @@ echo "character(len=*), parameter :: interpolation_mode = '$interpolation'"  >> 
 MAKE_OPTIONS="execut=$exec_name"
 test "$DEF_COMP" == "no"  && MAKE_OPTIONS="$MAKE_OPTIONS FC=$compiler"
 test -z $comp_mode        || MAKE_OPTIONS="$MAKE_OPTIONS MODE=$comp_mode"
-test -z $ncpath           || MAKE_OPTIONS="$MAKE_OPTIONS ncpath=$ncpath"
+test -z $ncpath           || MAKE_OPTIONS="$MAKE_OPTIONS NCPATH=$ncpath"
 
 #'make' variables containing blanks (flags list) => cannot be passed using the string variable 'MAKE_OPTIONS'
 PRINT_MAKE_OPTIONS=$MAKE_OPTIONS
 test "$main_fflags" == "" || PRINT_MAKE_OPTIONS="$PRINT_MAKE_OPTIONS main_flags=\"$main_fflags\""
+test "$ncflags" == ""     || PRINT_MAKE_OPTIONS="$PRINT_MAKE_OPTIONS NETCDF_FLAGS=\"$ncflags\""
 test "$all_fflags" == ""  || PRINT_MAKE_OPTIONS="$PRINT_MAKE_OPTIONS FFLAGS=\"$all_fflags\""
 
 
@@ -721,14 +956,17 @@ rm -f GEOCLIM_environment
 echo "#!/bin/bash"                 >  GEOCLIM_environment
 echo ""                            >> GEOCLIM_environment
 echo "export FC=$compiler"         >> GEOCLIM_environment
+test "$ncflags" == ""     || echo "export NETCDF_FLAGS='$ncflags'"    >> GEOCLIM_environment
 test "$main_fflags" == "" || echo "export main_flags='$main_fflags'"  >> GEOCLIM_environment
 test "$all_fflags" == ""  || echo "export FFLAGS='$all_fflags'"       >> GEOCLIM_environment
 echo "export execut=$exec_name"    >> GEOCLIM_environment
 echo "export USE_DS=$USE_DS"       >> GEOCLIM_environment
 echo "export USE_ECO=$USE_ECO"     >> GEOCLIM_environment
 test "$USE_DS" == "yes"   && echo "export DS_MODE=$DS_MODE"         >> GEOCLIM_environment
+echo "export CP_LOOP='$CP_LOOP'"   >> GEOCLIM_environment
+echo "export CP_KILL='$CP_KILL'"   >> GEOCLIM_environment
 test -z $comp_mode        || echo "export MODE=$comp_mode"          >> GEOCLIM_environment
-test -z $ncpath           || echo "export ncpath=$ncpath"           >> GEOCLIM_environment
+test -z $ncpath           || echo "export NCPATH=$ncpath"           >> GEOCLIM_environment
 echo ""                            >> GEOCLIM_environment
 echo "# Compilation command:"      >> GEOCLIM_environment
 echo "# make $PRINT_MAKE_OPTIONS"  >> GEOCLIM_environment
@@ -746,17 +984,29 @@ echo ""
 echo ""
 echo "Compiling..."
 
+
+#<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
 #<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
 if [ "$all_fflags" != "" ]
 then
     make $MAKE_OPTIONS FFLAGS="$all_fflags" > ../build.log 2> ../build.error
 elif [ "$main_fflags" != "" ]
 then
-    make $MAKE_OPTIONS main_flags="$main_fflags" > ../build.log 2> ../build.error
+    if [ "$ncflags" != "" ]
+    then
+        make $MAKE_OPTIONS main_flags="$main_fflags" NETCDF_FLAGS="$ncflags" > ../build.log 2> ../build.error
+    else
+        make $MAKE_OPTIONS main_flags="$main_fflags" > ../build.log 2> ../build.error
+    fi
+elif [ "$ncflags" != "" ]
+then
+    make $MAKE_OPTIONS NETCDF_FLAGS="$ncflags" > ../build.log 2> ../build.error
 else
     make $MAKE_OPTIONS > ../build.log 2> ../build.error
 fi
 #<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
+#<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
+
 
 if [ $? -eq 0 ]
 then
