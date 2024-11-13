@@ -1,87 +1,106 @@
 ###################################################################################################
 # Contains information to read the inputs directly from GCM annual climatology output (CO2 axis,  #
 # files paths, variables names...)                                                                #
-# Notes:                                                                                          #
-#   - Any blank line or line beginning by '#' is ignored by the reading subroutine.               #
-#   - File path are interpreted relative to GEOCLIM main directory, unless an absolute path is    #
-#     given (starting by '/').                                                                    #
-#   - Put file paths between quotes, for slashes are interpreted as string seperator              #
+# Note: File path are interpreted relative to GEOCLIM main directory, unless an absolute path is  #
+# given (starting by '/').                                                                        #
 ###################################################################################################
 
 
-# CO2 AXIS. ie, CO2 mixing ratio (in ppm) for each level, on a single line, separated by commas, semicolons, blanks or tabs
-# The number of CO2 levels MUST be the same as stated by the variable 'nclimber' in source/shape.inc
-# 280.
-280., 560., 1120.
+####  Climatic parameters  ####
+####  ===================  ####
+#
+# Syntax for each line:
+#   all_climparam(k,:) = 287.6, -9e99, -3e33, ...
+#
+# On each line, write the parameter value one by one, per column, separated by commas, semicolons, blanks or tabs.
+# The first parameter value must be CO2 level (in ppmv), and is mandatory. Others are "offline" climatic parameters,
+# and are optional. The number of columns must be consistent with the number of climatic parameters stated at compilation
+# (see `build_GEOCLIM` command, or "source/shape.inc" file).
+# There can be up to 5 "extra" climatic parameters (ie, other than CO2).
+#
+# Each line corresponds to a unique climatic parameters combination ("k" in the example being the "k-th" parameter combination),
+# that will be used to build the parameter space lookup table.
+# Line ordering is up to the user, as long as it is same than the order of the climate field netCDF files (next paragraph)
+#
+# Typically, is CO2 is the only considered parameter, each line has 1 parameter value (1 CO2 level), and there are as many line
+# as CO2 levels.
+
+&CLIM_PARAMS
+ all_climparam(1,:) = 280.
+ all_climparam(2,:) = 560.
+ all_climparam(3,:) = 1120.
+/
 
 
 
 ####  CONTINENTAL ANNUAL CLIMATOLOGY (netCDF FORMAT)    ####
 ####  ==============================================    ####
-
-# NOTE: * file dimension (nx,ny) MUST be consistent with what is declared in source/combine_foam.inc (nlon and nlat)
-#       * It is possible to specifiy a sum or difference of variables with + or 0. (eg, for land_frac: 'frac_ter-frac_lice').
-#         Do not use space, or put the whole string between quotes.
+#
+# * file dimension (nx,ny) must be consistent with compilation (`build_GEOCLIM` command, or "source/shape.inc" file)
+# * It is possible to specifiy a sum or difference of variables with + or 0. (eg, for land_frac: 'frac_ter-frac_lice').
+# * Do not use space or / without putting the whole string between quotes (=> Fortran input format `fmt=*`).
 
 #    File for total grid cell areas (on the entire earth)
 # file path                                                                                x_var_name    y_var_name    main_var_name
 #-----------------------------------------------------------------------------------------------------------------------------------
-'INPUT/GFDL/preind/cell_area_360_720.nc'                                                   lon           lat           area
+&AREA_INFO
+ area_file       = 'INPUT/GFDL/preind/cell_area_360_720.nc'
+ area_x_dim_name = 'lon'
+ area_y_dim_name = 'lat'
+ area_var_name   = 'area'
+/
 
 #    File for land fraction (or land area, will be interpreted according to its units)
 # file path                                                                                x_var_name    y_var_name    main_var_name
 #-----------------------------------------------------------------------------------------------------------------------------------
-'INPUT/GFDL/preind/land_area_360_720.nc'                                                   lon           lat           area
+&LAND_AREA_INFO
+ landarea_file       = 'INPUT/GFDL/preind/land_area_360_720.nc'
+ landarea_x_dim_name = 'lon'
+ landarea_y_dim_name = 'lat'
+ landarea_var_name   = 'area'
+/
 
 
-# For continental temperature and runoff, expect 1 file per CO2 level.
+# Land climate fields (temperature, runoff)
+# -----------------------------------------
+# Expect 1 file per unique climatic parameters combination, in THE SAME ORDER than provided above.
 # x axis, y axis, temperature and runoff variables MUST be present in every file (under the same name)
 # It is possible specify a sum or difference of several variables with + or -
 # (eg, for runoff: 'RUNOFF + DRAINAGE' or 'PRECIP - EVAP')
-# You can use space, but DO NOT PUT THE LINE BETWEEN QUOTES
 
-# x variable name
-lon
+&LAND_CLIM_INFO
 
-# y variable name
-lat
+ land_x_dim_name = 'lon'
+ land_y_dim_name = 'lat'
 
-# temperature variable name
-tmp
+ land_temp_var_name = 'tmp'
+ runoff_var_name    = 'rnf'
 
-# runoff variable name
-rnf
+ ! # File paths (MUST BE CONSISTENT WITH ORDER OF UNIQUE CLIMATIC PARAMETER COMBINATIONS),
+ land_list_file(1) = 'INPUT/GFDL/preind/GFDL_preind_qT_286ppm.nc'
+ land_list_file(2) = 'INPUT/GFDL/preind/GFDL_preind_qT_572ppm.nc'
+ land_list_file(3) = 'INPUT/GFDL/preind/GFDL_preind_qT_1144ppm.nc'
 
-# File paths (MUST BE CONSISTENT WITH CO2 AXIS), one line per file, between the "START" and "STOP" tags.
-# DO NOTE MODIFY the "START" and "STOP" tags, they are used to check the number of files.
-<<--START-->>
-'INPUT/GFDL/preind/GFDL_preind_qT_286ppm.nc'
-'INPUT/GFDL/preind/GFDL_preind_qT_572ppm.nc'   # Note:
-'INPUT/GFDL/preind/GFDL_preind_qT_1144ppm.nc'  # comment those 2 lines for preind fixed CO2 run
-<<--STOP-->>
+/
 
 
-#    File and variable names for global temperature
-#    **********************************************
-#
+# Global temperature field
+# ------------------------
 # Same expectations as previous GCM outputs.
-# Global temperature is not mandatory. Write "-" is no data available for global temperature. The global temperature
-# must be defined ON THE SAME GRID than mandatory climatology, but can be stored in different files.
+# Global temperature is not mandatory. Write '' or comment (!) fields is no data available for global temperature.
+# (if "glob_temp_varname" is '' or commented, all the other entries will be ignored).
+# The global temperature must be defined ON THE SAME GRID than mandatory climatology, but can be stored in different files.
 # If no GCM output file are specified, the same as above will be considered, and "x" and "y" variable name will be ignored.
-# *DO NOT PUT THE LINE OF VARIABLES NAMES BETWEEN QUOTES*
 
-# x variable name
--
+&GLOB_CLIM_INFO
 
-# y variable name
--
+ !glob_x_dim_name = ''
+ !glob_y_dim_name = ''
 
-# global temperature variable name
-tmp
+ glob_temp_var_name = 'tmp'
 
-# list of file paths (must be consistent with co2 axis), one line per file, between the "START" and "STOP" tags.
-# DO NOTE MODIFY the "START" and "STOP" tags, they are used to check the number of files.
-# Leave empty (no uncommented line between the tags) to keep previously stated files.
-<<--START-->>
-<<--STOP-->>
+ ! # File paths (MUST BE CONSISTENT WITH ORDER OF UNIQUE CLIMATIC PARAMETER COMBINATIONS),
+ !glob_list_file = ''
+
+/
 

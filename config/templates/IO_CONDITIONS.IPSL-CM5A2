@@ -68,14 +68,12 @@
 ############################################################################################################################################
 
 
-##  COMBINE and Ecology (biodiv) modules (ascii text files)
-##  =======================================================
+##  COMBINE module (ascii text files)
+##  =================================
 
 #<------->
 &INIT_INFO
  geoc_var_init_file = 'restart/geoclim/output.calib_IPSL-CM5A2.EQ' ! unit 2
- species_init_file  = 'restart/biodiv/current_init_species' ! unit 1
- biod_var_init_file = 'restart/biodiv/current_init_varbio' ! unit 300
 /
 #<------->
 
@@ -459,35 +457,6 @@
 #<------------->
 
 
-## ================= ##
-##  ECOGEO OUTPUTS:  ##
-## ================= ##
-#
-# => ignored if no coupled to biodiversity module
-
-#<------------->
-&ECO_OUTPUT_FILE
- file_name='eco_network_output'
-/
--------------
-&ECO_OUTPUT_DIM
- dname(1)='nspecies',	units(1)='1',	vartype(1)='integer'
- dname(2)='box',	units(2)='1',	vartype(2)='integer'
- dname(3)='time',	units(3)='y'
-/
----------------
-&ECO_OUTPUT_VAR
- vname(1)='box_volume',			units(1)='m3',			defdim(1,:)=0,1,0
- vname(2)='box_surface',		units(2)='m2',			defdim(2,:)=0,1,0
- vname(3)='species_biomass',		units(3)='GtC',			defdim(3,:)=1,1,1       long_name(3)='total living biomass for each species'
- vname(4)='species_count',		units(4)='1',			defdim(4,:)=0,1,1,	vartype(4)='integer', fillval(4)=-1,  long_name(4)='Number of surviving species'
- vname(5)='living_biomass',		units(5)='GtC',			defdim(5,:)=0,1,1,	long_name(5)='total living biomass of all species'
- vname(6)='carbonate_Corg_ratio',	units(6)='-',			defdim(6,:)=0,1,1,      long_name(6)='Carbonate/Corg ratio in each basin'
- vname(7)='carb_bio_vs_total_bio',	units(7)='-',			defdim(7,:)=0,1,1,      long_name(7)='ratio between the biomass of calcifiers vs total biomass'
-/
-#<------------->
-
-
 ## ================== ##
 ##  DYNSOIL OUTPUTS:  ##
 ## ================== ##
@@ -536,7 +505,7 @@
 
 ############################################################################################################################################
 ##                                                                                                                                        ##
-##                                        names of restart files and biodiv files written by the code:                                    ##
+##                                              names of restart files written by the code:                                               ##
 ##                                                                                                                                        ##
 ############################################################################################################################################
 ##
@@ -547,25 +516,7 @@
 #<---------->
 &RESTART_INFO
  COMBINE_restart_file = 'output'          ! unit 10
- ECOGEO_restart_file  = 'output_bio'      ! unit 9
- species_restart_file = 'species_restart' ! unit 202
  DynSoil_restart_file = 'dynsoil_restart'
 /
 #<---------->
-
-# Offline files of ECOGEO module:
-#<--------->
-&ECOGEO_INFO
- who_eats_who   = 'who_eats_who' ! unit 104
- temp_tolerance = 'temp_tol'     ! unit 105
- temp_optimum   = 'temp_opt'     ! unit 106
- ph_tolerance   = 'pH_tol'       ! unit 107
- ph_optimum     = 'pH_opt'       ! unit 108
- birth_rate     = 'birth'        ! unit 109
- death_rate     = 'death'        ! unit 110
- carb_prod_rate = 'carb_prod'    ! unit 111
- ecological_web = 'ecoweb'       ! unit 112
- evolution      = 'evolution'    ! unit 203
-/
-#<--------->
 
