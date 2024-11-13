@@ -1,4 +1,12 @@
-﻿# GEOCLIM6.0
+﻿# GEOCLIM6.1
+
+This release is a moderate update from version 6.0.  
+The modifications essentially concern a reorganization of the internal variables of the Fortran source code
+(see "source/MEMO\_oldvar-2-newvar.txt").
+The computations methods are unchanged, so the code will generated the same outputs.
+The configuration files and boundary condition files are identical, except "oce\_vol.dat" (box volume no longer variable-dependent).
+The COMBINE restarts have been updated (order of variables changed).  
+Therefore, v6.1 is almost compatible with v6.0.
 
 
 
@@ -53,7 +61,9 @@ is a script designed for submitting a series of runs, each new one starting from
 
 
 
-## Updates from GEOCLIM5.2:
+## Former updates
+
+### from GEOCLIM5.2 to GEOCLIM6.0:
 #### Major updates
 * Use namelist in configuration files ('config/IO_CONDITION', 'config/GCM_input_conditions' and 'config/cond_p20.dat').
 The syntax of configuration files; and the routines reading the inputs have hence been drastically changed.
@@ -79,13 +89,11 @@ whether or not they have a periodic range of value (like the Earth axis precessi
 * New options in 'build_GEOCLIM' (--nc-flags). Use `nc-config --flibs` and `--fflags` instead of `--prefix`
 * New options in 'cond_p20.dat' (e.g., "tot_degass_in", that can be used in place of "volin" and "xMORin")
 * The module "netcdf_io_module" has been simplified, with fewer, more flexible, and less repetitive functions.
-* The bash script "configure.sh" was removed
 * Minor bug corrections:
   * the reshaping of 4D DynSoil output variables
   * the computation of COMBINE global isotopic outputs
 
-
-## Updates from GEOCLIM5.1:
+### from GEOCLIM5.1 to GEOCLIM5.2:
 * Possibility to read area, temperature and runoff inputs directly from GCM annual climatology files,
   with some automatic unit conversions.
 * Possibility to automatically create DynSoil initial conditions (null regolith, or at equilibrium with initial pCO2).
@@ -111,7 +119,25 @@ Type `./make_test` for more information.
 
 
 
-## Configuration and compilation: the `build_GEOCLIM` command
+## Useful commands
+
+### `configure.sh`
+A script to quickly set up predefined GEOCLIM configurations (pre- and post-compilation): "ref" (ERA5), "GFDL" or "IPSL".
+It replaces some current GEOCLIM files by predefined ones, stored in local template/ directory.
+The replaced files are the 3 config files (IO\_CONDITIONS, cond\_p20.dat and GCM\_input\_conditions, in "config/"),
+and some Fortran source files, (constante.f90 and shape.inc in "source/").
+GEOCLIM is then configured for the given forcings (climate fields, oceanic geometry...) with the corresponding
+model parameters calibrated for those forcings.
+
+The "new" configuration files can still be modified after invoking that command, for instance, to run the model
+in a paleo configuration using the same GCM and parameterization as a predefined one.
+
+Because this script updates the source code, it should be invoked before compilation. Furthermore, as it performs
+the pre-compilation, it is not needed to use the command `build_GEOCLIM` to compile the code, the Makefile (in source/)
+is enough. `build_GEOCLIM` can still be used, but the user will have to re-specified the model resolution and set of
+components.
+
+### `build_GEOCLIM`
 `build_GEOCLIM` is a bash script, meant to edit the needed source files for pre-compilation configuration (data shape,
 activated modules, ...) and compile the code. The post-compilation configuration is left to do (which file to use as
 input data, names of output and solver parameters, see section "After-compilation configuration").
@@ -601,7 +627,7 @@ Or, for multi-dimensional variables (like geographic or DynSoil variable):
 
 > i = 9 ! Z  
 > if (DYNS_outvar_info(i)%writevar) &  
->   call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(z, shape=(/nlon,nlat,nlitho,nDSlev,1/), &  
+>   call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(z, shape=(/nlon,nlat,nDSlev,nlitho/), &  
 >                                            order=(/4,3,1,2/))), stt=(/1,1,1,1,nt/), cnt=(/nlon,nlat,nlitho,nDSlev,1/))  
 > !  
 
@@ -668,7 +694,6 @@ input, sinking (for particulate variables only) and sedimentation on seafloor. T
 variables only**. Particulate variables are not affected by oceanic advection, and the advection part for isotopic ratio (of
 dissolved variables) is including in 'R' in 'source/creades.f', because its mathematical expression is different from concentration
 variables.
-* Update the routine 'source/varset.f'
 * Update COMBINE restart file and the input file 'oce_vol.dat' (see previous section *Change oceanic basin definition*).
 * Update whatever routine needed to compute the geochemical fluxes of that new variable.
 
@@ -752,7 +777,7 @@ Check the following before completing the steps outlined below:
 
 #### With Linux OS
 The simplest way is with apt-get: `apt-get install libnetcdff`
-This should ensure the compatibility with the installed Fortran compiler.
+This will ensure the compatibility with the installed Fortran compiler.
 
 ### Non-required software instructions for installation (Mac OS)
 * pyFerret
