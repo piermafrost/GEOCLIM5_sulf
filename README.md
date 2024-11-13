@@ -1,29 +1,4 @@
-﻿# GEOCLIM5.2.1
-
-
-
-## Updates
-
-### Last update
-This version (5.2.1) is almost similar to the version 5.2 (published with the article Maffre et al., 2021, 10.1029/2021GL094589).
-The only difference is that all former files, Fortran variables and configuration lines corresponding to the desactivated "ECOGEO" module were definitively removed.
-The submission scripts (in "job/" repertory) were also updated to account for deleted lines in configuration files.
-The code is therefore entirely compatible with previous release (5.2) and Maffre et al. (2021)'s experiments.
-
-### Former updates
-#### from GEOCLIM5:
-* Possibility to read area, temperature and runoff inputs directly from GCM annual climatology files,
-  with some automatic unit conversions.
-* Possibility to automatically create DynSoil initial conditions (null regolith, or at equilibrium with initial pCO2).
-* Can specify uniform lithology, without input netCDF file
-* Add checks for axis matching, missing points, invalid runoff and slope, invalid lithology, and physical units.
-  Interactively ask the users if error detected (by default).
-* Reorganize the main IO file ('config/IO_CONDITION'), can now add commented (#) and blank lines
-* Standardization of the oceanic temperature input (2 options, "parametric" or "raw ascii input").
-* Minor code improvements (eg, Runge-Kutta 4 scheme, biological 13C fractionation formula...)
-* Logarithmic or linear interpolation available for CO2 dimension (default: log)
-* COMBINE (oceanic) restart in concentration instead of molar amount.
-* Implementation of a simplified sulfur cycle (oceanic SO4^2-, sulfide weathering and sulfate-reduction).
+﻿# GEOCLIM6.0
 
 
 
@@ -61,15 +36,11 @@ are running the model on a cluster, you can use the files in 'job/' to submit th
 is a script designed for submitting a series of runs, each new one starting from the end of the previous one. See also section
 *Multiple runs and job submission* in *Run GEOCLIM*.
 
-
-
-## Required software
+#### Required software
 * Fortran compiler (note: the Makefile is configured for gfortran, ifort or pgfortran)
 * netCDF-Fortran library (see section "How to install netCDF-Fortran library")
 
-
-
-## Recommended but not required software
+#### Recommended but not required software
 * 'make' software (installed by default on all UNIX/Mac OS)
 * Python: some scripts for pre-processing (generate boundary conditions) and visualization are in Python.
   Those scripts use the following packages:
@@ -79,6 +50,54 @@ is a script designed for submitting a series of runs, each new one starting from
     * matplotlib (plotting scripts)
     * cartopy (a few plotting scripts)
 * PyFerret
+
+
+
+## Updates from GEOCLIM5.2:
+#### Major updates
+* Use namelist in configuration files ('config/IO_CONDITION', 'config/GCM_input_conditions' and 'config/cond_p20.dat').
+The syntax of configuration files; and the routines reading the inputs have hence been drastically changed.
+* Simplification of outputs writing:
+  * Following this first update, the output writing routines have been simplified: the outputs files are no longer flexible,
+there are 3 imposed files: one for combine outputs, one for geographically-distributed outputs, and one for DynSoil outputs (if
+activated). However, the name of the files, of the outputs variables (including which variable is outputted) is still customizable.
+  * The dimension on which the output variables are defined is now determined in 'config/IO_CONDITION', instead of being hard-coded
+  * New source file 'output_size.inc' that define the number of outputs variables once and for all
+in writing routines. Thus, the "\*\_create_output.f90" routines no longer needs to be modified when adding new output variables.
+* The model can accept time-varying climatic parameters (e.g., orbital parameters). This option in only available in "GCM" input mode.
+It implies the following updates:
+  * The simple CO2 interpolation is replaced by a multilinear interpolation of climate fields (can still be "log" for CO2).
+This interpolation holds for continental fields and oceanic temperature (oceanic circulation is left for future development).
+  * A new input file indicating the values of climatic parameters through time is read by the code.
+  * The configuration file "GCM_input_conditions" should indicate the netCDF files of climate fields for each combination
+of climatic parameter, whatever order, as well as the corresponding values of the climatic parameters. The subroutines from
+"climatic_parameters" modules handle the filling the the parameter hyperspace. If non-parametric, the oceanic temperature MUST be 
+provided with the same order of combinations climatic parameters.
+  * New options in 'build_GEOCLIM' are available to specify the number of climatic parameters, the size of their ranges of values,
+whether or not they have a periodic range of value (like the Earth axis precession parameter).
+#### Minor updates
+* New options in 'build_GEOCLIM' (--nc-flags). Use `nc-config --flibs` and `--fflags` instead of `--prefix`
+* New options in 'cond_p20.dat' (e.g., "tot_degass_in", that can be used in place of "volin" and "xMORin")
+* The module "netcdf_io_module" has been simplified, with fewer, more flexible, and less repetitive functions.
+* The bash script "configure.sh" was removed
+* Minor bug corrections:
+  * the reshaping of 4D DynSoil output variables
+  * the computation of COMBINE global isotopic outputs
+
+
+## Updates from GEOCLIM5.1:
+* Possibility to read area, temperature and runoff inputs directly from GCM annual climatology files,
+  with some automatic unit conversions.
+* Possibility to automatically create DynSoil initial conditions (null regolith, or at equilibrium with initial pCO2).
+* Can specify uniform lithology, without input netCDF file
+* Add checks for axis matching, missing points, invalid runoff and slope, invalid lithology, and physical units.
+  Interactively ask the users if error detected (by default).
+* Reorganize the main IO file ('config/IO_CONDITION'), can now add commented (#) and blank lines
+* Standardization of the oceanic temperature input (2 options, "parametric" or "raw ascii input").
+* Minor code improvements (eg, Runge-Kutta 4 scheme, biological 13C fractionation formula...)
+* Logarithmic or linear interpolation available for CO2 dimension (default: log)
+* COMBINE (oceanic) restart in concentration instead of molar amount.
+* Implementation of a simplified sulfur cycle (oceanic SO4^2-, sulfide weathering and sulfate-reduction).
 
 
 
@@ -92,25 +111,7 @@ Type `./make_test` for more information.
 
 
 
-## Useful commands
-
-### `configure.sh`
-A script to quickly set up predefined GEOCLIM configurations (pre- and post-compilation), like "ref" (ERA5) or "GFDL".
-It replaces some current GEOCLIM files by predefined ones, stored in local template/ directory.
-The replaced files are the 3 config files (IO_CONDITIONS, cond_p20.dat and GCM_input_conditions, in config/),
-and some Fortran source files, (constante.f90, shape.inc and coupler.inc, in source/).
-GEOCLIM is then configured for the given forcings (climate fields, oceanic geometry...) with the corresponding
-model parameters calibrated for those forcings.
-
-The "new" configuration files can still be modified after invoking that command, for instance, to run the model
-in a paleo configuration using the same GCM and parameterization as a predefined one.
-
-Because this script updates the source code, it should be invoked before compilation. Furthermore, as it performs
-the pre-compilation, it is not needed to use the command `build_GEOCLIM` to compile the code, the Makefile (in source/)
-is enough. `build_GEOCLIM` can still be used, but the user will have to re-specified the model resolution and set of
-components.
-
-### `build_GEOCLIM`
+## Configuration and compilation: the `build_GEOCLIM` command
 `build_GEOCLIM` is a bash script, meant to edit the needed source files for pre-compilation configuration (data shape,
 activated modules, ...) and compile the code. The post-compilation configuration is left to do (which file to use as
 input data, names of output and solver parameters, see section "After-compilation configuration").
@@ -126,6 +127,8 @@ If you do not use the `build_GEOCLIM` nor `configure.sh` commands, here is the l
 follow *before compiling the code*, in order to define your run:
 * Which modules to use (file 'source/coupler.inc')
 * Number of CO2 levels: 'nclimber' parameter in 'source/shape.inc'
+* If using climatic parameters, their number ('nclimparam'), the length of each ("len\_p\*') and their potential value's period
+('p\*\_period'), in 'source/shape.inc'
 * Geographic resolution (must be consistent with input data): 'nlon' and 'nlat' parameters in 'source/shape.inc'
 * Number of lithological classes: variable 'nlitho' in 'source/shape.inc'. The model is parameterized for 6 classes, and
   the subroutine 'source/cont_weath.f' explicitly assumes that carbonate rocks is the last lithology class (regardless of
@@ -146,8 +149,6 @@ modification of the source code to be changed. See section *Advanced customizati
 * If you don't compile the code with the Makefile, you should also check that the file 'source/path.inc' exists and states
   the correct path of GEOCLIM root directory (with the line `character(len=*), parameter:: geoclim_path = "..."`). If you do
   use the Makefile, it will be updated automatically.
-* A certain number of configuration options are meant for a ecological network module. These options are left for further
-development, the ecological module is not available in the present distribution.
 
 All those parameters must be consistent with the initialization and forcing files (initial ocean chemistry, climate files...)
 
@@ -175,7 +176,7 @@ This command will also be saved in the file "GEOCLIM_environment". It may be use
 ###### Details of Makefile:
 The "standard" options to customize the Makefile are:
 
-`make [FC=...] [MODE=...] [ncpath=...] [execut=...] [main_flags="..."] [FFLAGS="..."]`
+`make [FC=...] [MODE=...] [NCPATH=...] [execut=...] [main_flags="..."] [NETCDF_FLAGS="..."] [FFLAGS="..."]`
 
 All those arguments are optional (hence the []).
 
@@ -185,12 +186,13 @@ All those arguments are optional (hence the []).
     * 'standard': (default), standard check options.
     * 'debug': extra debugging options
     * 'optim': with optimization flags (and less debugging options, like traceback)
-* ncpath=...: States the path of the directory where the netCDF-Fortran library is installed. That directory must contain
-  the sub-repertories lib/ and include/
-  By default, it is '/usr', but you may have installed your netCDF library elsewhere (/usr/local, /usr/local/netcdf, ...)
-  It can be inquired with `nc-config --prefix`. The command `build_GEOCLIM` first tries this to get it. 
 * execut=...: sets the name of the created executable file. Default is 'geoclim.exe'
-* main_flags="...": Override the main compilation flags (all but "-I$ncpath/include -L$ncpath/lib -lnetcdf -lnetcdff").
+* NCPATH=...: States the path of the directory where the netCDF-Fortran library is installed. This assumes that the only
+needed options are "-I$NCPATH/lib", "-L$NCPATH/include" and "-lnetcdf -lnetcdff". If not, use NETCDF_FLAGS option.
+By default, NCPATH is '/usr', but you may have installed your netCDF library elsewhere (/usr/local, /usr/local/netcdf, ...)
+It can be inquired with `nc-config --prefix`. The command `build_GEOCLIM` first tries this to get it. 
+* NETCDF_FLAGS="...": Override the netCDF flags.
+* main_flags="...": Override the main compilation flags (all but the netCDF flags).
   The variable 'MODE' becomes useless. Useful if you use a different compiler whose options are not configured in the Makefile.
 * FFLAGS="...": Override all compilation flags. The variables 'MODE' and 'ncpath' become useless. Useful if you use a
   different compiler whose options are not configured in the Makefile and who does not support "-I", "-L", "-lnetcdf" or
@@ -239,25 +241,30 @@ The name of all input files needed by GEOCLIM must be provided in config/IO_COND
 * Oceanic configuration (basin volumes, surfaces, water circulation between them). Reference files are in INPUT/COMBINE/ref/
 * Oceanic temperature: 2 options (specified in config/IO_CONDITIONS). "parametric", the temperature of oceanic boxes are
 computed with a parametric function of pCO2. "file_name", the boxes temperature are read in an input ascii file stating the
-temperature of each box at each CO2 level. Each row of that file represents a CO2 level, each column states the temperature
-of the n-th box, except the first column that states the CO2 level (in ppmv).
-* Continental climate: total grid area, land area, temperature (at each CO2 levels) and runoff (at each CO2 levels).
-  See examples in INPUT/ERA5/ (ascii files. Area in 1e6 km2, temperature in °C, runoff in cm/y, if INPUT_MODE is 'ascii').
-  Alternatively, those 4 inputs can be read from GCM outputs (land annual climatology), in netCDF format.
-  Set INPUT_MODE as 'GCM' in config/IO_CONDITIONS. The GCM output files info must be provided in config/GCM_input_conditions.
-  The model expect 1 netCDF file per CO2 level. It recognizes several units and completes automatic conversions. If the units are not
-  recognized, the default units will be assumed, but the user will be asked interactively to validate it. New units and conversion
-  factors can easily be added in source/physical_units.f90 (see section *defining new physical units* in *Further information*).
+temperature of each box at each combination of climatic parameters (that can be only CO2, or more, but MUST be given in the
+same order than continental climate fields in config/GCM_input_conditions). Each row of that file represents unique climatic
+parameter combination (or a single CO2 level), each column states the temperature of the n-th box, except the first column
+that states the CO2 level in ppmv (kept for retro-compatibility, but not use if there are climatic parameters).
+* Continental climate: total grid area (including non-land points), land area, temperature (for each climatic parameter combination),
+  runoff (similarly), and global temperature (similarly). This last input is the 2m-temperature on all grid points (not just continental
+  points). It is optional, and is used to compute the Global Mean Surface Temperature (GMST). It can be stored in different
+  netCDF files than land temperature and runoff (as runoff is very often in *land* GCM output, whose variables are defined
+  only on lands, and not on ocean). However, this temperature field **must** be defined on the same grid than the land outputs.
+  If nothing is specified, the GMST will not be computed and output by the model
+  Those 4/5 inputs are typically read from GCM outputs (land and atm. annual climatology), in netCDF format, if cont_input_mode='GCM'
+  in config/IO_CONDITIONS. The GCM output files info must be provided in config/GCM_input_conditions. The model expect 1 netCDF
+  file per combination of climatic parameters. It recognizes several units and completes automatic conversions.
+  If the units are not recognized, the default units will be assumed, but the user will be asked interactively to validate it.
+  New units and conversion factors can easily be added in source/physical_units.f90 (see section *defining new physical units* in
+  *Further information*).  
+  Alternatively, the option cont_input_mode='ascii' allows to read area, land area, land temperature and runoff from ascii files.
+  In that case, areas must be in 1e6 km2, temperature in °C and runoff in cm/y. There is no possibility to define global temperature,
+  and to use climatic parameters (other than CO2). See ascii input examples in INPUT/FOAM/CTRL_48x40/.
 * Lithology mask: a netCDF file containing the area fraction covered by each lithology class in every land pixels.
   Alternatively, the user can specify directly in config/IO_CONDITIONS a geographically uniform lithology fraction for each class.
 * topography slope: a netCDF file, only read if coupled with DynSoil.
 * A special file is also required ("All" file) containing mean climate variables (like global temperature) at each CO2 level.
-  See for instance 'INPUT/ERA5/All_ERA5.dat'
-* Global Mean Surface Temperature (GMST): this input is optional, and is available in 'GCM' input mode only. You can specify
-  in config/GCM_input_conditions the netCDF files and variable for 2m temperature *everywhere* (not only on lands). It can be
-  stored in different netCDF files than land temperature and runoff (as runoff is very often in *land* GCM output, whose variables
-  are defined only on lands, and not on ocean). However, this temperature field **must** be defined on the same grid than the land
-  outputs. If nothing is specified, the GMST will not be computed and output by the model.
+  See for instance 'INPUT/FOAM/CTRL_48x40/Aire_CtrlLR.dat'
 
 
 #### Initialization files
@@ -309,12 +316,12 @@ degenerated (size-1) extra dimensions.
 ### Output
 * 2 systematic netCDF files: geoclim and geographic
 * 1 netCDF file for DynSoil outputs (if coupled with)
-* It is possible to automatically convert those outputs in ascii format,
-  that option must be entered at the last line of config/cond_p20.dat
+* It is possible to automatically convert those outputs in ascii format, 'convert2ascii' option in config/cond_p20.dat
 
 You can specify in "config/IO_CONDITIONS" which variable you want to output or not (among the list of "outputable" variables).
-To not output a variable, write "#" in place of the output file name.
-You can also change the name of the output files, each variable can be placed in a separated file.
+To not output a variable, write "writevar(\*)=FALSE" ("\*" being the output variable number) in the namelist "&...\_OUTPUT\_VAR"
+of the corresponding output file ("CMB" for COMBINE, "GEO" for geographic and ""DYN" for DynSoil).
+You can also change the name of the output files, dimensions, "long_name" attribute...
 
 The frequency at which outputs are written is specified in "config/cond_p20.dat". There are 3 frequencies: one for COMBINE
 output, one for geographic outputs (ie, continental variables) and one for specific DynSoil outputs.
@@ -335,6 +342,8 @@ To do so, simply write the name of the run (as specified at the first uncommente
 You can put as many run names as you want in the deathnote, one by line. Don't forget to erase the names afterward!
 
 ### Multiple runs and job submission
+**Note: these scripts have not been updated from GEOCLIM5.3 and are currently not working**
+
 'submit_chain.sh' (in the repertory job/) is a bash script for automatically launching a series of GEOCLIM runs.
 A series of runs are runs that have exactly the same configuration (except for their timesteps, starting and stopping times),
 each one starts from the end of the previous one (the very first one starts from the initial condition given by the user).
@@ -354,7 +363,7 @@ but must be configured for the current cluster (whereas the main one is a bash s
 When using 'submit_chain.sh', the pre-compilation configuration must be done (and the code compiled). If you wants to launch
 in parallel several runs that need different pre-compilation configurations, save as many different GEOCLIM executable files.
 Here is the list of options that can be customized with 'submit_chain.sh':
-* The name of the run (for a series of runs, suffix '_1', '_2'... are automatically added).
+* The name of the run (for a series of runs, suffix '\_1', '\_2'... are automatically added).
 * The submission command (cluster-dependent) and the name of the running script (usually, 'run_geoclim.sh').
 * The name of the GEOCLIM executable file.
 * GEOCLIM (COMBINE) and DynSoil initial condition.
@@ -461,7 +470,9 @@ inputs *in the ascii files* (or create new ascii files with only 1xCO2 inputs).
 * Do a first short run with the pre-industrial forcings to retrieve the silicate weathering flux. If you used DynSoil
 in "dynamic" mode, run the model from "startup:eq" with acceleration tuning (see previous paragraph) during 1000-10000 yr.
 If you use another set of components, only 1 model time step is needed.
-* Get the "total silicate weathering" flux from the outputs and use that value as CO2 degassing flux. It should be 2-6 Tmol/yr.
+* Get the "total silicate weathering" flux and the "total sulfuric silicate weathering flux" from the outputs (traditionnaly,
+thos variables are named 'sil_wth_C_flux' and 'sil_sulfwth_Ca_flux'). The sum of the 2 must be used as CO2 degassing flux.
+The degassing flux value should around 2-6 Tmol/yr.
 As today's degassing flux is not well constrained, it is better to tuned it and keep the weathering parameters unchanged.
 Note that the degassing flux (specified in "config/cond_p20.dat") is split in 2: Volcanic (continental) and MOR (oceanic).
 Doing so, the equilibrium CO2 with Pre-Industrial boundary conditions will be 1 PAL.
@@ -495,10 +506,14 @@ Physical units are defined in the source code in 'source/physical_units.f90'. To
 newly defined units. The rule for converting variable into the reference unit is 'ref_unit_var = factor\*var + offset'.
 
 ### Generate oceanic temperature ascii input file from GCM outputs
-This is still experimental, but the Python file 'make_oceanic_input.py' in 'preproc/python/' is meant to read oceanic temperature from GCM
-netCDF output for each CO2 level, as well as the ocean grid definition (ie, longitude, latitude and depth), average the temperature on GEOCLIM
-(COMBINE) oceanic boxes and generate a ascii input file readable by the model (1 CO2 level per row, CO2 value + boxes temperature on each column).
-See description in the Python file.
+The Python script 'make_oceanic_input.py' in 'preproc/python/' read oceanic temperature from GCM netCDF output, and computes geometric
+definition of each oceanixc basin (volume, top surface, sedimentary surface), the average temperature on each basin, and the water flux
+exchanges between the basin. It handles curvilinear grid (common for ocean modules in GCM), and needs the grid information (nav_lon, nav_lat,
+depth, horizontal and vertical areas of grid cells...)
+This computation is done for each climatic parameter combination. *The order in which those combinations are given to the Python script must
+be the same order in which they are stated in config/GCM_input_conditions*.
+This script generates the input files readable by GEOCLIM ("GCM_oceanic_temp.dat", "oce_surf.dat", "surf_sedi.dat", "oce_vol.dat", and
+"exchange_2.dat"). See description in the Python file for more information.
 
 ### Other boundary conditions
 ##### Note on climatology average
@@ -530,8 +545,8 @@ is a "2D matrix" ascii file. Each point {i,j} (ie, line i, column j) represents 
 the box j (column) to the box i (line). Hence, *the sum of each line must yields the same vector than the sum of each column*. 
 The advection of the geochemical species in computed as 'water flux time concentration'.
 
-Though the oceanic circulation is CO2-dependent, it is not taken into account in the code (the model assumes this dependence to be
-negligible).
+Though the oceanic circulation is CO2- and climatic parameter depend, it is not yet taken into account in the code. This is an
+ongoing development.
 
 ### Basic code modification
 ##### Model parameters
@@ -547,77 +562,57 @@ All the parameters of DynSoil module are defined in 'source/dynsoil_physical_par
 
 ##### Output additional variables
 There are a certain number of predefined output variables that the user can choose to output or not simply by editing the main
-configuration file 'config/IO_CONDITIONS'.
+configuration file 'config/IO_CONDITIONS' ("writevar(\*)" option, see previous section "Run GEOCLIM", "Output").
 However, to output a variable that is not in that predefined list, here are the steps to follow.
 
-###### COMBINE variable
-ie, oceanic variable, that have a value for each COMBINE box (like salinity), or a single value (for instance, atmospheric
-variable, or continental flux).
+Firstly, you need to know the name of the variable *in the Fortran source code*, or the way to compute it.
 
-First, you need to know the name of the variable *in the Fortran source code*, or the way to compute it.
+Secondly, depending on the type of the variable, it should be outputted in a different file:
+* COMBINE variables. i.e., oceanic variables, that have a value for each COMBINE box (like salinity), or a single value (for instance,
+atmospheric variable, or continental flux).
+* Geographic variables. i.e., 2D geographic fields (for instance, runoff), or 3D if lithology-dependent (like weathering fluxes)
+* DynSoil variables. Similar to geographic variables, but outputted only if DynSoil module is activated, and can be defined on lithology
+and/or DynSoil vertical dimension.
 
-* Increment by 1 the parameter 'nGEOoutvar' in 'source/combine_foam.inc'.
-* Increment by 1 the parameter 'nvar' in 'source/geoclim_create_output.f90'. It must have the same value than 'nGEOoutvar' (this
-subroutine does not use combine_foam.inc).
-* Add a value in the vector parameter 'indice_boxdef' in both 'source/geoclim_create_output.f90' and 'source/geoclim_write_output.f90'
-(that vector must be the same in both files). The value must be 0 is the output variable is a scalar (single value), or 1 if it has
-a value for each COMBINE box.
-* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS", "GEOCLIM", add a line (eg, copy and
-paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
-* In 'source/geoclim_write_output.f90', at the end of the section "write variables", (just before the section "output file
-closing"), add a block of 3 lines (eg, copy and paste the last 3 lines) that looks like:
+The next steps are:
+
+* In 'source/'output_size.inc, increment by 1 the parameter defining the number of variable *of the corresponding outputfile*
+('nCOMBoutvar' for COMBINE, 'nGEOGoutvar' for geographic, 'nDYNSoutvar' for DynSoil). 
+* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS" and corresponding block ("COMBINE OUTPUTS",
+"GEOGRAPHIC OUTPUTS", OUTPUTS", or "DYNSOIL OUTPUTS"), add a line in the namelist (respectively, "&CMB_OUTPUT_VAR",
+"&GEO_OUTPUT_VAR", or "&DYN_OUTPUT_VAR") – e.g., copy and paste the last line – stating the name of the variable
+*in the netCDF output file* ("vname(\*)"), its units ("units(\*)"), under which dimension it is defined ("defdim(\*,:)", must be
+consistent with the source code!), its fill-value, and "long_name" description. "\*" is the output variable number, i.e., the number
+incremented in the previous step.
+* In the corresponding source file "source/...\_write\_output.f90" ("..." being, respectively, "geoclim", "geographic", or "dynsoil"),
+at the end of the section "write output variables", add a block of lines (e.g., copy and paste the following block) that looks like:
+> i = 106  
+>   if (COMB_outvar_info(i)%writevar) &  
+>     call put_var(fid, varname=COMB_outvar_info(i)%vname, var_real0D=real(fO2_odc_tot), &  
+>                  stt=(/nt/), cnt=(/1/))
+> !
+
+Or, for multi-dimensional variables (like geographic or DynSoil variable):
+> i = 12  
+>   if (GEOG_outvar_info(i)%writevar) &  
+>     call put_var(fid, varname=GEOG_outvar_info(i)%vname, &  
+> var_real3D=real(reshape(wth_litho_wgh, shape=(/nlon,nlat,nlitho/), order=(/3,1,2/))), stt=(/1,1,1,nt/), cnt=(/nlon,nlat,nlitho,1/)  
 > !  
-> i = 107  
-> if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), (/real(...)/),   (/nt(i)/), (/1/) ) 
 
-With the *code* variable instead of '...'. If that variable is defined on each box, the line should be a little different:
-> if (fnum(i)>0)    call put_var_real1D(  fileid(i), varid(i), real(...(:)), (/1,nt(i)/), (/nbasin,1/)  )
+> i = 9 ! Z  
+> if (DYNS_outvar_info(i)%writevar) &  
+>   call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(z, shape=(/nlon,nlat,nlitho,nDSlev,1/), &  
+>                                            order=(/4,3,1,2/))), stt=(/1,1,1,1,nt/), cnt=(/nlon,nlat,nlitho,nDSlev,1/))  
+> !  
 
-The output variable can be computed directly in that outputting line.
+"i = " is the output variable number, the one defined in the output namelist in IO_CONDITIONS. "\*\_outvar\_info" is the namelist
+variable defined in IO_CONDITIONS.
 
-###### Geographic variable
-ie, 2D geographic field (for instance, runoff). This is more complex because the variable can also be defined on the lithology
-dimension (it is then a 3D field).
+Geographic variables have the particularity that they need a "reshape", as the two horizontal dimensions are unfolded in 1 dimension,
+the lithology dimension is before the horizontal dimensions (and needs to be put at the end in the netCDF outputs), and for DynSoil
+vertical variables, the vertical dimension ("z") is the first (before lithology and horizontal dimensions), and must be the last
+in the netCDF outputs. This is the meaning of "order=..."
 
-* Increment by 1 the parameter 'nGEOGoutvar' in 'source/combine_foam.inc'.
-* Increment by 1 the parameter 'nvar' in 'source/geographic_create_output.f90' and 'source/geographic_write_output.f90'.
-* If the output variable is defined on the lithology dimension (currently, only the variables # 11 and 12 are lithology-defined):
-    * add the variable number to the loop lines 209-225 of 'source/geographic_create_output.f90'.
-    * add the variable number to the loop lines 307-125 of 'source/geographic_create_output.f90'.
-    * make the loop lines 317-325 of 'source/geographic_create_output.f90' go from 13 to *nvar-1* instead of from 13 to nvar, as
-      the last output variable (ie, the one just added) is defined lithology-defined.
-* If the output variable is not defined on the lithology dimension, nothing more should be changed in 'source/geographic_create_output.f90'.
-* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS", "GEOGRAPHIC", add a line (eg, copy
-and paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
-* In 'source/geographic_write_output.f90', at the end of the section "write variables", (just before the section "output file
-closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) that looks like:
-> i = 15  
-> if (filenum(i)>0) then  
->   call put_var_real2D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny/))) , (/1,1,nt(i)/) , (/nx,ny,1/) )   
-> end if
-
-With the *code* variable instead of '...'. If that variable is lithology-defined on each box, the line should be:
->   call put_var_real3D( fileid(i) , varid(i) , real(reshape(..., shape=(/nx,ny,nlit/), order=(/3,1,2/))) , (/1,1,1,nt(i)/) , (/nx,ny,nlit,1/) )
-
-* If that output variable cannot be computed from the variable present in 'source/geographic_write_output.f90', declare the code
-variable you need as input arguments of the subroutine 'geographic_write_output', and add them in 'source/printf.f', where the
-subroutine is called.
-
-###### DynSoil variable
-Similar to geographic variable, but output only if DynSoil module is activated, and can be defined on lithology and/or vertical
-dimension.
-
-* Increment by 1 the parameter 'nDSvar' in 'source/combine_foam.inc'.
-* Increment by 1 the parameter 'nvar' in 'source/dynsoil_create_output.f90' and 'source/dynsoil_write_output.f90'.
-* Look on 'source/dynsoil_create_output.f90' for all the specific cases for variable defined (or not) on lithology and vertical
-dimensions.
-* In the main configuration file (config/IO_CONDITIONS), in the section "OUTPUT CONDITIONS", "DYNSOIL", add a line (eg, copy and
-paste the last line) stating the name of the variable *in the netCDF output file*, its units, fill-value and description.
-* In 'source/dynsoil_write_output.f90', at the end of the section "write variables", (just before the section "output file
-closing"), add a block of 4 lines (eg, copy and paste the last 4 lines) similarly to 'geographic_write_output.f90', paying special
-attention on which dimension the variable is defined on.
-* Similarly to geographic variables, if needed, declare new input argument and add them in 'source/printf.f', where the subroutine
-is called.
 
 ### Advanced customization
 ##### Change oceanic basin definition
@@ -673,6 +668,7 @@ input, sinking (for particulate variables only) and sedimentation on seafloor. T
 variables only**. Particulate variables are not affected by oceanic advection, and the advection part for isotopic ratio (of
 dissolved variables) is including in 'R' in 'source/creades.f', because its mathematical expression is different from concentration
 variables.
+* Update the routine 'source/varset.f'
 * Update COMBINE restart file and the input file 'oce_vol.dat' (see previous section *Change oceanic basin definition*).
 * Update whatever routine needed to compute the geochemical fluxes of that new variable.
 
@@ -756,7 +752,7 @@ Check the following before completing the steps outlined below:
 
 #### With Linux OS
 The simplest way is with apt-get: `apt-get install libnetcdff`
-This will ensure the compatibility with the installed Fortran compiler.
+This should ensure the compatibility with the installed Fortran compiler.
 
 ### Non-required software instructions for installation (Mac OS)
 * pyFerret
@@ -771,6 +767,8 @@ This will ensure the compatibility with the installed Fortran compiler.
 
 
 ## Frequent issues
+
+**Note: this section has not been updated. Source file names and line numbers in error examples may not be up-to-date**
 
 ### Errors during compilation
 
