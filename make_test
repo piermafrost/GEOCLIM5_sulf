@@ -187,6 +187,21 @@ then
     echo "             Input data format: ascii"
     echo "             CO2 interpolation: linear"
     echo "             Run name: .testrun_FOAM-ascii"
+    echo ""
+    echo "     orbit"
+    echo "             400 kyr Geoclim run with DynSoil steady-state module, idealized"
+    echo "             orbital cycles (precession, eccentricity and obliquity), and"
+    echo "             made-up boundary conditions (both climate and slope) on a \"fake\""
+    echo "             3x2 grid, with 1 CO2 level."
+    echo "             Parameterization: ERA5 calibration"
+    echo "             CO2 degassing = pre-industrial ERA5 degassing"
+    echo "             Lithology mask: 6 class, uniform"
+    echo "             Combine initial condition: 'restart/geoclim/output.ref'"
+    echo "             Input data format: netCDF (GCM outputs)"
+    echo "             CO2 interpolation: logarithmic"
+    echo "             Climatic (orbital) parameters reading: every 1 kyr"
+    echo "             Run ending: when reached end of climatic parameter time-series"
+    echo "             Run name: .testrun_FakeOrbitParam"
     exit 0
 fi
 
@@ -351,6 +366,33 @@ case $case_name in
 	#
 	# executable name (as will be defined by 'build_GEOCLIM')
 	exec_name='geoclim_6x48x40x6-1x1x1x1x1.exe'
+        ;;
+
+    "orbit")
+        # Copy main configuration file
+        test -e config/IO_CONDITIONS && rm -f config/IO_CONDITIONS
+	cp config/templates/IO_CONDITIONS.FakOrbPar config/IO_CONDITIONS
+	config_iostat=$?
+	#
+        test -e 'source/constante.f90' && rm -f 'source/constante.f90'
+	cp 'source/templates/constante.f90.ERA5' 'source/constante.f90'
+	test $? -ne 0 && config_iostat=1
+	#
+	# Check that other configuration files exist
+	ls config/templates/GCM_input_conditions.FakOrbPar > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	ls config/templates/cond_p20.FakOrbPar.dat > /dev/null
+	test $? -ne 0 && config_iostat=1
+	#
+	# Run configuration
+	resolution="1,3,2,6,10"
+	compset="COMBINE_WTH:DynSoil%steady"
+	interpolation="log"
+	other_options="--clim-param 3,2,4 --clim-param-periods ,,360. --param-ending stoprun"
+	#
+	# executable name (as will be defined by 'build_GEOCLIM')
+	exec_name='geoclim_1x3x2x6-3x2x5x1x1_DS-SS.exe'
         ;;
 
     *)
