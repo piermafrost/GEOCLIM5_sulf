@@ -74,12 +74,12 @@ subroutine dynsoil_write_output(ofile_name, time_dimname, DYNS_outvar_info, t, t
     !
     i = 9 ! Z
     if (DYNS_outvar_info(i)%writevar) &
-      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(z, shape=(/nlon,nlat,nlitho,nDSlev/), &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(z, shape=(/nlon,nlat,nDSlev,nlitho/), &
                                                order=(/4,3,1,2/))), stt=(/1,1,1,1,nt/), cnt=(/nlon,nlat,nlitho,nDSlev,1/))
     !
     i = 10 ! TAU
     if (DYNS_outvar_info(i)%writevar) &
-      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(tau, shape=(/nlon,nlat,nlitho,nDSlev/), &
+      call put_var(fid, varname=DYNS_outvar_info(i)%vname, var_real4D=real(reshape(tau, shape=(/nlon,nlat,nDSlev,nlitho/), &
                                                  order=(/4,3,1,2/))), stt=(/1,1,1,1,nt/), cnt=(/nlon,nlat,nlitho,nDSlev,1/))
     !
     i = 11 ! REG_PROD
