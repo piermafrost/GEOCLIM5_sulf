@@ -38,7 +38,7 @@ module dynsoil_create_init_condition
 
             case ("eq")
                 call get_cont_pixel() ! => set global variable 'list_cont_pixel' needed for climate interpolation
-                p=var(12,nbasin)/PI_n_CO2_atm
+                p=var_diss(7,nbasin)/PI_n_CO2_atm
                 call climate_interpolation(co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5,    &
                                            p, cpvec, list_cont_pixel=list_cont_pixel, ncontpxl=ncontpxl,                        &
                                            temp_array=Tairclimber, runf_array=Runclimber, interp_temp=Tclim, interp_runf=runclim)

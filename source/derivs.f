@@ -1,20 +1,16 @@
-    subroutine derivs(x,y,nv,dydx)
+    subroutine derivs(x,y,dydx)
 !   ******************************
     implicit none
 
-    integer nv
     include 'combine_foam.inc'
 
 
-    call varset(y,nv)
+    call varset(y)
 
 !   Initialise les derives
-
-    do i=1,nvar_real
-        do j=1,nbasin
-            diff(i,j)=0.
-        enddo
-    enddo
+    diff_diss = 0.
+    diff_part = 0.
+    diff_isot = 0.
     
 
 !    hard code
@@ -26,81 +22,96 @@
 
 !   Calcul
 
-!   cccccccccccccccccccccccccccccccccccccccc
-!   dissovled variables: i= 1-5 , 12 & 20
-!   cccccccccccccccccccccccccccccccccccccccc
+!   ccccccccccccccccccccccccccccccccccccccccccccccccc
+!   Dissolved variables - except oxygen (diss var #6)
+!   ccccccccccccccccccccccccccccccccccccccccccccccccc
 !   --------
     do i=1,5
         do j=1,nbasin
             do k=1,nbasin
-                diff(i,j)=diff(i,j)+F(k,j)*var(i,k)*sluggish  &
-                                   -F(j,k)*var(i,j)*sluggish
+                diff_diss(i,j)=diff_diss(i,j)+F(k,j)*var_diss(i,k)*sluggish  &
+                                             -F(j,k)*var_diss(i,j)*sluggish
             enddo
-            diff(i,j)=diff(i,j) + R(i,j)
+            diff_diss(i,j)=diff_diss(i,j) + R_diss(i,j)
         enddo
     end do
-!   ----
-    i=12
-    do j=1,nbasin
-        do k=1,nbasin
-            diff(i,j)=diff(i,j)+F(k,j)*var(i,k)*sluggish  &
-                               -F(j,k)*var(i,j)*sluggish
+!   --------
+    do i=7,nvar_diss
+        do j=1,nbasin
+            do k=1,nbasin
+                diff_diss(i,j)=diff_diss(i,j)+F(k,j)*var_diss(i,k)*sluggish  &
+                                             -F(j,k)*var_diss(i,j)*sluggish
+            enddo
+            diff_diss(i,j)=diff_diss(i,j) + R_diss(i,j)
         enddo
-        diff(i,j)=diff(i,j) + R(i,j)
-    enddo
-!   ----
-    i=20  ! SO4^2-
-    do j=1,nbasin
-        do k=1,nbasin
-            diff(i,j)=diff(i,j)+F(k,j)*var(i,k)*sluggish  &
-                               -F(j,k)*var(i,j)*sluggish
-        enddo
-        diff(i,j)=diff(i,j) + R(i,j)
     end do
 
-!       cccccccccccccccccccccccccccccccccccccccc
-    i=11 ! Oxygen
-!       cccccccccccccccccccccccccccccccccccccccc
+!   cccccccccccccccccccccccccccccccccccccccccccc
+!   Oxygen (diss var #6)
+!   cccccccccccccccccccccccccccccccccccccccccccc
+!   --------
+    i=6 ! Oxygen (diss var #6)
     do j0=1,nnosurface
         j = jbox_nosurface(j0)
         do k=1,nbasin
-            diff(i,j)=diff(i,j)+F(k,j)*var(i,k)*sluggish  &
-                               -F(j,k)*var(i,j)*sluggish
+            diff_diss(i,j)=diff_diss(i,j)+F(k,j)*var_diss(i,k)*sluggish  &
+                                         -F(j,k)*var_diss(i,j)*sluggish
         enddo
-        diff(i,j)=diff(i,j) + R(i,j)
+        diff_diss(i,j)=diff_diss(i,j) + R_diss(i,j)
     end do
-    do j0=1,nsurface !!! oxygN de surf. equilibr (diff(i,j)=0)
+    do j0=1,nsurface !!! oxygN de surf. equilibr (diff_diss(i,j)=0)
         j = jbox_surface(j0)
-        diff(i,j)=R(i,j)
+        diff_diss(i,j)=R_diss(i,j)
     end do
-!       cccccccccccccccccccccccccccccccccccccccc
-    do i=6,10 ! particulate variables
-!       cccccccccccccccccccccccccccccccccccccccc
+
+!   cccccccccccccccccccccccccccccccccccccccccccc
+!   Particulate variables
+!   cccccccccccccccccccccccccccccccccccccccccccc
+!   --------
+    do i=1,nvar_part
         do j=1,nbasin
-            diff(i,j)=diff(i,j) + R(i,j)
+            diff_part(i,j)=diff_part(i,j) + R_part(i,j)
         enddo
     end do
 
-!       cccccccccccccccccccccccccccccccccccccccc
-    do i=13,18 ! isotopic ratios
-!       cccccccccccccccccccccccccccccccccccccccc
+!   cccccccccccccccccccccccccccccccccccccccccccc
+!   Isotopic variables
+!   cccccccccccccccccccccccccccccccccccccccccccc
+!   --------
+    do i=1,nvar_isot 
         do j=1,nbasin ! dissolved isotope are mixed in creades
-            diff(i,j)=diff(i,j) + R(i,j)
+            diff_isot(i,j)=diff_isot(i,j) + R_isot(i,j)
         end do
     end do
 
-!   Deplace les derivs ds un vector
 
-    diff(11,10)=diff(11,10)*oxy_acc_fact !accelerating atm O2 (if oxy_acc_fact>1)
-    diff(20,:) = sulf_acc_fact*diff(20,:) ! accelerating sulfate cycle (in all oceanic boxes)
+!   Acceleration factors
+!   --------------------
+    diff_diss(6,nbasin) = diff_diss(6,nbasin)*oxy_acc_fact ! atmospheric O2
+    diff_diss(8,:) = diff_diss(8,:)*sulf_acc_fact          ! oceanic sulfate (all basins)
 
-    k=0
-    do i=1,nvar_real
-        do j=1,nbasin
-            k=k+1
-            dydx(k)=diff(i,j)
-        enddo
-    enddo
 
-    return
-    end
+!   Put derivatives in a vector
+!   ---------------------------
+
+    k = 0
+    do i = 1,nvar_diss
+        do j = 1,nbasin
+            k = k+1
+            dydx(k) = diff_diss(i,j)
+        end do
+    end do
+    do i = 1,nvar_part
+        do j = 1,nbasin
+            k = k+1
+            dydx(k) = diff_part(i,j)
+        end do
+    end do
+    do i = 1,nvar_isot
+        do j = 1,nbasin
+            k = k+1
+            dydx(k) = diff_isot(i,j)
+        end do
+    end do
+
+    end subroutine

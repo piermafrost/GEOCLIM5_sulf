@@ -220,31 +220,27 @@ program geoclim
 !   COMBINE:
 !   --------
 
-    do j=1,nvar
+    do j=1,nvb
         read(2,*)y(j)
     enddo
     close(unit=2)
 
-    ! extensive variables: concentration => chemical amount
-    do j = 1,11*nbasin
-        y(j) = y(j)*vol(j)
-    end do
-    do j = 1+19*nbasin,nvar
-        y(j) = y(j)*vol(j)
-    end do
+    ! convert extensive variables: concentration => chemical amount
+    ! (note: isotopic variables have vol(j)=1)
+    y = y*vol
 
     if (nclimber==1) then
         ! fixed atm CO2 run => set atmospheric CO2 as defined by the unique CO2 level
         ! = co2_level (PAL) * Pre-Ind moles of CO2 in atm (0.0508d18)
         ! (atm PCO2 is 12th variable of last basin (nbasin))
-        y(12*nbasin) = co2climber(1)*PI_n_CO2_atm
+        y(7*nbasin) = co2climber(1)*PI_n_CO2_atm
     endif
 
-    call varset(y,nvar)
+    call varset(y)
 
 
-!   ECOLOGICAL NETWORK MODULE (=> LEFT FOR FUTURE DEVELOPMENT):
-!   -----------------------------------------------------------
+!   ECOLOGY MODULE:
+!   ---------------
 
     if (coupling_ecogeo) then
         print *, 'ECOGEO module not available'
@@ -301,7 +297,7 @@ program geoclim
 !   <><><><><><><><><><>
 
 !   read combine (oceanic) output conditions and create output file(s):
-    call geoclim_create_output(0, output_directory, run_name, vol, oce_surf, surf_sedi, &
+    call geoclim_create_output(0, output_directory, run_name, box_vol, oce_surf, surf_sedi, &
                                COMB_ofile_name, COMB_time_dimname, COMB_outvar_info     )
     ! Special case of GMST (optional input, output variable #93)
     where(GMSTclimber==-1d99)
@@ -418,6 +414,7 @@ program geoclim
 
 !   End of initialization:
 
+
     htot=0.
     icount=ijump_print+1
     icount_cont_weath = ijump_cont_weath
@@ -453,9 +450,9 @@ program geoclim
     call read_veget()
     ! no need to call "get_clim_param" => 'cpvec' variable already assigned during initialization
     call creades(time)
-    call rk4(y,dydx,nvar,time,htry,yout)
+    call rk4(y,dydx,nvb,time,htry,yout)
 
-    do j=1,nvar
+    do j=1,nvb
       y(j)=yout(j)
     end do
 
@@ -472,7 +469,7 @@ program geoclim
       reg_ktop     = reg_ktop_0
       icount_DS_int = ijump_DS_integration
     end if
-    call varset(y,nvar)
+    call varset(y)
     icount_cont_weath = ijump_cont_weath
     icount_veget = ijump_veget
     ! 'icount_climparam' not modified during dummy integration
@@ -509,12 +506,12 @@ program geoclim
       call read_veget()
       call get_clim_param(time, tend, ijump_climparam, icount_climparam, prev_cpvec, next_cpvec, cpvec, cp_lowest_value)
       call creades(time)
-      call rk4(y,dydx,nvar,time,htry,yout)
-      do j=1,nvar
+      call rk4(y,dydx,nvb,time,htry,yout)
+      do j=1,nvb
         y(j)=yout(j)
       end do
 
-      call varset(y,nvar)
+      call varset(y)
 
       call printf(time, icount, y, COMB_outvar_info, GEOG_outvar_info, DYNS_outvar_info)
       time=time+htry

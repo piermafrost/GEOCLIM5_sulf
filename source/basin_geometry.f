@@ -6,13 +6,34 @@
     ! local variables:
     double precision:: area_sediepicontsurf, area_sediepicontnosurf, area_sedinoepicont
 
-!     volumes in cubic meters:
-    do k=1,nbasin*nvar_real
-        read(33,*)vol(k)
-        vol(k)=vol(k)*1.d+15
-    enddo
+!   volumes in cubic meters (read in 1e6 km3):
+    do k=1,nbasin
+        read(33,*) box_vol(k)
+        box_vol(k) = box_vol(k)*1.d+15 ! 1e6 km3 => m3
+    end do
 
-!    area in m 2
+!   Define a volume for each variable (with special case for isotopic variables!)
+!   COMBINE variable order: all dissolved, then all particulate, then all isotopic
+    !
+    i = 0
+    do j=1,nvar_diss ! dissolved variables
+        do k = 1,nbasin
+            i = i+1
+            vol(i) = box_vol(k)
+        end do
+    end do
+    do j=1,nvar_part ! particulate variables
+        do k = 1,nbasin
+            i = i+1
+            vol(i) = box_vol(k)
+        end do
+    end do
+    do j=1,nvar_isot ! isotopic variables do not need volume => will be multiplied by 1
+        do k = 1,nbasin
+            i = i+1
+            vol(i) = 1
+        end do
+    end do
 
     ndeep               = 0
     nnodeep             = 0
@@ -35,6 +56,9 @@
     nsurfnoappcont      = 0
     nnosurfbelappcont   = 0
     nnosurfnobelappcont = 0
+
+!   areas are read in 1e9 km2 and converted in m2
+!   water fluxes are read in Sv (1e6 m3/s) and converted in m3/yr
 
     do i=1,nbasin
 
@@ -129,12 +153,12 @@
             jbox_noappcont(nnoappcont) = i
         end if
 
-        oce_surf(i)=oce_surf(i)*1.d+15
-        surf_sedi(i)=surf_sedi(i)*1.d+15
+        oce_surf(i)=oce_surf(i)*1.d+15   ! 1e9 km2 => m2
+        surf_sedi(i)=surf_sedi(i)*1.d+15 !
     enddo
     do i=1,nbasin
         do j=1,nbasin
-            F(i,j)=F(i,j)*1.d+6*31.536d+6  !water flux m3/s
+            F(i,j)=F(i,j)*1.d+6*31.536d+6  ! Sv => m3/yr
         enddo
     enddo
     oce_surf_tot=oce_surf(nbasin)

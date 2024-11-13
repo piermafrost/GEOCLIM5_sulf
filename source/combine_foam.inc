@@ -16,10 +16,11 @@
     !            number of lithology classes ('nlitho'),
     !            number of DynSoil levels ('nDSlev') 
     !            number of additional climatic parameters ('len_p1', 'len_p2', 'len_p3', 'len_p4', and 'len_p5')
-    integer, parameter :: nvar_real=20
+    integer, parameter :: nvar_diss=8, nvar_part=5, nvar_isot=6
+    integer, parameter :: nvb = (nvar_diss + nvar_part + nvar_isot)*nbasin
     integer, parameter :: npixel=nlon*nlat
 
-    integer, parameter :: nvar=nvar_real*nbasin,ndegas=1000000,nsres=24
+    integer, parameter :: ndegas=1000000,nsres=24
     include 'output_size.inc' ! => define nCOMBoutvar, nGEOGoutvar and nDYNSoutvar
     integer, parameter :: n_peaks = 5
 
@@ -73,7 +74,7 @@
     double precision fvol,fmor(1:nbasin),ftrap,fSO4_atmos,fSO4_ocean,fSO4_deep,fSO4_basin(1:nbasin) &
                      ,fSO4_crust(1:nbasin),fCO2_atmos,fCO2_crust(1:nbasin),fCO2_deep
     double precision clo,phosss
-    double precision var(1:nvar_real,1:nbasin)
+    double precision var_diss(nvar_diss,nbasin), var_part(nvar_part,nbasin), var_isot(nvar_isot,nbasin)
     double precision volin,xMORin,xlumin,berner,fvegin,oblin,shells &
                      ,xnoorg,xdrift,xsolar,temcondi,async,ageYprint &
                      ,oxy_acc_fact,sulf_acc_fact
@@ -115,14 +116,14 @@
     double precision fodt,ept
     double precision tdata_deg(1:ndegas),data_deg(1:ndegas)
     double precision fracveg
-    double precision vol(1:nvar)
+    double precision box_vol(1:nbasin), vol(1:nvb)
     double precision fsilw,fcarbw,fkerw,fpw,fbasw,fpyrw,ftrapw,fcarbsulfw,fsilsulfw,fH2SO4sulfw,faddsulfw ! add carbonate and silicate weathering by sulphuric acid
     ! Sulfate Reduction:
     double precision:: fodc_noSR_m2, fSulfRed_m2, fO2_odc_m2
     double precision, dimension(nbasin):: fSulfRed, fO2_odc
     double precision total_cont_POC_export,reg_eros_galy_unit
-    double precision F(1:nbasin,1:nbasin)
-    double precision R(1:nvar_real,1:nbasin)
+    double precision F(1:nbasin,1:nbasin), F_exch_clim(nbasin**2, nclimber, len_p1, len_p2, len_p3, len_p4, len_p5)
+    double precision R_diss(nvar_diss,nbasin), R_part(nvar_part,nbasin), R_isot(nvar_isot,nbasin)
     double precision ATe(1:npixel),BTe(1:npixel)
     double precision ARu(1:npixel),BRu(1:npixel)
     double precision litho_frac(1:nlitho,1:npixel)
@@ -136,7 +137,7 @@
     double precision:: cp_lowest_value(5)
     integer:: ijump_climparam, icount_climparam
 
-    double precision y(1:nvar),y_0(1:nvar),dydx(1:nvar),yout(1:nvar)
+    double precision y(nvb),y_0(nvb),dydx(nvb),yout(nvb)
     double precision Corg_hml(1:nbasin),Corg_hsr(1:nbasin), &
                      fodcm2(1:nbasin),fin(1:nbasin),fin0,fsedim,fexport
     double precision area_cal(1:nbasin),area_ara(1:nbasin)
@@ -147,7 +148,8 @@
     double precision areagra(1:npixel),fbas(1:npixel)
     double precision Runinterd(1:nclimber),Tinterd(1:nclimber)
     double precision edb(1:nbasin),ebc(1:nbasin)
-    double precision beta(1:nbasin),diff(1:nvar_real,1:nbasin),bilan_water(1:nbasin)
+    double precision beta(1:nbasin), diff_diss(nvar_diss,nbasin), diff_part(nvar_part,nbasin), diff_isot(nvar_isot,nbasin), &
+                     bilan_water(1:nbasin)
 
     double precision runoff,Patm,temperature,temper
     double precision x1,x2,xacc,xn,fx,dfx
@@ -162,7 +164,7 @@
     double precision pr,fph,xv,dfph
     double precision xPOPexport,totalCO2_exch,freef_tot,fodc_tot,fdep_tot,fco2atm_ocean_tot,F_seafloor_cdiss_tot,&
                      fSulfRed_tot,fO2_odc_tot
-    double precision var_tot(nvar_real),ph_tot,vol_tot,temp_tot,salin_tot,&
+    double precision vartot_diss(nvar_diss), vartot_part(nvar_part), vartot_isot(nvar_isot), ph_tot,vol_tot,temp_tot,salin_tot,&
                      O2_atm_level,CO2_atm_level,O2_atm_conc,CO2_atm_conc
 
     double precision tka
@@ -250,7 +252,7 @@
                        ,fSO4_crust,fCO2_atmos,fCO2_crust,fCO2_deep &
                        ,tstart_deg2,tend_deg2,ipeak
     common /closed_system/ clo,phosss
-    common /concent/ var
+    common /concent/ var_diss, var_part, var_isot
     common /shell_alone/ shells,oxy_acc_fact,sulf_acc_fact
     common /condi/ volin,xMORin,xlumin,berner,fvegin,oblin &
                    ,xnoorg,xdrift,xsolar,temcondi,async,ageYprint
@@ -296,12 +298,12 @@
     common /terorg/ fodt,ept
     common /trap/ tdata_deg,data_deg
     common /vegetal_frac/ fracveg
-    common /volumes/ vol
+    common /volumes/ box_vol, vol
     common /weathfl/ fsilw,fcarbw,fkerw,fpw,fbasw,fcarbsulfw,fsilsulfw,fH2SO4sulfw ! add carbonate and silicate weathering by sulphuric acid
     common /weathrt/ fsil, fbas, wth_allsil, wth_litho_wgh, wth_litho, fker, fp
     common /sulfred/ fSulfRed, fO2_odc ! variables for sulfate reduction
-    common /water/ F
-    common /creation/ R
+    common /water/ F, F_exch_clim
+    common /creation/ R_diss, R_part, R_isot
     common /shellsbug/ ishelfal
     common /outputs1/ COMB_ofile_name, GEOG_ofile_name
     common /outputs2/ COMB_time_dimname, GEOG_time_dimname

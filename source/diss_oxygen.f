@@ -20,16 +20,16 @@
     
 
 !   surface ocean at steady-state with the atmosphere:
-    xnum=var(11,nbasin)
+    xnum=var_diss(6,nbasin)
     somme=0. 
     do j=1,nbasin
-        somme = somme + beta(j)*vol(j)*indice_surface(j)
+        somme = somme + beta(j)*box_vol(j)*indice_surface(j)
     enddo
     xden=PI_n_O2_atm + somme
     po2=xnum/xden   
     do j0=1,nsurface
         j = jbox_surface(j0)
-        var(11,j)=beta(j)*po2
+        var_diss(6,j)=beta(j)*po2
     enddo
     return
     end

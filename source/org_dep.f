@@ -13,7 +13,7 @@
     do j0 = 1,nsediepicontsurf
         j = jbox_sediepicontsurf(j0)
         fin0 = ( sedim_fract(j)*tss + &
-                 gotoshelf*(fsink_inorg(j)*PIC_mmass*var(10,j) + fsink(j)*POC_mmass*var(9,j))*vol(j) ) / rho_sed
+                 gotoshelf*(fsink_inorg(j)*PIC_mmass*var_part(5,j) + fsink(j)*POC_mmass*var_part(4,j))*box_vol(j) ) / rho_sed
         ! Michaelis-like saturation: export what exceeds sedimentation capacity
         fin_sed(j) = fin0 / (1 + fin0/sedim_capacity(j))
         fexport = fexport + fin0-fin_sed(j)
@@ -25,7 +25,7 @@
     do j0 = 1,nsediepicontnosurf
         j = jbox_sediepicontnosurf(j0)
         fin0 = sedim_fract(j)*fsedim + &
-               (fsink_inorg(j)*PIC_mmass*var(10,j)*vol(j) + fsink(j)*POC_mmass*var(9,j)*vol(j)) / rho_sed
+               (fsink_inorg(j)*PIC_mmass*var_part(5,j)*box_vol(j) + fsink(j)*POC_mmass*var_part(4,j)*box_vol(j)) / rho_sed
         ! Michaelis-like saturation: export what exceeds sedimentation capacity
         fin_sed(j) = fin0 / (1 + fin0/sedim_capacity(j))
         fexport = fexport + fin0-fin_sed(j)
@@ -36,7 +36,7 @@
     do j0 = 1,nsedinoepicont
         j = jbox_sedinoepicont(j0)
         fin_sed(j) = sedim_fract(j)*fsedim + &
-                     (fsink_inorg(j)*PIC_mmass*var(10,j)*vol(j) + fsink(j)*POC_mmass*var(9,j)*vol(j)) / rho_sed
+                     (fsink_inorg(j)*PIC_mmass*var_part(5,j)*box_vol(j) + fsink(j)*POC_mmass*var_part(4,j)*box_vol(j)) / rho_sed
         ! Note: deep basins have infinite sedimentation capacity
     end do
 
@@ -50,11 +50,11 @@
 !       sedimentation rate (m/yr)
         ws(j) = fin_sed(j) / surf_sedi(j)
 !       input at the sediment top (mole(C)/a/m2):
-        fin(j) = (1-indice_surface(j)*(1-gotoshelf)) * fsink(j)*var(9,j)*vol(j)/surf_sedi(j)
+        fin(j) = (1-indice_surface(j)*(1-gotoshelf)) * fsink(j)*var_part(4,j)*box_vol(j)/surf_sedi(j)
 !       Corg at the basis of the bioturbated layer (mixed layer):
-        Corg_hml(j) = fin(j)/(ws(j) + betahml*var(11,j)*hml)
+        Corg_hml(j) = fin(j)/(ws(j) + betahml*var_diss(6,j)*hml)
 !       Corg at the basis of the sulfate reduction zone
-        Corg_hsr(j) = (ws(j)*Corg_hml(j))/(ws(j) + gammahsr*var(20,j)*hsr) ! var(20,:) : [SO4^2-]
+        Corg_hsr(j) = (ws(j)*Corg_hml(j))/(ws(j) + gammahsr*var_diss(8,j)*hsr) ! var_diss(8,:) : [SO4^2-]
 
 !       Convert in specific fluxes (per squared meters):
         fodc_noSR_m2 = ws(j)*Corg_hml(j)

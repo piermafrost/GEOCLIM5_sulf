@@ -26,7 +26,7 @@
 
         fbioP(j)=0.
         do k=1,nbasin
-            fbioP(j) = fbioP(j) + reff(j)*F(k,j)*var(3,k)
+            fbioP(j) = fbioP(j) + reff(j)*F(k,j)*var_diss(3,k)
         enddo
 
         xkill=1.  !mass extinction, obsolete

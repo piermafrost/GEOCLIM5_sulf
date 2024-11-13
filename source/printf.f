@@ -61,16 +61,8 @@ subroutine printf(t, icount, y, COMB_outvar_info, GEOG_outvar_info, DYNS_outvar_
 
     if (t.gt.ageYprint.and.fog.eq.0) then
         fog=1
-        ! extensive variables (chemical amounts) => concentration
-        do j = 1,11*nbasin
-            write(10,*) y(j)/vol(j)
-        end do
-        ! PCO2 and isopotic variables
-        do j = 1+11*nbasin, 19*nbasin
-            write(10,*) y(j)
-        end do
-        ! rest of extensive variables => concentration
-        do j = 1+19*nbasin,nvar
+        ! COMBINE restart
+        do j = 1,nvb
             write(10,*) y(j)/vol(j)
         end do
         ! DYNSOIL restart files:

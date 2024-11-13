@@ -10,26 +10,26 @@
     h6=h/6.
     xh=x+hh
 
-    call derivs(x,y,n,dydx)
+    call derivs(x,y,dydx)
 
     do 11 i=1,n
         yt(i)=y(i)+hh*dydx(i)
    11 continue
 
-    call derivs(xh,yt,n,dyt)
+    call derivs(xh,yt,dyt)
 
     do 12 i=1,n
         yt(i)=y(i)+hh*dyt(i)
    12 continue
 
-    call derivs(xh,yt,n,dym)
+    call derivs(xh,yt,dym)
 
     do 13 i=1,n
         yt(i)=y(i)+h*dym(i)
         dym(i)=dyt(i)+dym(i)
    13 continue
 
-    call derivs(x+h,yt,n,dyt)
+    call derivs(x+h,yt,dyt)
 
     do 14 i=1,n
         yout(i)=y(i)+h6*(dydx(i)+dyt(i)+2.*dym(i))

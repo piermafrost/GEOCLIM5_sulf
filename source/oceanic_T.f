@@ -7,7 +7,7 @@
 
     ! Note: temp_box(nbasin) is the GMST (Global Mean Surface Temperature)
 
-    p = var(12,nbasin)/PI_n_CO2_atm ! CO2 level in PAL
+    p = var_diss(7,nbasin)/PI_n_CO2_atm ! CO2 level in PAL
 
     call climate_interpolation(co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5, &
                                p, cpvec, boxtemp_array=Toceclimber, interp_boxtemp=temp_box                      )

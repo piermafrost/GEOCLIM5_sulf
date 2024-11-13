@@ -5,7 +5,7 @@
     include 'combine_foam.inc'
 
     do i=1,nbasin
-        fphos(i)=akphos*var(3,i)*clo*phosss*indice_deep(i)
+        fphos(i)=akphos*var_diss(3,i)*clo*phosss*indice_deep(i)
     enddo
     return
     end

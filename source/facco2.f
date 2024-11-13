@@ -6,7 +6,7 @@
     pmin=0.2
     prmax=4.
     aco2=0.3
-    pco2pal=var(12,nbasin)
+    pco2pal=var_diss(7,nbasin)
      
 !   volk, 94
 !   beta=1. !full vegetation ! pco2 en pal

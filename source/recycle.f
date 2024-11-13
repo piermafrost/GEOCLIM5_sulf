@@ -15,7 +15,7 @@
     ! Deep and intermediate basins
     do j0=1,nnosurface-1
         j = jbox_nosurface(j0)
-        roxyd(j) = k_oxyd*(1 - dexp(-var(11,j)/KO2))
+        roxyd(j) = k_oxyd*(1 - dexp(-var_diss(6,j)/KO2))
     end do
 
     ! Atmosphere

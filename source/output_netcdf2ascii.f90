@@ -93,7 +93,9 @@ use constante, only: PI_n_CO2_atm
 
   ! Fill-value on all variables (in case they were not saved)
   t                    = DEFAULT_FILLVAL
-  var                  = DEFAULT_FILLVAL
+  var_diss             = DEFAULT_FILLVAL
+  var_part             = DEFAULT_FILLVAL
+  var_isot             = DEFAULT_FILLVAL
   h2co3(:)             = DEFAULT_FILLVAL
   hco3(:)              = DEFAULT_FILLVAL
   co3(:)               = DEFAULT_FILLVAL
@@ -106,7 +108,9 @@ use constante, only: PI_n_CO2_atm
   salin(:)             = DEFAULT_FILLVAL
   dplysc(:)            = DEFAULT_FILLVAL
   dplysa(:)            = DEFAULT_FILLVAL
-  var_tot              = DEFAULT_FILLVAL
+  vartot_diss          = DEFAULT_FILLVAL
+  vartot_part          = DEFAULT_FILLVAL
+  vartot_isot          = DEFAULT_FILLVAL
   ph_tot               = DEFAULT_FILLVAL
   temp_tot             = DEFAULT_FILLVAL
   salin_tot            = DEFAULT_FILLVAL
@@ -148,9 +152,24 @@ use constante, only: PI_n_CO2_atm
       ierr = nf90_get_var( fid, tvarid , vector , start=(/k/), count=(/1/) )
       t = vector(1)
       !
-      do i = 4,23
-        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var(i-3,:)           , start=(/1,k/), count=(/nbasin,1/)  )
+      do i = 4,8
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_diss(i-3,:)      , start=(/1,k/), count=(/nbasin,1/)  )
       end do
+      !
+      do i = 9,13
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_part(i-8,:)      , start=(/1,k/), count=(/nbasin,1/)  )
+      end do
+      !
+      do i = 14,15
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_diss(i-8,:)      , start=(/1,k/), count=(/nbasin,1/)  )
+      end do
+      !
+      do i = 16,21
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_isot(i-15,:)     , start=(/1,k/), count=(/nbasin,1/)  )
+      end do
+      !
+      i = 23
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_diss(8,:)        , start=(/1,k/), count=(/nbasin,1/)  )
       !
       i = 24
         if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  h2co3(:)             , start=(/1,k/), count=(/nbasin,1/)  )
@@ -188,17 +207,27 @@ use constante, only: PI_n_CO2_atm
       i = 35
         if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  dplysa(:)            , start=(/1,k/), count=(/nbasin,1/)  )
       !
-      do i = 36,46
-        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_tot(i-35:i-35)    , start=(/k/), count=(/1/)          )
+      do i = 36,40
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  vartot_diss(i-35:i-39) , start=(/k/), count=(/1/)          )
       end do
+      !
+      do i = 41,45
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  vartot_part(i-40:i-44) , start=(/k/), count=(/1/)          )
+      end do
+      !
+      i = 46
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  vartot_diss(6:6) ,      start=(/1,k/), count=(/nbasin,1/)  )
       !
       do i = 47,49
-        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_tot(i-34:i-34)    , start=(/k/), count=(/1/)          )
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  vartot_isot(i-46:i-48) , start=(/k/), count=(/1/)          )
       end do
       !
-      do i = 50,53
-        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  var_tot(i-33:i-33)    , start=(/k/), count=(/1/)          )
+      do i = 50,51
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  vartot_isot(i-45:i-46) , start=(/k/), count=(/1/)          )
       end do
+      !
+      i = 53
+        if (got_var(i))  ierr = nf90_get_var(  fid, varid(i),  vartot_diss(8:8) ,      start=(/1,k/), count=(/nbasin,1/)  )
       !
       i = 54
         vector = 0
@@ -348,29 +377,22 @@ use constante, only: PI_n_CO2_atm
                   fco2atm_ocean(6),fco2atm_ocean(8),xPOPexport, &
                   finorgC(3),fdissol_carb(3),dplysa(3)
 
-    write(11,11)t,(var(j,1),j=1,nvar_real)
-    write(12,11)t,(var(j,2),j=1,nvar_real)
-    write(13,11)t,(var(j,3),j=1,nvar_real)
-    write(14,11)t,(var(j,4),j=1,nvar_real)
-    write(15,11)t,(var(j,5),j=1,nvar_real)
-    write(16,11)t,(var(j,6),j=1,nvar_real)
-    write(17,11)t,(var(j,7),j=1,nvar_real)
-    write(18,11)t,(var(j,8),j=1,nvar_real)
-    write(19,11)t,(var(j,9),j=1,nvar_real)
-    write(20,11)t,(var(j,10),j=1,nvar_real)
+    do j = 1,10
+      write(10+j,11) t, (var_diss(i,j),i=1,5), (var_part(i,j),i=1,5), (var_diss(i,j),i=6,7), (var_isot(i,j),i=1,6), var_diss(8,j)
+    end do
 
     write(21,12)t,fsilw,fbasw,fcarbw,fkerw,freef_tot, &
                     fdep_tot,fodc_tot, &
                     (freef(j),j=1,9), &
                     (fodc(j),j=1,9), &
-             (fsink_inorg(j)*var(10,j),j=1,9),fpw, &
+             (fsink_inorg(j)*var_part(5,j),j=1,9),fpw, &
              (fbioC(j),j=1,9),total_cont_POC_export
 
     write(205,12)t,FrivLi,dLiriv
 
     write(23,10)t,(dplysc(i),i=1,nbasin-1)
 
-    write(22,15)t,var_tot(1),var_tot(2),ph_tot, &
+    write(22,15)t,vartot_diss(1),vartot_diss(2),ph_tot, &
                     (pH(j),j=1,9),(omega(j),j=1,9)
 
     write(24,12)t,ftrap,(fCO2_crust(j),j=1,9),(fSO4_basin(j),j=1,9),(fSO4_crust(j),j=1,9)
@@ -379,7 +401,7 @@ use constante, only: PI_n_CO2_atm
     write(27,12)t,(h2co3(j),j=1,nbasin-1),(hco3(j),j=1,nbasin-1),(co3(j),j=1,nbasin-1)
     write(28,12)t,(dh2co3(j),j=1,nbasin-1),(dhco3(j),j=1,nbasin-1),(dco3(j),j=1,nbasin-1)
 
-    write(29,17)t/1e6,var(12,nbasin)/PI_n_CO2_atm,temp_box(1),temp_box(3), &
+    write(29,17)t/1e6,var_diss(7,nbasin)/PI_n_CO2_atm,temp_box(1),temp_box(3), &
                   temp_box(6),temp_box(8),salin(3),salin(4),salin(6),dco3(3)*1d3,dco3(6)*1d3
 
 

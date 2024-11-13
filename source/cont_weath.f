@@ -17,7 +17,7 @@ include 'combine_foam.inc'
 ! current atmospheric CO2 level (in PAL) and climate interpolation (from look-up table)
 ! -------------------------------------------------------------------------------------
 
-p=var(12,nbasin)/PI_n_CO2_atm
+p=var_diss(7,nbasin)/PI_n_CO2_atm
 call climate_interpolation(co2climber, clim_param_1, clim_param_2, clim_param_3, clim_param_4, clim_param_5,    &
                            p, cpvec, list_cont_pixel=list_cont_pixel, ncontpxl=ncontpxl,                        &
                            temp_array=Tairclimber, runf_array=Runclimber, interp_temp=Tclim, interp_runf=runclim)
@@ -126,7 +126,7 @@ if (.not. coupling_dynsoil) then
         ! =====================
         ! Old formulation:
         !! facker=(-43000./Rgas)*(1./(Tclim(j)+273.15)-1./288.15)
-        !fker(j)=4.4184d+8*runclim(j)*areaclimber(j)   !*var(11,nbasin)/38.d+18 !& !2.4 !1.432
+        !fker(j)=4.4184d+8*runclim(j)*areaclimber(j)   !*var_diss(6,nbasin)/38.d+18 !& !2.4 !1.432
         !                                              ! *dexp(facker)  !0.672d+10
         !fkerw=fkerw+fker(j)*clo
         fker(j) = 0.5 * sum(litho_frac(:,j)*OC_rock)*(tss/TSS_density/areatot)
@@ -267,7 +267,7 @@ else
             ! =====================
             ! Old formulation:
             ! facker=(-43000./Rgas)*(1./(Tclim(j)+273.15)-1./288.15)
-            ! fker(j)=4.4184d+8*runclim(j)*areaclimber(j)   !*var(11,nbasin)/38.d+18 !& !2.4 !1.432
+            ! fker(j)=4.4184d+8*runclim(j)*areaclimber(j)   !*var_diss(6,nbasin)/38.d+18 !& !2.4 !1.432
                                                             ! *dexp(facker)  !0.672d+10
             fker(j) = 0.5 * sum(litho_frac(:,j)*OC_rock*reg_eros(:,j))
             !         ^^^ : oxidation efficiency

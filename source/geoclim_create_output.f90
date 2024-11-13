@@ -16,7 +16,7 @@ subroutine geoclim_create_output(ID, output_path, run_name, vol, surf, surf_sedi
 
   integer, intent(in):: ID
   character(len=*), intent(in):: output_path, run_name
-  double precision, dimension(:), intent(in):: vol, surf, surf_sedi
+  double precision, dimension(nbasin), intent(in):: vol, surf, surf_sedi
   !
   character(len=500), intent(out):: file_name
   character(len=100), intent(out):: time_dimname
@@ -195,9 +195,9 @@ subroutine geoclim_create_output(ID, output_path, run_name, vol, surf, surf_sedi
   !--------------------------------------------------------------------------------
 
   call put_var(fid, dimvarid(1), var_int1D=(/(i,i=1,nbasin)/))
-  if (outvar_info(1)%writevar) call put_var(fid, outvar_info(1)%id, var_real1D=real(vol(1:nbasin)))
-  if (outvar_info(2)%writevar) call put_var(fid, outvar_info(2)%id, var_real1D=real(surf)         )
-  if (outvar_info(3)%writevar) call put_var(fid, outvar_info(3)%id, var_real1D=real(surf_sedi)    )
+  if (outvar_info(1)%writevar) call put_var(fid, outvar_info(1)%id, var_real1D=real(vol)      )
+  if (outvar_info(2)%writevar) call put_var(fid, outvar_info(2)%id, var_real1D=real(surf)     )
+  if (outvar_info(3)%writevar) call put_var(fid, outvar_info(3)%id, var_real1D=real(surf_sedi))
 
 
   ! close output file:

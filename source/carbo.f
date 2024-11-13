@@ -5,7 +5,7 @@
     include 'combine_foam.inc'
 
     Pmax=1.+0.302483*runoff**0.8
-    !Patm=var(12,nbasin)/0.0508d+18 ! obsolete, Patm is now an input argument
+    !Patm=var_diss(7,nbasin)/0.0508d+18 ! obsolete, Patm is now an input argument
     pco2soil=Patm+Pmax/(1+dexp(1.315-0.119*(temperature)))
     SO4soil=SO4_conc(j)
 

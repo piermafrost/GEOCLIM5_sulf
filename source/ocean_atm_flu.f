@@ -9,9 +9,9 @@
         call eqcte(temp_box(j),salin(j),press_box(j),bco2(j) &
                    ,ak1(j),ak2(j),akb(j),akc(j))
 !       carbonate speciation:
-        call phbor(var(1,j),var(2,j),ch(j),salin(j),dens,ak1(j) &
+        call phbor(var_diss(1,j),var_diss(2,j),ch(j),salin(j),dens,ak1(j) &
                    ,ak2(j),akb(j))
-        call chimie(var(1,j),var(2,j),ch(j),h2co3(j),hco3(j) &
+        call chimie(var_diss(1,j),var_diss(2,j),ch(j),h2co3(j),hco3(j) &
                     ,co3(j),ak1(j),ak2(j))
         ph(j)=-dlog10(ch(j)*1.d-3)
         pco2_dissous(j)=h2co3(j)/bco2(j)
