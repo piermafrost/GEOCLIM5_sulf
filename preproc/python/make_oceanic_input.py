@@ -37,17 +37,9 @@ MODERN_AREA   = 3.619e14 # m2
 ATM_VOL = 1.
 ATM_AREA = 0.363e15
 ATM_SEDI_AREA = 0.357e15
-DEFAULT_VOLUME = 1. # pseudo-volume for non-concentration variables
 AREA_CONVERSION_FACTOR   = 1e-15 # areas expressed in 1e9 km2
 VOLUME_CONVERSION_FACTOR = 1e-15 # volume expressed in 1e6 km3
 FLUX_CONVERSION_FACTOR   = 1e-6  # water fluxes expressed in Sv (1e6 m3/s)
-
-# List and nature of GEOCLIM variables
-# ------------------------------------
-NVAR = 20
-CONCVAR_MASK = np.ones(NVAR, dtype=bool)
-CONCVAR_MASK[12:19] = False
-ISOTVAR_MASK = ~CONCVAR_MASK
 
 
 ##########################
@@ -81,7 +73,7 @@ def geoclim_basin_mask(nav_lat, nav_z, nav_bathy):
       8. S high-lat, deep
     '''
 
-    i_surfbox = (0, 2, 5, 7)
+    i_surfbox = np.array([0, 2, 5, 7])
 
     shp = np.maximum(np.maximum(nav_lat.shape, nav_z.shape), nav_bathy.shape)
 
@@ -166,7 +158,7 @@ def remove_orca_north_fold(x):
 # AUXILIARY FUNCTIONS #
 #######################
 
-def find_bathy(var_mask: np.ndarray, z: np.ndarray):
+def find_bathy(var_mask: np.ndarray, z: np.ndarray, invert_zaxis=False):
     '''
     Return a 2D (horizontal) array giving the seafloor depth (bathymetry) of each point,
     and the 2D array of vertical indices at which the seafloor is reached.
@@ -177,9 +169,13 @@ def find_bathy(var_mask: np.ndarray, z: np.ndarray):
          If all the value of var_mask in one column are 'True', the depth of that point
          will be '0'
     "var_mask" must be a rank-3 boolean array. "z" must be a rank-3 array, and can have
-    degenerated (size-1) dimensions. The vertical dimension must be the 1st one (C-indexing)
-    and must be positive downward.
+    degenerated (size-1) dimensions. The vertical dimension must be the 1st one (C-indexing),
+    must be positive downward, and must be in increasing order (i.e., from surface to
+    bottom), unless specified "invert_zaxis=True"
     '''
+
+    # order of z axis
+    order = slice(None, None, -1) if invert_zaxis else slice(None)
 
     if var_mask.ndim != 3 or z.ndim != 3:
         raise ValueError('"var_mask" and "z" must be rank-3')
@@ -193,23 +189,35 @@ def find_bathy(var_mask: np.ndarray, z: np.ndarray):
     horiz_shp = var_mask.shape[1:]
 
     # Initialization
-    bottom_idx = nz*np.ones(horiz_shp, dtype='int16')
+    if invert_zaxis:
+        bottom_idx = -1*np.ones(horiz_shp, dtype='int16')
+    else:
+        bottom_idx = nz*np.ones(horiz_shp, dtype='int16')
 
     # Loop on vertical dimension of "var_mask"
-    for i in range(nz):
+    for i in range(nz)[order]:
         bottom_idx[~var_mask[i,:,:]] = i
 
     # Trick: add an extra element "0" and the end of z, so that if
-    # bottom_idx==nz (all elements are True) => z[bottom_idx] = 0
-    z = np.concatenate((z, np.zeros((1,)+z.shape[1:], z.dtype)), axis=0)
+    # bottom_idx=="last index" (all elements are True) => z[bottom_idx] = 0
+    if invert_zaxis:
+        z = np.concatenate((np.zeros((1,)+z.shape[1:], z.dtype), z), axis=0)
+        bottom_idx += 1
+    else:
+        z = np.concatenate((z, np.zeros((1,)+z.shape[1:], z.dtype)), axis=0)
 
     #<><><><><><><><><><><><><><><>#
     ii, jj = np.indices(z.shape[1:])
     bathy = z[bottom_idx, ii, jj]
     #<><><><><><><><><><><><><><><>#
 
-    # Replace "nz" values by "-1"
-    bottom_idx[bottom_idx==nz] = -1
+    if invert_zaxis:
+        bottom_idx -= 1
+        # Replace "last index" values by "0"
+        bottom_idx[bottom_idx==-1] = 0
+    else:
+        # Replace "last index" values by "-1"
+        bottom_idx[bottom_idx==nz] = -1
 
     return bathy, bottom_idx
 
@@ -337,7 +345,7 @@ def get_axis_weighting(axis: str, wghvar, ref_dims, ref_shp, axis_bnds_var=None,
             except UnknownUnitError:
                 has_units = False
 
-            shp = list(ref_shpe)
+            shp = list(ref_shp)
             if axis_bnds_var.dimensions[0]==ref_dims[2]: # weighting dimension is {x}
                 shp[0] = 1 # remove z dimension
                 shp[1] = 1 # remove y dimension
@@ -500,16 +508,11 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
         In case of missing information for the weighting in one or several
         dimensions, A UNIFORM WEIGHTING WILL BE APPLIED.
 
-        The volume output file is designed for the GEOCLIM version with
-        20 variables, in the following order:
-        12 concentrations,
-        7 isotopic (ie, don't need volume)
-        1 concentration.
-        A additional box is added for the atmosphere, with volume 1e-15,
-        after all the oceanic boxes, for each variable.
+        Output area unit is Gkm2 (1e15 m2)
         Output volume unit is Mkm3 (1e15 m3)
 
-        Output area unit is Gkm2 (1e15 m2)
+        The volume of the atmospheric box is expected to be 1e-15 (so that
+        is is "1" after the conversion in m3)
 
         Example:
 
@@ -535,7 +538,7 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
 
     if co2 is None:
 
-        nclim = len(intput_files)
+        nclim = len(input_files)
         co2 = cycle([-1e36])
 
     else:
@@ -558,17 +561,17 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
         raise ValueError('Number of input files inconsistent with CO2 axis')
 
     if input_u_files is None:
-        input_u_files = cycle(None)
+        input_u_files = cycle([None])
     elif len(input_u_files) != nclim:
         raise ValueError('Number of input "u" files inconsistent with number of input "Temp" files')
 
     if input_v_files is None:
-        input_v_files = cycle(None)
+        input_v_files = cycle([None])
     elif len(input_v_files) != nclim:
         raise ValueError('Number of input "v" files inconsistent with number of input "Temp" files')
 
     if input_w_files is None:
-        input_w_files = cycle(None)
+        input_w_files = cycle([None])
     elif len(input_w_files) != nclim:
         raise ValueError('Number of input "w" files inconsistent with number of input "Temp" files')
 
@@ -682,10 +685,9 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
     # z must be positive
     if (nav_z<=0).all():
         nav_z = -nav_z
-        reverse_z = True
-    else:
-        reverse_z = False
 
+    # check z ordering:
+    reverse_z = (nav_z[0,:,:] > nav_z[1,:,:]).any()
     isurf = -1 if reverse_z else 0
 
     # Units conversion
@@ -709,11 +711,11 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
     # Get depth and create "nav_bathy"
     # --------------------------------
     if bathy is None:
-        baty, bottom_idx = find_bathy(temp[:].mean(idx_t).mask, nav_z)
+        baty, bottom_idx = find_bathy(temp[:].mean(idx_t).mask, nav_z, invert_zaxis=reverse_z)
         print('NOTE: "bathy" field (bathymetry) automatically computed as the z-value of')
         print('      the last valid point of temperature field on each vertical column')
     else:
-        _, bottom_idx = find_bathy(temp[:].mean(idx_t).mask, nav_z)
+        _, bottom_idx = find_bathy(temp[:].mean(idx_t).mask, nav_z, invert_zaxis=reverse_z)
         if baty.ndim != 2:
             raise ValueError('seafloor depth variable (argument "bathy") must be rank-2')
         else:
@@ -1109,28 +1111,20 @@ def write_oceanic_input(co2, input_files, latitude, z, temperature,
     # Compute and export box volumes
     # ------------------------------
 
-    box_vol = np.zeros((NVAR, NBASIN+1), dtype=w_vol.dtype)
-
-    # concentration variables
-    totvol = 0.
+    box_vol = np.zeros((NBASIN+1), dtype=w_vol.dtype)
     for k in range(NBASIN):
-        vol = w_vol[:,:,ix0:ix1][Gmask[k,:,:,ix0:ix1]].sum()
-        totvol += vol
-        box_vol[CONCVAR_MASK, k] = vol
+        box_vol[k] = w_vol[:,:,ix0:ix1][Gmask[k,:,:,ix0:ix1]].sum()
 
     if not volunits:
         # normalize volume and scale it to modern total ocean volume
         print('volumes scaled to modern ocean volume')
-        box_vol *= MODERN_VOLUME/totvol
-
-    # non-concentration (isotopic) variables
-    box_vol[ISOTVAR_MASK, :NBASIN] = DEFAULT_VOLUME
+        box_vol *= MODERN_VOLUME/box_vol.sum()
 
     # atmosphere box
-    box_vol[:,-1] = ATM_VOL
+    box_vol[-1] = ATM_VOL
 
-    # Conversion to GEOCLIM units and ravelling (box axis changing fastest)
-    box_vol = VOLUME_CONVERSION_FACTOR*box_vol.ravel(order='C')
+    # Conversion to GEOCLIM units
+    box_vol *= VOLUME_CONVERSION_FACTOR
 
     # Write in file
     np.savetxt(outdir+vol_outfile, box_vol, fmt='%.12e', delimiter='\n')
