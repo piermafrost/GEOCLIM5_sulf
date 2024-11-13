@@ -325,7 +325,7 @@
  vname(19)='CO2_d13C',			units(19)='-',			defdim(19,:)=1,1	long_name(19)='delta C 13 of CO2'
  vname(20)='Sr_iso_ratio',		units(20)='-',			defdim(20,:)=1,1	long_name(20)='Sr 87 / Sr 86 isotopic ratio'
  vname(21)='PIC_Sr_iso_ratio',		units(21)='-',			defdim(21,:)=1,1	long_name(21)='Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
- writevar(22)=FALSE ! GEOCLIM variable no 19 - not attributed
+ writevar(22)=FALSE ! Archaism: former unattributed GEOCLIM variable 19 
  vname(23)='SO4',			units(23)='mol/m3',		defdim(23,:)=1,1	long_name(23)='Sulfate ion concentration'
  vname(24)='H2CO3',			units(24)='mol/m3',		defdim(24,:)=1,1	long_name(24)='H2CO3 ion concentration'
  vname(25)='HCO3',			units(25)='mol/m3',		defdim(25,:)=1,1	long_name(25)='HCO3 - ion concentration'
@@ -355,7 +355,7 @@
  vname(49)='POC_d13C_glob',		units(49)='-',			defdim(49,:)=0,1	long_name(49)='Mean ocean delta C 13 of Particulate Organic Carbon'
  vname(50)='Sr_iso_rat_glob',		units(50)='-',			defdim(50,:)=0,1	long_name(50)='Mean ocean Sr 87 / Sr 86 isotopic ratio'
  vname(51)='PIC_Sr_iso_rat_glob',	units(51)='-',			defdim(51,:)=0,1	long_name(51)='Mean ocean Sr 87 / Sr 86 ratio in Particulate Inorganic Carbon'
- writevar(52)=FALSE ! GEOCLIM variable no 19 - not attributed
+ writevar(52)=FALSE ! Archaism: former unattributed GEOCLIM variable 19
  vname(53)='SO4_glob',			units(53)='mol/m3',		defdim(53,:)=0,1	long_name(53)='Mean ocean sulfate concentration'
  vname(54)='pH_glob',			units(54)='-',			defdim(54,:)=0,1	long_name(54)='Mean ocean potential of hydrogen'
 ! # note: 'omega_glob' NO LONGER WRITTEN
